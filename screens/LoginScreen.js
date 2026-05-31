@@ -1,0 +1,122 @@
+import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import axios from 'axios';
+import { useAuth } from '../AuthContext';
+import { colors } from '../theme';
+
+const API = 'https://fontap-backend-production.up.railway.app';
+
+export default function LoginScreen({ navigation }) {
+  const { login: guardarSesion } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [mostrarPass, setMostrarPass] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    setError('');
+    if (!email || !password) { setError('Rellena todos los campos'); return; }
+    setCargando(true);
+    try {
+      const res = await axios.post(`${API}/login`, { email, password });
+      await guardarSesion(res.data);
+      if (res.data.tipo_usuario === 'fontanero') {
+        navigation.replace('PanelFontanero', { nombre: res.data.nombre || email.split('@')[0] });
+      } else {
+        navigation.replace('Mapa');
+      }
+    } catch (e) {
+      setError('Email o contraseña incorrectos');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <View style={s.container}>
+      <StatusBar barStyle="light-content" />
+
+      <View style={s.hero}>
+        <View style={s.logoWrap}>
+          <Text style={s.logoIcon}>🔧</Text>
+        </View>
+        <Text style={s.logoText}>FonTap</Text>
+        <Text style={s.logoSub}>Fontaneros profesionales · Bilbao</Text>
+      </View>
+
+      <View style={s.sheet}>
+        <Text style={s.sheetTitulo}>Bienvenido de nuevo</Text>
+        <Text style={s.sheetSub}>Inicia sesión para continuar</Text>
+
+        {error ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {error}</Text></View> : null}
+
+        <Text style={s.inputLabel}>Email</Text>
+        <View style={s.inputWrap}>
+          <Text style={s.inputIcon}>✉️</Text>
+          <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor={colors.textFaint}
+            value={email} onChangeText={t => { setEmail(t); setError(''); }}
+            keyboardType="email-address" autoCapitalize="none" />
+        </View>
+
+        <Text style={s.inputLabel}>Contraseña</Text>
+        <View style={s.inputWrap}>
+          <Text style={s.inputIcon}>🔒</Text>
+          <TextInput style={s.input} placeholder="••••••••" placeholderTextColor={colors.textFaint}
+            value={password} onChangeText={t => { setPassword(t); setError(''); }}
+            secureTextEntry={!mostrarPass} />
+          <TouchableOpacity onPress={() => setMostrarPass(!mostrarPass)}>
+            <Text style={s.inputIcon}>{mostrarPass ? '🙈' : '👁️'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={[s.btnPrimario, cargando && s.btnDesactivado]} onPress={handleLogin} disabled={cargando}>
+          <Text style={s.btnPrimarioText}>{cargando ? 'Entrando...' : 'Iniciar sesión'}</Text>
+        </TouchableOpacity>
+
+        <View style={s.divider}>
+          <View style={s.dividerLine} />
+          <Text style={s.dividerText}>o</Text>
+          <View style={s.dividerLine} />
+        </View>
+
+        <TouchableOpacity style={s.btnSecundario} onPress={() => navigation.navigate('Registro')}>
+          <Text style={s.btnSecundarioText}>Crear cuenta nueva</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Registro')} style={s.fontaneroLink}>
+          <Text style={s.fontaneroLinkText}>¿Eres fontanero? <Text style={s.fontaneroLinkBlue}>Únete a FonTap →</Text></Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  hero: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
+  logoWrap: { width: 88, height: 88, borderRadius: 28, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1.5, borderColor: colors.blue },
+  logoIcon: { fontSize: 40 },
+  logoText: { fontSize: 38, fontWeight: 'bold', color: colors.text, letterSpacing: -1 },
+  logoSub: { fontSize: 13, color: colors.textMuted, marginTop: 6 },
+  sheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 48, borderTopWidth: 1, borderColor: colors.border },
+  sheetTitulo: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 4 },
+  sheetSub: { fontSize: 14, color: colors.textMuted, marginBottom: 28 },
+  errorBox: { backgroundColor: colors.redLight, borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.red },
+  errorText: { color: '#FF6B6B', fontSize: 13 },
+  inputLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, borderWidth: 1, borderColor: colors.border2 },
+  inputIcon: { fontSize: 16, marginRight: 10 },
+  input: { flex: 1, color: colors.text, paddingVertical: 15, fontSize: 15 },
+  btnPrimario: { backgroundColor: colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', marginTop: 4 },
+  btnDesactivado: { opacity: 0.5 },
+  btnPrimarioText: { color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.3 },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.border2 },
+  dividerText: { color: colors.textFaint, marginHorizontal: 12, fontSize: 13 },
+  btnSecundario: { borderWidth: 1.5, borderColor: colors.border2, borderRadius: 14, padding: 17, alignItems: 'center' },
+  btnSecundarioText: { color: colors.text, fontWeight: '600', fontSize: 16 },
+  fontaneroLink: { marginTop: 20, alignItems: 'center' },
+  fontaneroLinkText: { color: colors.textMuted, fontSize: 14 },
+  fontaneroLinkBlue: { color: colors.blue, fontWeight: '600' },
+});

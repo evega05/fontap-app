@@ -1,24 +1,46 @@
 {
   "expo": {
-    "name": "fontap-app",
-    "slug": "fontap-app",
+    "name": "FonTap",
+    "slug": "fontap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080812"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fontap.app",
+      "config": {
+        "googleMapsApiKey": "AIzaSyA7ySPuuzWVj_rMIQU35VJk_XiVM-FSgAA"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#080812"
+      },
+      "package": "com.fontap.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA7ySPuuzWVj_rMIQU35VJk_XiVM-FSgAA"
+        }
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.fontap.app",
+          "enableGooglePay": true
+        }
+      ]
+    ]
   }
 }
