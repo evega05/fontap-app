@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
 import axios from 'axios';
@@ -18,24 +18,30 @@ export default function ConfirmacionScreen({ navigation, route }) {
   const { fontanero, tipo, urgente, servicioId, precio: precioProp, clienteId } = route.params || {};
   const [estado, setEstado] = useState('pendiente');
   const [precio, setPrecio] = useState(precioProp || null);
+  const [actualizando, setActualizando] = useState(false);
+
+  const consultar = useCallback(async () => {
+    if (!servicioId) return;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    setActualizando(true);
+    try {
+      const res = await axios.get(`${API}/servicios/${servicioId}`, { headers });
+      const nuevoEstado = res.data.estado || 'pendiente';
+      setEstado(nuevoEstado);
+      if (res.data.precio) setPrecio(res.data.precio);
+    } catch (e) {
+      console.log('[Confirmacion] ERROR polling:', e?.response?.status, JSON.stringify(e?.response?.data));
+    } finally {
+      setActualizando(false);
+    }
+  }, [servicioId, token]);
 
   useEffect(() => {
     if (!servicioId) return;
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const consultar = async () => {
-      try {
-        const res = await axios.get(`${API}/servicios/${servicioId}`, { headers });
-        const nuevoEstado = res.data.estado || 'pendiente';
-        setEstado(nuevoEstado);
-        if (res.data.precio) setPrecio(res.data.precio);
-      } catch (e) {
-        console.log('[Confirmacion] ERROR polling:', e?.response?.status, JSON.stringify(e?.response?.data));
-      }
-    };
     consultar();
-    const intervalo = setInterval(consultar, 4000);
+    const intervalo = setInterval(consultar, 3000);
     return () => clearInterval(intervalo);
-  }, [servicioId, token]);
+  }, [consultar, servicioId]);
 
   const estadoActual = ESTADOS[estado] || ESTADOS.pendiente;
 
@@ -45,7 +51,22 @@ export default function ConfirmacionScreen({ navigation, route }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={s.back}>← Volver</Text>
         </TouchableOpacity>
+        {servicioId && (
+          <TouchableOpacity onPress={consultar} disabled={actualizando} style={s.refreshBtn}>
+            {actualizando
+              ? <ActivityIndicator size="small" color={colors.blue} />
+              : <Text style={s.refreshText}>🔄 Actualizar</Text>}
+          </TouchableOpacity>
+        )}
       </View>
+
+      {!servicioId && (
+        <View style={s.avisoSinId}>
+          <Text style={s.avisoSinIdText}>
+            ⚠️ No se pudo registrar el servicio. Vuelve atrás e inténtalo de nuevo.
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={s.contenido} contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
         <View style={[s.estadoCirculo, { borderColor: estadoActual.color }]}>
@@ -157,8 +178,12 @@ export default function ConfirmacionScreen({ navigation, route }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: 24, paddingTop: 52, paddingBottom: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 52, paddingBottom: 8 },
   back: { color: colors.blue, fontSize: 15, fontWeight: '500' },
+  refreshBtn: { paddingVertical: 4, paddingHorizontal: 8, minWidth: 90, alignItems: 'flex-end' },
+  refreshText: { color: colors.blue, fontSize: 14, fontWeight: '500' },
+  avisoSinId: { marginHorizontal: 24, marginTop: 8, backgroundColor: colors.redLight, borderWidth: 1, borderColor: colors.red, borderRadius: 12, padding: 12 },
+  avisoSinIdText: { color: colors.red, fontSize: 13, textAlign: 'center', fontWeight: '500' },
   contenido: { flex: 1 },
   estadoCirculo: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, justifyContent: 'center', alignItems: 'center', marginBottom: 16, backgroundColor: colors.bgCard },
   estadoEmoji: { fontSize: 44 },
