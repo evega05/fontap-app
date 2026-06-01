@@ -41,6 +41,8 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       const todas = res.data || [];
       setPendientes(todas.filter(s => s.estado === 'pendiente'));
       setCompletados(todas.filter(s => s.estado === 'completado' || s.estado === 'pagado'));
+      const activo = todas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
+      if (activo) { setTrabajoActivo(activo); }
     } catch (e) {
       console.log('[Panel] ERROR cargando solicitudes:', e?.response?.status, JSON.stringify(e?.response?.data));
     }
@@ -248,6 +250,30 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         />
       </View>
 
+      {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
+        <View style={s.enCursoCard}>
+          <View style={s.enCursoHeader}>
+            <Text style={s.enCursoTitulo}>🔧 Trabajo en curso</Text>
+            <View style={s.enCursoPill}>
+              <Text style={s.enCursoPillText}>
+                {trabajoActivo.estado === 'precio_enviado' ? '💰 Precio enviado' : trabajoActivo.estado === 'pago_pendiente' ? '💵 Esperando pago' : '🚗 En camino'}
+              </Text>
+            </View>
+          </View>
+          <Text style={s.enCursoCliente}>{trabajoActivo.cliente_nombre} · {trabajoActivo.tipo}</Text>
+          {trabajoActivo.estado === 'aceptado' && (
+            <TouchableOpacity style={s.enCursoBtn} onPress={() => setMostrarPrecio(true)}>
+              <Text style={s.enCursoBtnText}>Enviar precio al cliente →</Text>
+            </TouchableOpacity>
+          )}
+          {trabajoActivo.estado === 'aceptado' && (
+            <TouchableOpacity style={s.enCursoChatBtn} onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
+              <Text style={s.enCursoChatText}>💬 Chat con cliente</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       <View style={s.tabs}>
         <TouchableOpacity style={[s.tab, tab === 'pendientes' && s.tabActivo]} onPress={() => setTab('pendientes')}>
           <Text style={[s.tabText, tab === 'pendientes' && s.tabTextActivo]}>Pendientes</Text>
@@ -346,6 +372,16 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f0f1a' },
+  enCursoCard: { backgroundColor: '#0e1f0e', borderRadius: 16, padding: 16, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: '#05A357' },
+  enCursoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  enCursoTitulo: { color: '#4ade80', fontWeight: 'bold', fontSize: 15 },
+  enCursoPill: { backgroundColor: '#1a2e1a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#05A357' },
+  enCursoPillText: { color: '#4ade80', fontSize: 11, fontWeight: '600' },
+  enCursoCliente: { color: '#ccc', fontSize: 13, marginBottom: 12 },
+  enCursoBtn: { backgroundColor: '#3b82f6', borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 8 },
+  enCursoBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  enCursoChatBtn: { backgroundColor: '#1e1e2e', borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#2a2a3e' },
+  enCursoChatText: { color: '#aaa', fontWeight: '600', fontSize: 14 },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
   modal: { backgroundColor: '#1e1e2e', borderRadius: 20, padding: 24, margin: 20, width: '90%', borderWidth: 1, borderColor: '#2a2a3e' },
   modalTitulo: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
