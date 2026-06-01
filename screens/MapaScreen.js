@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 

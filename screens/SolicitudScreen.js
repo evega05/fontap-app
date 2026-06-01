@@ -16,7 +16,7 @@ const SERVICIOS = [
 ];
 
 export default function SolicitudScreen({ navigation, route }) {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const fontanero = route.params?.fontanero;
   const [tipo, setTipo] = useState(null);
   const [descripcion, setDescripcion] = useState('');
