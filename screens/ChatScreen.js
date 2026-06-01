@@ -67,13 +67,16 @@ export default function ChatScreen({ navigation, route }) {
 
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.post(
+      console.log('[Chat] Enviando mensaje. servicioId:', servicioId, 'usuario:', usuario?.id, 'tipo:', usuario?.tipo, 'token:', !!token);
+      const res = await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
         { contenido, remitente_tipo: usuario?.tipo, remitente_id: usuario?.id },
         { headers: hdrs }
       );
+      console.log('[Chat] Mensaje enviado OK:', res.status);
       await cargarMensajes();
     } catch (e) {
+      console.log('[Chat] ERROR enviando:', e?.response?.status, JSON.stringify(e?.response?.data));
       setMensajes(prev => prev.map(m =>
         m.id === mensajeTemporal.id ? { ...m, error: true, pendiente: false } : m
       ));
