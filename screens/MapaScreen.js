@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
@@ -32,16 +33,22 @@ export default function MapaScreen({ navigation, route }) {
     axios.get(`${API}/fontaneros`)
       .then(res => { setFontaneros(res.data || []); })
       .catch(() => {});
+  }, []);
+
+  const cargarNotifs = useCallback(() => {
     const hds = token ? { Authorization: `Bearer ${token}` } : {};
-    if (clienteId) {
-      axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: hds })
-        .then(res => setFavoritos((res.data || []).map(f => f.id)))
-        .catch(() => {});
-      axios.get(`${API}/usuarios/${clienteId}/notificaciones`, { headers: hds })
-        .then(res => setNotifNoLeidas((res.data || []).filter(n => !n.leida).length))
-        .catch(() => {});
-    }
-  }, [clienteId]);
+    if (!clienteId) return;
+    axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: hds })
+      .then(res => setFavoritos((res.data || []).map(f => f.id)))
+      .catch(() => {});
+    axios.get(`${API}/usuarios/${clienteId}/notificaciones`, { headers: hds })
+      .then(res => setNotifNoLeidas((res.data || []).filter(n => !n.leida).length))
+      .catch(() => {});
+  }, [clienteId, token]);
+
+  useEffect(() => { cargarNotifs(); }, [cargarNotifs]);
+
+  useFocusEffect(useCallback(() => { cargarNotifs(); }, [cargarNotifs]));
 
   const fontanerosFiltrados = fontaneros.filter(f => {
     if (busqueda && !f.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
