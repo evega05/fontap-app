@@ -54,13 +54,17 @@ export default function SolicitudScreen({ navigation, route }) {
     if (paso < 3) setPaso(paso + 1);
     else {
       try {
-  const res = await axios.post(`${API}/servicios`, {
+  const clienteId = route.params?.clienteId || usuario?.id || 1;
+  const body = {
     tipo: tipo.nombre,
     descripcion,
     urgente,
     fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
     fontanero_id: fontanero?.id || null,
-  }, { params: { cliente_id: route.params?.clienteId || usuario?.id || 1 } });
+  };
+  console.log('[Solicitud] Enviando servicio:', JSON.stringify(body), 'cliente_id:', clienteId);
+  const res = await axios.post(`${API}/servicios`, body, { params: { cliente_id: clienteId } });
+  console.log('[Solicitud] Servicio creado:', JSON.stringify(res.data));
 
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;

@@ -35,11 +35,15 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   const cargarSolicitudes = useCallback(async () => {
     try {
+      console.log('[Panel] Cargando solicitudes para fontanero ID:', userId);
       const res = await axios.get(`${API}/fontaneros/${userId}/solicitudes`, { headers });
+      console.log('[Panel] Respuesta solicitudes:', JSON.stringify(res.data));
       const todas = res.data || [];
       setPendientes(todas.filter(s => s.estado === 'pendiente'));
       setCompletados(todas.filter(s => s.estado === 'completado' || s.estado === 'pagado'));
-    } catch (e) {}
+    } catch (e) {
+      console.log('[Panel] ERROR cargando solicitudes:', e?.response?.status, JSON.stringify(e?.response?.data));
+    }
     finally {
       setCargando(false);
     }
