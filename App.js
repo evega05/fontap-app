@@ -19,6 +19,8 @@ import NotificacionesScreen from './screens/NotificacionesScreen';
 import OfertasScreen from './screens/OfertasScreen';
 import CalendarioScreen from './screens/CalendarioScreen';
 import MisServiciosScreen from './screens/MisServiciosScreen';
+import EstadisticasScreen from './screens/EstadisticasScreen';
+import OfertasClienteScreen from './screens/OfertasClienteScreen';
 
 const Stack = createStackNavigator();
 
@@ -69,6 +71,8 @@ function NavegadorPrincipal() {
         <Stack.Screen name="Ofertas" component={OfertasScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Calendario" component={CalendarioScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MisServicios" component={MisServiciosScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Estadisticas" component={EstadisticasScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="OfertasCliente" component={OfertasClienteScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

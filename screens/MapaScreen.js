@@ -32,15 +32,20 @@ export default function MapaScreen({ navigation, route }) {
   const [busqueda, setBusqueda] = useState('');
   const [mostrar24h, setMostrar24h] = useState(false);
   const [favoritos, setFavoritos] = useState([]);
+  const [notifNoLeidas, setNotifNoLeidas] = useState(0);
   const token = useAuth().token;
 
   useEffect(() => {
     axios.get(`${API}/fontaneros`)
       .then(res => { if (res.data && res.data.length > 0) setFontaneros(res.data); })
       .catch(() => {});
+    const hds = token ? { Authorization: `Bearer ${token}` } : {};
     if (clienteId) {
-      axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: hds })
         .then(res => setFavoritos((res.data || []).map(f => f.id)))
+        .catch(() => {});
+      axios.get(`${API}/usuarios/${clienteId}/notificaciones`, { headers: hds })
+        .then(res => setNotifNoLeidas((res.data || []).filter(n => !n.leida).length))
         .catch(() => {});
     }
   }, [clienteId]);
@@ -142,8 +147,13 @@ export default function MapaScreen({ navigation, route }) {
           <Text style={s.sub}>📍 Bilbao · {fontanerosFiltrados.filter(f => f.disponible).length} disponibles</Text>
         </View>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Notificaciones')}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => { setNotifNoLeidas(0); navigation.navigate('Notificaciones'); }}>
             <Text style={s.iconBtnText}>🔔</Text>
+            {notifNoLeidas > 0 && (
+              <View style={s.badge}>
+                <Text style={s.badgeText}>{notifNoLeidas > 9 ? '9+' : notifNoLeidas}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Favoritos')}>
             <Text style={s.iconBtnText}>❤️</Text>
@@ -242,8 +252,10 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 52 },
   headerRight: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border, position: 'relative' },
   iconBtnText: { fontSize: 16 },
+  badge: { position: 'absolute', top: -4, right: -4, backgroundColor: colors.red, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, borderWidth: 1.5, borderColor: colors.bg },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: 'bold' },
   cardRight: { alignItems: 'flex-end', gap: 6 },
   favBtn: { padding: 4 },
   favBtnText: { fontSize: 18 },

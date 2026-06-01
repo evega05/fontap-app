@@ -167,6 +167,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Ofertas')}>
             <Text style={s.iconBtnText}>💼</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Estadisticas', { userId })}>
+            <Text style={s.iconBtnText}>📊</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={s.perfilBtn} onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
             <Text style={s.perfilLetra}>{nombre[0]}</Text>
           </TouchableOpacity>
