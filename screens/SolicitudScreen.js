@@ -55,12 +55,12 @@ export default function SolicitudScreen({ navigation, route }) {
     else {
       try {
   const res = await axios.post(`${API}/servicios`, {
-
     tipo: tipo.nombre,
     descripcion,
     urgente,
     fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
-  }, { params: { cliente_id: route.params?.clienteId || usuario?.id || 1 } }); // ← id real del usuario
+    fontanero_id: fontanero?.id || null,
+  }, { params: { cliente_id: route.params?.clienteId || usuario?.id || 1 } });
 
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;
