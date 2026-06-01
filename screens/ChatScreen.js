@@ -32,6 +32,7 @@ export default function ChatScreen({ navigation, route }) {
         ultimoIdRef.current = nuevos[nuevos.length - 1].id;
       }
     } catch (e) {
+      console.log('[Chat] ERROR GET mensajes:', e?.response?.status, JSON.stringify(e?.response?.data));
     } finally {
       setCargando(false);
     }
@@ -50,16 +51,15 @@ export default function ChatScreen({ navigation, route }) {
   }, [mensajes.length]);
 
   const enviar = async () => {
-    const contenido = texto.trim();
-    if (!contenido || enviando) return;
+    const msg = texto.trim();
+    if (!msg || enviando) return;
     setTexto('');
     setEnviando(true);
 
     const mensajeTemporal = {
       id: `tmp_${Date.now()}`,
-      contenido,
-      remitente_tipo: usuario?.tipo,
-      remitente_nombre: usuario?.nombre,
+      texto: msg,
+      emisor_id: usuario?.id,
       creado_en: new Date().toISOString(),
       pendiente: true,
     };
@@ -67,13 +67,17 @@ export default function ChatScreen({ navigation, route }) {
 
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.post(
+      const body = { texto: msg };
+      console.log('[Chat] POST body:', JSON.stringify(body), 'servicioId:', servicioId, 'token:', !!token);
+      const res = await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
-        { contenido, remitente_tipo: usuario?.tipo, remitente_id: usuario?.id },
-        { headers: hdrs }
+        body,
+        { headers: { ...hdrs, 'Content-Type': 'application/json' } }
       );
+      console.log('[Chat] Mensaje enviado OK:', res.status);
       await cargarMensajes();
     } catch (e) {
+      console.log('[Chat] ERROR POST:', e?.response?.status, JSON.stringify(e?.response?.data));
       setMensajes(prev => prev.map(m =>
         m.id === mensajeTemporal.id ? { ...m, error: true, pendiente: false } : m
       ));
@@ -82,7 +86,7 @@ export default function ChatScreen({ navigation, route }) {
     }
   };
 
-  const esMio = (msg) => msg.remitente_tipo === usuario?.tipo;
+  const esMio = (msg) => msg.emisor_id === usuario?.id;
 
   const renderMensaje = ({ item }) => {
     const mio = esMio(item);
@@ -90,7 +94,7 @@ export default function ChatScreen({ navigation, route }) {
       <View style={[s.msgRow, mio ? s.msgRowMio : s.msgRowOtro]}>
         <View style={[s.bubble, mio ? s.bubbleMio : s.bubbleOtro, item.error && s.bubbleError]}>
           <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>
-            {item.contenido}
+            {item.texto}
           </Text>
           <Text style={[s.bubbleHora, mio ? s.bubbleHoraMio : s.bubbleHoraOtro]}>
             {item.pendiente ? '⏳' : item.error ? '⚠️' : formatHora(item.creado_en)}

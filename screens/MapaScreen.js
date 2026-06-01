@@ -428,7 +428,7 @@ export default function MapaScreen({ navigation, route }) {
           {
             icon: '💬',
             label: 'Chats recientes',
-            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Chats'), 250); },
+            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('MisServicios', { clienteId }), 250); },
           },
         ].map((item, idx) => (
           <TouchableOpacity

@@ -22,10 +22,13 @@ export default function ConfirmacionScreen({ navigation, route }) {
     const intervalo = setInterval(async () => {
       try {
         const res = await axios.get(`${API}/servicios/${servicioId}`);
+        console.log('[Confirmacion] servicio:', JSON.stringify(res.data));
         const nuevoEstado = res.data.estado || 'pendiente';
         setEstado(nuevoEstado);
         if (res.data.precio) setPrecio(res.data.precio);
-      } catch (e) {}
+      } catch (e) {
+        console.log('[Confirmacion] ERROR polling:', e?.response?.status, JSON.stringify(e?.response?.data));
+      }
     }, 4000);
     return () => clearInterval(intervalo);
   }, [servicioId]);
