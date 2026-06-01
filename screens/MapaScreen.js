@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -30,12 +31,19 @@ export default function MapaScreen({ navigation, route }) {
   const [filtroServicio, setFiltroServicio] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
   const [mostrar24h, setMostrar24h] = useState(false);
+  const [favoritos, setFavoritos] = useState([]);
+  const token = useAuth().token;
 
   useEffect(() => {
     axios.get(`${API}/fontaneros`)
       .then(res => { if (res.data && res.data.length > 0) setFontaneros(res.data); })
       .catch(() => {});
-  }, []);
+    if (clienteId) {
+      axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        .then(res => setFavoritos((res.data || []).map(f => f.id)))
+        .catch(() => {});
+    }
+  }, [clienteId]);
 
   const fontanerosFiltrados = fontaneros.filter(f => {
     if (busqueda && !f.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
@@ -46,6 +54,17 @@ export default function MapaScreen({ navigation, route }) {
   });
 
   const ultimoFontanero = fontanerosDemo[0];
+
+  const toggleFavorito = async (f) => {
+    const esFav = favoritos.includes(f.id);
+    if (esFav) {
+      setFavoritos(prev => prev.filter(id => id !== f.id));
+      axios.delete(`${API}/clientes/${clienteId}/favoritos/${f.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }).catch(() => {});
+    } else {
+      setFavoritos(prev => [...prev, f.id]);
+      axios.post(`${API}/clientes/${clienteId}/favoritos`, { fontanero_id: f.id }, { headers: token ? { Authorization: `Bearer ${token}` } : {} }).catch(() => {});
+    }
+  };
 
   const renderTarjetaFontanero = (f) => (
     <TouchableOpacity key={f.id}
@@ -77,10 +96,17 @@ export default function MapaScreen({ navigation, route }) {
             {f.llegada && <><Text style={s.cardStatDot}>·</Text><Text style={s.cardStat}>🕐 {f.llegada}</Text></>}
           </View>
         </View>
-        <View style={[s.estadoBadge, f.disponible ? s.estadoVerde : s.estadoGris]}>
-          <Text style={[s.estadoText, f.disponible ? s.estadoTextVerde : s.estadoTextGris]}>
-            {f.disponible ? '● Libre' : `Hasta ${f.ocupadoHasta || '—'}`}
-          </Text>
+        <View style={s.cardRight}>
+          <View style={[s.estadoBadge, f.disponible ? s.estadoVerde : s.estadoGris]}>
+            <Text style={[s.estadoText, f.disponible ? s.estadoTextVerde : s.estadoTextGris]}>
+              {f.disponible ? '● Libre' : `Hasta ${f.ocupadoHasta || '—'}`}
+            </Text>
+          </View>
+          {clienteId && (
+            <TouchableOpacity style={s.favBtn} onPress={() => toggleFavorito(f)}>
+              <Text style={s.favBtnText}>{favoritos.includes(f.id) ? '❤️' : '🤍'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -114,6 +140,17 @@ export default function MapaScreen({ navigation, route }) {
         <View>
           <Text style={s.logo}>FonTap</Text>
           <Text style={s.sub}>📍 Bilbao · {fontanerosFiltrados.filter(f => f.disponible).length} disponibles</Text>
+        </View>
+        <View style={s.headerRight}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Notificaciones')}>
+            <Text style={s.iconBtnText}>🔔</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Favoritos')}>
+            <Text style={s.iconBtnText}>❤️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('MisServicios', { clienteId })}>
+            <Text style={s.iconBtnText}>📋</Text>
+          </TouchableOpacity>
         </View>
         <View style={s.modoRow}>
           <TouchableOpacity style={[s.modoBtn, modo === 'mapa' && s.modoBtnActivo]} onPress={() => setModo('mapa')}>
@@ -204,6 +241,12 @@ export default function MapaScreen({ navigation, route }) {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 52 },
+  headerRight: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  iconBtnText: { fontSize: 16 },
+  cardRight: { alignItems: 'flex-end', gap: 6 },
+  favBtn: { padding: 4 },
+  favBtnText: { fontSize: 18 },
   logo: { fontSize: 24, fontWeight: 'bold', color: colors.text, letterSpacing: -0.5 },
   sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   modoRow: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 12, padding: 3, borderWidth: 1, borderColor: colors.border },

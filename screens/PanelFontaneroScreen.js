@@ -157,9 +157,20 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           <Text style={s.nombre}>{nombre}</Text>
           <Text style={s.idText}>ID: {userId}</Text>
         </View>
-        <TouchableOpacity style={s.perfilBtn} onPress={() => navigation.navigate('PerfilFontanero', { nombre })}>
-          <Text style={s.perfilLetra}>{nombre[0]}</Text>
-        </TouchableOpacity>
+        <View style={s.headerRight}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Notificaciones')}>
+            <Text style={s.iconBtnText}>🔔</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Calendario', { userId })}>
+            <Text style={s.iconBtnText}>📅</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Ofertas')}>
+            <Text style={s.iconBtnText}>💼</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.perfilBtn} onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
+            <Text style={s.perfilLetra}>{nombre[0]}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={s.disponibilidadCard}>
@@ -343,6 +354,9 @@ const s = StyleSheet.create({
   modalCancelar: { marginTop: 12, alignItems: 'center' },
   modalCancelarText: { color: '#aaa', fontSize: 14 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1e1e2e', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a3e' },
+  iconBtnText: { fontSize: 16 },
   saludo: { color: '#aaa', fontSize: 13, marginBottom: 2 },
   nombre: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
   idText: { color: '#3b82f6', fontSize: 11, marginTop: 2 },

@@ -14,6 +14,11 @@ import PerfilFontaneroScreen from './screens/PerfilFontaneroScreen';
 import ReseñaScreen from './screens/ReseñaScreen';
 import PagoScreen from './screens/PagoScreen';
 import ChatScreen from './screens/ChatScreen';
+import FavoritosScreen from './screens/FavoritosScreen';
+import NotificacionesScreen from './screens/NotificacionesScreen';
+import OfertasScreen from './screens/OfertasScreen';
+import CalendarioScreen from './screens/CalendarioScreen';
+import MisServiciosScreen from './screens/MisServiciosScreen';
 
 const Stack = createStackNavigator();
 
@@ -59,6 +64,11 @@ function NavegadorPrincipal() {
         <Stack.Screen name="Resena" component={ReseñaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Pago" component={PagoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Favoritos" component={FavoritosScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Notificaciones" component={NotificacionesScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Ofertas" component={OfertasScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Calendario" component={CalendarioScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="MisServicios" component={MisServiciosScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator } from 'react-native';
 import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -23,6 +24,30 @@ export default function SolicitudScreen({ navigation, route }) {
   const [paso, setPaso] = useState(1);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [horaSeleccionada, setHoraSeleccionada] = useState(null);
+  const [fotosProblema, setFotosProblema] = useState([]);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+
+  const seleccionarFoto = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (!res.canceled) setFotosProblema(prev => [...prev, res.assets[0].uri]);
+  };
+
+  const subirFotosServicio = async (servicioId) => {
+    if (!fotosProblema.length || !servicioId) return;
+    setSubiendoFoto(true);
+    for (const uri of fotosProblema) {
+      try {
+        const form = new FormData();
+        form.append('foto', { uri, name: 'foto.jpg', type: 'image/jpeg' });
+        await axios.post(`${API}/servicios/${servicioId}/fotos`, form, {
+          headers: { 'Content-Type': 'multipart/form-data', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+      } catch (e) {}
+    }
+    setSubiendoFoto(false);
+  };
 
   const continuar = async () => {
     if (paso === 1 && !tipo) return;
@@ -30,6 +55,7 @@ export default function SolicitudScreen({ navigation, route }) {
     else {
       try {
   const res = await axios.post(`${API}/servicios`, {
+
     tipo: tipo.nombre,
     descripcion,
     urgente,
@@ -38,6 +64,7 @@ export default function SolicitudScreen({ navigation, route }) {
 
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;
+  await subirFotosServicio(servicioId);
 
   navigation.navigate('Confirmacion', {
     fontanero, tipo, descripcion, urgente,
@@ -103,6 +130,22 @@ export default function SolicitudScreen({ navigation, route }) {
               multiline
               numberOfLines={5}
             />
+            <Text style={s.subtitulo}>📸 Fotos del problema (opcional)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
+              <TouchableOpacity style={s.addFotoBtn} onPress={seleccionarFoto}>
+                <Text style={s.addFotoEmoji}>📷</Text>
+                <Text style={s.addFotoText}>Añadir foto</Text>
+              </TouchableOpacity>
+              {fotosProblema.map((uri, i) => (
+                <View key={i} style={s.fotoWrap}>
+                  <Image source={{ uri }} style={s.fotoThumb} />
+                  <TouchableOpacity style={s.fotoEliminar} onPress={() => setFotosProblema(prev => prev.filter((_, j) => j !== i))}>
+                    <Text style={s.fotoEliminarText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+
             {fontanero && (
               <View style={s.fontaneroCard}>
                 <View style={s.avatar}>
@@ -259,6 +302,13 @@ const s = StyleSheet.create({
   resumenFila: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   resumenLabel: { color: '#aaa', fontSize: 13 },
   resumenValor: { color: '#fff', fontSize: 13, fontWeight: '500' },
+  addFotoBtn: { width: 80, height: 80, backgroundColor: '#1e1e2e', borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#2a2a3e', borderStyle: 'dashed' },
+  addFotoEmoji: { fontSize: 24, marginBottom: 4 },
+  addFotoText: { color: '#aaa', fontSize: 10 },
+  fotoWrap: { position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden' },
+  fotoThumb: { width: 80, height: 80, borderRadius: 12 },
+  fotoEliminar: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
+  fotoEliminarText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
   footer: { padding: 20, paddingBottom: 36 },
   btnContinuar: { backgroundColor: '#3b82f6', borderRadius: 14, padding: 16, alignItems: 'center' },
   btnDesactivado: { backgroundColor: '#1e1e2e', opacity: 0.5 },
