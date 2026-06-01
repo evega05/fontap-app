@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from '
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { registrarNotificaciones } from './notifications';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -22,6 +23,7 @@ export default function LoginScreen({ navigation }) {
       const res = await axios.post(`${API}/login`, { email, password });
       console.log('RESPUESTA LOGIN:', JSON.stringify(res.data));
       await guardarSesion(res.data);
+      registrarNotificaciones(res.data.id, res.data.access_token);
       if (res.data.tipo_usuario === 'fontanero') {
         navigation.replace('PanelFontanero', { nombre: res.data.nombre || email.split('@')[0], userId: res.data.id });
       } else {

@@ -13,7 +13,7 @@ const ESTADOS = {
 };
 
 export default function ConfirmacionScreen({ navigation, route }) {
-  const { fontanero, tipo, urgente, servicioId, precio: precioProp } = route.params || {};
+  const { fontanero, tipo, urgente, servicioId, precio: precioProp, clienteId } = route.params || {};
   const [estado, setEstado] = useState('pendiente');
   const [precio, setPrecio] = useState(precioProp || null);
 
@@ -22,10 +22,11 @@ export default function ConfirmacionScreen({ navigation, route }) {
     const intervalo = setInterval(async () => {
       try {
         const res = await axios.get(`${API}/servicios/${servicioId}`);
-        setEstado(res.data.estado || 'pendiente');
+        const nuevoEstado = res.data.estado || 'pendiente';
+        setEstado(nuevoEstado);
         if (res.data.precio) setPrecio(res.data.precio);
       } catch (e) {}
-    }, 5000);
+    }, 4000);
     return () => clearInterval(intervalo);
   }, [servicioId]);
 
@@ -106,7 +107,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
               <Text style={s.precioCardValor}>{precio}€</Text>
             </View>
             <TouchableOpacity style={s.btnPago}
-              onPress={() => navigation.navigate('Pago', { fontanero, servicio: tipo, precio })}>
+              onPress={() => navigation.navigate('Pago', { fontanero, servicio: tipo, precio, servicioId })}>
               <Text style={s.btnPagoText}>💳 Aceptar y pagar {precio}€</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.btnRechazar} onPress={() => navigation.goBack()}>
@@ -125,11 +126,23 @@ export default function ConfirmacionScreen({ navigation, route }) {
             </TouchableOpacity>
           </>
         )}
+        {estado === 'aceptado' && servicioId && (
+          <TouchableOpacity
+            style={[s.btnPrimario, { marginBottom: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.blue }]}
+            onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Fontanero' })}
+          >
+            <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el fontanero</Text>
+          </TouchableOpacity>
+        )}
         {(estado === 'pendiente' || estado === 'aceptado') && (
           <TouchableOpacity style={s.btnPrimario} onPress={() => navigation.navigate('Mapa')}>
             <Text style={s.btnPrimarioText}>Volver al inicio</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={[s.btnPrimario, { marginTop: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }]}
+          onPress={() => navigation.navigate('MisServicios', { clienteId })}>
+          <Text style={[s.btnPrimarioText, { color: colors.textMuted }]}>📋 Ver todos mis servicios</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

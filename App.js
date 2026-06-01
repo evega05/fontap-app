@@ -13,6 +13,14 @@ import PanelFontaneroScreen from './screens/PanelFontaneroScreen';
 import PerfilFontaneroScreen from './screens/PerfilFontaneroScreen';
 import ReseñaScreen from './screens/ReseñaScreen';
 import PagoScreen from './screens/PagoScreen';
+import ChatScreen from './screens/ChatScreen';
+import FavoritosScreen from './screens/FavoritosScreen';
+import NotificacionesScreen from './screens/NotificacionesScreen';
+import OfertasScreen from './screens/OfertasScreen';
+import CalendarioScreen from './screens/CalendarioScreen';
+import MisServiciosScreen from './screens/MisServiciosScreen';
+import EstadisticasScreen from './screens/EstadisticasScreen';
+import OfertasClienteScreen from './screens/OfertasClienteScreen';
 
 const Stack = createStackNavigator();
 
@@ -57,6 +65,14 @@ function NavegadorPrincipal() {
         <Stack.Screen name="PerfilFontanero" component={PerfilFontaneroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Resena" component={ReseñaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Pago" component={PagoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Favoritos" component={FavoritosScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Notificaciones" component={NotificacionesScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Ofertas" component={OfertasScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Calendario" component={CalendarioScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="MisServicios" component={MisServiciosScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Estadisticas" component={EstadisticasScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="OfertasCliente" component={OfertasClienteScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -81,9 +97,9 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: '#05050F', justifyContent: 'center', alignItems: 'center' },
-  splashLogo: { width: 120, height: 120, borderRadius: 36, backgroundColor: '#0A1F4E', justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: '#276EF1' },
+  splash: { flex: 1, backgroundColor: '#070B14', justifyContent: 'center', alignItems: 'center' },
+  splashLogo: { width: 120, height: 120, borderRadius: 36, backgroundColor: '#0A1836', justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: '#3D7EFF' },
   splashEmoji: { fontSize: 56 },
-  splashNombre: { fontSize: 42, fontWeight: 'bold', color: '#F0F0FF', letterSpacing: -1, marginBottom: 8 },
-  splashSub: { fontSize: 15, color: '#8080A0' },
+  splashNombre: { fontSize: 42, fontWeight: 'bold', color: '#E8EDF5', letterSpacing: -1, marginBottom: 8 },
+  splashSub: { fontSize: 15, color: '#7A8BA8' },
 });

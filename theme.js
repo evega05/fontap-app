@@ -1,20 +1,29 @@
 export const colors = {
-  bg: '#05050F',
-  bgCard: '#0D0D1F',
-  bgCard2: '#131326',
-  bgCard3: '#1A1A35',
-  border: '#1E1E3F',
-  border2: '#252545',
-  blue: '#276EF1',
-  blueLight: '#0A1F4E',
-  blueBright: '#4D8FF5',
-  green: '#05A357',
-  greenLight: '#021A0E',
-  red: '#E11900',
-  redLight: '#2D0600',
-  amber: '#FFC043',
-  purple: '#7356BF',
-  text: '#F0F0FF',
-  textMuted: '#8080A0',
-  textFaint: '#3A3A5C',
+  // Fondos — azul noche profundo estilo fintech
+  bg: '#070B14',
+  bgCard: '#0D1424',
+  bgCard2: '#111A2E',
+  bgCard3: '#172038',
+
+  // Bordes sutiles
+  border: '#1E2D4A',
+  border2: '#253350',
+
+  // Azul eléctrico — acento principal
+  blue: '#3D7EFF',
+  blueLight: '#0A1836',
+  blueBright: '#5B96FF',
+
+  // Semánticos
+  green: '#00C48C',
+  greenLight: '#001F16',
+  red: '#FF4D4D',
+  redLight: '#1F0909',
+  amber: '#FFB830',
+  purple: '#8B5CF6',
+
+  // Tipografía
+  text: '#E8EDF5',
+  textMuted: '#7A8BA8',
+  textFaint: '#2A3A56',
 };
