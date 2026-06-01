@@ -6,12 +6,6 @@ import { useAuth } from '../AuthContext';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
-const fontanerosDemo = [
-  { id: 1, nombre: 'Carlos Martínez', valoracion: 4.9, trabajos: 134, zona: 'Bilbao Centro', disponible: true, distancia: '0.8 km', llegada: '12 min', precio: '60-120€', servicios: ['Desatasco', 'Fuga', 'Grifo'], badge: 'top', disponible24h: true },
-  { id: 2, nombre: 'Pedro Gómez', valoracion: 4.7, trabajos: 89, zona: 'Deusto', disponible: true, distancia: '1.2 km', llegada: '18 min', precio: '50-90€', servicios: ['Caldera', 'Radiador', 'Fuga'], badge: 'rapido', disponible24h: false },
-  { id: 3, nombre: 'Luis Fernández', valoracion: 4.8, trabajos: 212, zona: 'Indautxu', disponible: false, distancia: '2.1 km', llegada: '25 min', precio: '70-130€', servicios: ['Desatasco', 'Caldera'], badge: 'popular', disponible24h: true, ocupadoHasta: '18:00' },
-  { id: 4, nombre: 'Mikel Etxebarria', valoracion: 4.6, trabajos: 67, zona: 'Rekalde', disponible: true, distancia: '1.8 km', llegada: '22 min', precio: '55-100€', servicios: ['Grifo', 'Fuga', 'Desatasco'], badge: null, disponible24h: true },
-];
 
 const SERVICIOS_FILTRO = ['Todos', 'Desatasco', 'Fuga', 'Caldera', 'Grifo', 'Radiador'];
 
@@ -26,7 +20,7 @@ export default function MapaScreen({ navigation, route }) {
   const clienteId = route.params?.clienteId || usuario?.id || null;
   const [seleccionado, setSeleccionado] = useState(null);
   const [modo, setModo] = useState('mapa');
-  const [fontaneros, setFontaneros] = useState(fontanerosDemo);
+  const [fontaneros, setFontaneros] = useState([]);
   const [filtroServicio, setFiltroServicio] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
   const [mostrar24h, setMostrar24h] = useState(false);
@@ -36,11 +30,8 @@ export default function MapaScreen({ navigation, route }) {
 
   useEffect(() => {
     axios.get(`${API}/fontaneros`)
-      .then(res => {
-        console.log('[Mapa] Fontaneros del backend:', JSON.stringify(res.data));
-        if (res.data && res.data.length > 0) setFontaneros(res.data);
-      })
-      .catch(e => console.log('[Mapa] Error cargando fontaneros:', e?.response?.status, e?.message));
+      .then(res => { setFontaneros(res.data || []); })
+      .catch(() => {});
     const hds = token ? { Authorization: `Bearer ${token}` } : {};
     if (clienteId) {
       axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: hds })
@@ -59,8 +50,6 @@ export default function MapaScreen({ navigation, route }) {
     if (mostrar24h && !f.disponible24h) return false;
     return true;
   });
-
-  const ultimoFontanero = fontanerosDemo[0];
 
   const toggleFavorito = async (f) => {
     const esFav = favoritos.includes(f.id);
@@ -216,26 +205,7 @@ export default function MapaScreen({ navigation, route }) {
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
-        {modo === 'mapa' && (
-          <View style={s.ultimoWrap}>
-            <Text style={s.ultimoTitulo}>🔄 TU ÚLTIMO FONTANERO</Text>
-            <TouchableOpacity style={s.ultimoCard}
-              onPress={() => navigation.navigate('Solicitud', { fontanero: ultimoFontanero, clienteId })}>
-              <View style={s.avatar}>
-                <Text style={s.avatarText}>{ultimoFontanero.nombre[0]}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardNombre}>{ultimoFontanero.nombre}</Text>
-                <Text style={s.cardZona}>⭐ {ultimoFontanero.valoracion} · {ultimoFontanero.zona}</Text>
-              </View>
-              <View style={s.btnRepetir}>
-                <Text style={s.btnRepetirText}>Repetir →</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <Text style={s.listaLabel}>FONTANEROS CERCANOS</Text>
+<Text style={s.listaLabel}>FONTANEROS CERCANOS</Text>
         {fontanerosFiltrados.length === 0 ? (
           <View style={s.vacio}>
             <Text style={s.vacioEmoji}>🔍</Text>
@@ -295,12 +265,7 @@ const s = StyleSheet.create({
   btnCitaSub: { color: colors.textMuted, fontSize: 11, marginTop: 1 },
   lista: { flex: 1, paddingHorizontal: 16 },
   listaLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 12, marginTop: 4 },
-  ultimoWrap: { marginBottom: 20 },
-  ultimoTitulo: { color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 10 },
-  ultimoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, gap: 12, borderWidth: 1, borderColor: colors.border },
-  btnRepetir: { backgroundColor: colors.blueLight, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: colors.blue },
-  btnRepetirText: { color: colors.blue, fontSize: 13, fontWeight: '700' },
-  card: { backgroundColor: colors.bgCard, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+card: { backgroundColor: colors.bgCard, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
   mapaCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   cardActiva: { borderColor: colors.blue, backgroundColor: colors.blueLight },
   cardInactivo: { opacity: 0.4 },
