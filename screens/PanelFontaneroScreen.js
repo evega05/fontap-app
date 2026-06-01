@@ -281,6 +281,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                     <Text style={s.btnAceptarText}>✓ Aceptar</Text>
                   </TouchableOpacity>
                 </View>
+                <TouchableOpacity
+                  style={s.btnChat}
+                  onPress={() => navigation.navigate('Chat', { servicioId: t.id, otroNombre: t.cliente_nombre || t.cliente || 'Cliente' })}
+                >
+                  <Text style={s.btnChatText}>💬 Chatear con el cliente</Text>
+                </TouchableOpacity>
               </View>
             ))
           )
@@ -382,6 +388,8 @@ const s = StyleSheet.create({
   trabajoServicio: { color: '#aaa', fontSize: 13 },
   descripcion: { color: '#666', fontSize: 12, marginTop: 6, fontStyle: 'italic' },
   botonesRow: { flexDirection: 'row', gap: 10 },
+  btnChat: { marginTop: 8, backgroundColor: '#0A1F4E', borderRadius: 12, padding: 11, alignItems: 'center', borderWidth: 1, borderColor: '#276EF1' },
+  btnChatText: { color: '#276EF1', fontWeight: '600', fontSize: 13 },
   btnRechazar: { flex: 1, backgroundColor: '#2d1515', borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: '#ef4444' },
   btnRechazarText: { color: '#ef4444', fontWeight: 'bold', fontSize: 14 },
   btnAceptar: { flex: 1, backgroundColor: '#1a2e1a', borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: '#22c55e' },

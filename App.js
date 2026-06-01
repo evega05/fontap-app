@@ -13,6 +13,7 @@ import PanelFontaneroScreen from './screens/PanelFontaneroScreen';
 import PerfilFontaneroScreen from './screens/PerfilFontaneroScreen';
 import ReseñaScreen from './screens/ReseñaScreen';
 import PagoScreen from './screens/PagoScreen';
+import ChatScreen from './screens/ChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -57,6 +58,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="PerfilFontanero" component={PerfilFontaneroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Resena" component={ReseñaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Pago" component={PagoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

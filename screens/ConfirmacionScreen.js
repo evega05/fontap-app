@@ -125,6 +125,14 @@ export default function ConfirmacionScreen({ navigation, route }) {
             </TouchableOpacity>
           </>
         )}
+        {estado === 'aceptado' && servicioId && (
+          <TouchableOpacity
+            style={[s.btnPrimario, { marginBottom: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.blue }]}
+            onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Fontanero' })}
+          >
+            <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el fontanero</Text>
+          </TouchableOpacity>
+        )}
         {(estado === 'pendiente' || estado === 'aceptado') && (
           <TouchableOpacity style={s.btnPrimario} onPress={() => navigation.navigate('Mapa')}>
             <Text style={s.btnPrimarioText}>Volver al inicio</Text>

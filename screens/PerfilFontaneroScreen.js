@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../AuthContext'; 
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image } from 'react-native';
+import { useAuth } from '../AuthContext';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme';
+import axios from 'axios';
+
+const API = 'https://fontap-backend-production.up.railway.app';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const HORAS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
@@ -26,11 +29,13 @@ const HORARIO_INICIAL = [
 ];
 
 export default function PerfilFontaneroScreen({ navigation, route }) {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const nombre = route.params?.nombre || usuario?.nombre || 'Fontanero';
   const userId = route.params?.userId || usuario?.id || 1;
   const PERFIL_KEY = `perfil_${userId}`;
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const [tab, setTab] = useState('perfil');
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [servicios, setServicios] = useState(SERVICIOS_INICIALES);
   const [horario, setHorario] = useState(HORARIO_INICIAL);
   const [nuevoServicio, setNuevoServicio] = useState('');
@@ -51,14 +56,22 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const cargarDatos = async () => {
     try {
       const foto = await AsyncStorage.getItem(`${PERFIL_KEY}_fotoPerfil`);
-      const fotos = await AsyncStorage.getItem(`${PERFIL_KEY}_fotosTrabajos`);
       const desc = await AsyncStorage.getItem(`${PERFIL_KEY}_descripcion`);
       const zon = await AsyncStorage.getItem(`${PERFIL_KEY}_zona`);
       if (foto) setFotoPerfil(foto);
-      if (fotos) setFotosTrabajos(JSON.parse(fotos));
       if (desc) setDescripcion(desc);
       if (zon) setZona(zon);
     } catch (e) {}
+
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/fotos`, { headers });
+      if (res.data && Array.isArray(res.data)) {
+        setFotosTrabajos(res.data.map(f => ({ id: f.id, uri: f.url, desc: f.descripcion || 'Trabajo realizado' })));
+      }
+    } catch (e) {
+      const fotos = await AsyncStorage.getItem(`${PERFIL_KEY}_fotosTrabajos`).catch(() => null);
+      if (fotos) setFotosTrabajos(JSON.parse(fotos));
+    }
   };
 
   const subirFotoPerfil = async () => {
@@ -86,17 +99,41 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       aspect: [4, 3],
       quality: 0.8,
     });
-    if (!resultado.canceled) {
-      setFotosTrabajos(prev => [...prev, {
-        id: Date.now(),
-        uri: resultado.assets[0].uri,
-        desc: 'Trabajo realizado',
-      }]);
+    if (resultado.canceled) return;
+
+    const uri = resultado.assets[0].uri;
+    const localFoto = { id: Date.now(), uri, desc: 'Trabajo realizado' };
+    setFotosTrabajos(prev => [...prev, localFoto]);
+    setSubiendoFoto(true);
+
+    try {
+      const form = new FormData();
+      form.append('foto', { uri, name: 'foto.jpg', type: 'image/jpeg' });
+      form.append('descripcion', 'Trabajo realizado');
+      const res = await axios.post(`${API}/fontaneros/${userId}/fotos`, form, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+      });
+      const fotoBackend = res.data;
+      setFotosTrabajos(prev =>
+        prev.map(f => f.id === localFoto.id
+          ? { id: fotoBackend.id, uri: fotoBackend.url || uri, desc: fotoBackend.descripcion || 'Trabajo realizado' }
+          : f
+        )
+      );
+    } catch (e) {
+      await AsyncStorage.setItem(`${PERFIL_KEY}_fotosTrabajos`, JSON.stringify(
+        fotosTrabajos.concat(localFoto)
+      )).catch(() => {});
+    } finally {
+      setSubiendoFoto(false);
     }
   };
 
-  const eliminarFoto = (id) => {
+  const eliminarFoto = async (id) => {
     setFotosTrabajos(prev => prev.filter(f => f.id !== id));
+    try {
+      await axios.delete(`${API}/fontaneros/${userId}/fotos/${id}`, { headers });
+    } catch (e) {}
   };
 
   const toggleDia = (index) => {
@@ -137,9 +174,11 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const guardar = async () => {
     try {
       await AsyncStorage.setItem(`${PERFIL_KEY}_fotoPerfil`, fotoPerfil || '');
-      await AsyncStorage.setItem(`${PERFIL_KEY}_fotosTrabajos`, JSON.stringify(fotosTrabajos));
       await AsyncStorage.setItem(`${PERFIL_KEY}_descripcion`, descripcion);
       await AsyncStorage.setItem(`${PERFIL_KEY}_zona`, zona);
+    } catch (e) {}
+    try {
+      await axios.put(`${API}/fontaneros/${userId}/perfil`, { descripcion, zona }, { headers });
     } catch (e) {}
     setGuardado(true);
     setTimeout(() => setGuardado(false), 2000);
@@ -363,9 +402,13 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             <Text style={s.seccionTitulo}>Mis trabajos realizados</Text>
             <Text style={s.seccionSub}>Sube fotos para que los clientes vean la calidad de tu trabajo</Text>
 
-            <TouchableOpacity style={s.subirFotoBtn} onPress={subirFoto}>
-              <Text style={s.subirFotoEmoji}>📸</Text>
-              <Text style={s.subirFotoText}>Subir foto de trabajo</Text>
+            <TouchableOpacity style={s.subirFotoBtn} onPress={subirFoto} disabled={subiendoFoto}>
+              {subiendoFoto ? (
+                <ActivityIndicator color={colors.blue} style={{ marginBottom: 8 }} />
+              ) : (
+                <Text style={s.subirFotoEmoji}>📸</Text>
+              )}
+              <Text style={s.subirFotoText}>{subiendoFoto ? 'Subiendo...' : 'Subir foto de trabajo'}</Text>
               <Text style={s.subirFotoSub}>Toca para seleccionar de tu galería</Text>
             </TouchableOpacity>
 

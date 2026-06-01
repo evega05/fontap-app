@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
 
   const login = async (data) => {
     setToken(data.access_token);
-    setUsuario({ tipo: data.tipo_usuario, nombre: data.nombre });
+    setUsuario({ tipo: data.tipo_usuario, nombre: data.nombre, id: data.id });
   };
 
   const logout = () => {
