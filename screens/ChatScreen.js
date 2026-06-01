@@ -25,9 +25,10 @@ export default function ChatScreen({ navigation, route }) {
   const cargarMensajes = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/servicios/${servicioId}/mensajes`, { headers: hdrs() });
+      console.log('[Chat] mensajes recibidos:', JSON.stringify(res.data?.[0]));
       setMensajes(res.data || []);
     } catch (e) {
-      console.log('[Chat] ERROR cargando:', e?.response?.status, JSON.stringify(e?.response?.data));
+      console.log('[Chat] ERROR GET:', e?.response?.status, JSON.stringify(e?.response?.data));
     } finally {
       setCargando(false);
     }
@@ -52,14 +53,17 @@ export default function ChatScreen({ navigation, route }) {
     const tmp = { id: `tmp_${Date.now()}`, texto: msg, emisor_id: usuario?.id, creado_en: new Date().toISOString(), pendiente: true };
     setMensajes(prev => [...prev, tmp]);
     try {
-      await axios.post(
+      const body = { texto: msg };
+      console.log('[Chat] POST', `${API}/servicios/${servicioId}/mensajes`, 'body:', JSON.stringify(body), 'token:', !!token);
+      const res = await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
-        { texto: msg },
-        { headers: hdrs() }
+        body,
+        { headers: { ...hdrs(), 'Content-Type': 'application/json' } }
       );
+      console.log('[Chat] OK:', res.status, JSON.stringify(res.data));
       await cargarMensajes();
     } catch (e) {
-      console.log('[Chat] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
+      console.log('[Chat] ERROR POST:', e?.response?.status, JSON.stringify(e?.response?.data));
       setMensajes(prev => prev.map(m => m.id === tmp.id ? { ...m, error: true, pendiente: false } : m));
     } finally {
       setEnviando(false);
