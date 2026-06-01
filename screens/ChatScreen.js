@@ -20,10 +20,11 @@ export default function ChatScreen({ navigation, route }) {
   const flatListRef = useRef(null);
   const pollingRef = useRef(null);
 
+  const hdrs = () => token ? { Authorization: `Bearer ${token}` } : {};
+
   const cargarMensajes = useCallback(async () => {
     try {
-      const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`${API}/servicios/${servicioId}/mensajes`, { headers: hdrs });
+      const res = await axios.get(`${API}/servicios/${servicioId}/mensajes`, { headers: hdrs() });
       setMensajes(res.data || []);
     } catch (e) {
       console.log('[Chat] ERROR cargando:', e?.response?.status, JSON.stringify(e?.response?.data));
@@ -39,9 +40,8 @@ export default function ChatScreen({ navigation, route }) {
   }, [cargarMensajes]);
 
   useEffect(() => {
-    if (mensajes.length > 0) {
+    if (mensajes.length > 0)
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    }
   }, [mensajes.length]);
 
   const enviar = async () => {
@@ -49,31 +49,19 @@ export default function ChatScreen({ navigation, route }) {
     if (!contenido || enviando) return;
     setTexto('');
     setEnviando(true);
-
-    const tmp = {
-      id: `tmp_${Date.now()}`,
-      contenido,
-      remitente_tipo: usuario?.tipo,
-      creado_en: new Date().toISOString(),
-      pendiente: true,
-    };
+    const tmp = { id: `tmp_${Date.now()}`, contenido, remitente_tipo: usuario?.tipo, creado_en: new Date().toISOString(), pendiente: true };
     setMensajes(prev => [...prev, tmp]);
-
     try {
-      const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      console.log('[Chat] Enviando. servicioId:', servicioId, 'id:', usuario?.id, 'tipo:', usuario?.tipo, 'token:', !!token);
-      const res = await axios.post(
+      console.log('[Chat] POST body:', { contenido, remitente_tipo: usuario?.tipo });
+      await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
-        { contenido, remitente_tipo: usuario?.tipo, remitente_id: usuario?.id },
-        { headers: hdrs }
+        { contenido, remitente_tipo: usuario?.tipo },
+        { headers: hdrs() }
       );
-      console.log('[Chat] OK:', res.status);
       await cargarMensajes();
     } catch (e) {
-      console.log('[Chat] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
-      setMensajes(prev => prev.map(m =>
-        m.id === tmp.id ? { ...m, error: true, pendiente: false } : m
-      ));
+      console.log('[Chat] ERROR enviando:', e?.response?.status, JSON.stringify(e?.response?.data));
+      setMensajes(prev => prev.map(m => m.id === tmp.id ? { ...m, error: true, pendiente: false } : m));
     } finally {
       setEnviando(false);
     }
@@ -86,9 +74,7 @@ export default function ChatScreen({ navigation, route }) {
     return (
       <View style={[s.msgRow, mio ? s.msgRowMio : s.msgRowOtro]}>
         <View style={[s.bubble, mio ? s.bubbleMio : s.bubbleOtro, item.error && s.bubbleError]}>
-          <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>
-            {item.contenido}
-          </Text>
+          <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>{item.contenido}</Text>
           <Text style={[s.bubbleHora, mio ? s.bubbleHoraMio : s.bubbleHoraOtro]}>
             {item.pendiente ? '⏳' : item.error ? '⚠️' : formatHora(item.creado_en)}
           </Text>
@@ -98,11 +84,7 @@ export default function ChatScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
           <Text style={s.backText}>←</Text>
@@ -119,9 +101,7 @@ export default function ChatScreen({ navigation, route }) {
       </View>
 
       {cargando ? (
-        <View style={s.cargando}>
-          <ActivityIndicator color={colors.blue} size="large" />
-        </View>
+        <View style={s.cargando}><ActivityIndicator color={colors.blue} size="large" /></View>
       ) : (
         <FlatList
           ref={flatListRef}
@@ -133,7 +113,6 @@ export default function ChatScreen({ navigation, route }) {
             <View style={s.vacio}>
               <Text style={s.vacioEmoji}>💬</Text>
               <Text style={s.vacioText}>Inicia la conversación</Text>
-              <Text style={s.vacioSub}>Los mensajes aparecerán aquí</Text>
             </View>
           }
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
@@ -163,21 +142,15 @@ export default function ChatScreen({ navigation, route }) {
   );
 }
 
-function formatHora(isoString) {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  } catch { return ''; }
+function formatHora(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); }
+  catch { return ''; }
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', paddingTop: 50, paddingBottom: 14,
-    paddingHorizontal: 16, backgroundColor: colors.bgCard,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 50, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: colors.bgCard, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { marginRight: 12, padding: 4 },
   backText: { color: colors.blue, fontSize: 22, fontWeight: '600' },
   headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -202,18 +175,9 @@ const s = StyleSheet.create({
   bubbleHoraOtro: { color: colors.textMuted },
   vacio: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   vacioEmoji: { fontSize: 48, marginBottom: 12 },
-  vacioText: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 6 },
-  vacioSub: { color: colors.textMuted, fontSize: 13 },
-  inputRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 10,
-    padding: 12, paddingBottom: 28,
-    backgroundColor: colors.bgCard, borderTopWidth: 1, borderTopColor: colors.border,
-  },
-  input: {
-    flex: 1, backgroundColor: colors.bgCard2, borderRadius: 22,
-    paddingHorizontal: 16, paddingVertical: 10, color: colors.text,
-    fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: colors.border2,
-  },
+  vacioText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 12, paddingBottom: 28, backgroundColor: colors.bgCard, borderTopWidth: 1, borderTopColor: colors.border },
+  input: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, color: colors.text, fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: colors.border2 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled: { backgroundColor: colors.blueLight, opacity: 0.5 },
   sendIcon: { color: '#fff', fontSize: 16, fontWeight: 'bold' },

@@ -8,7 +8,8 @@ const API = 'https://fontap-backend-production.up.railway.app';
 const ESTADOS = {
   pendiente: { emoji: '🔍', titulo: 'Buscando fontanero...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
   aceptado: { emoji: '✅', titulo: '¡Fontanero en camino!', sub: 'El fontanero ha aceptado tu solicitud', color: '#05A357', paso: 2 },
-  precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'El fontanero ha terminado el trabajo', color: '#276EF1', paso: 3 },
+  precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'Revisa el precio y acepta para pagar', color: '#276EF1', paso: 3 },
+  pago_pendiente: { emoji: '💵', titulo: 'Pendiente de pago', sub: 'El fontanero espera confirmación', color: '#7356BF', paso: 3 },
   pagado: { emoji: '🎉', titulo: '¡Servicio completado!', sub: 'Gracias por usar FonTap', color: '#05A357', paso: 4 },
 };
 
@@ -16,24 +17,23 @@ export default function ConfirmacionScreen({ navigation, route }) {
   const { fontanero, tipo, urgente, servicioId, precio: precioProp, clienteId } = route.params || {};
   const [estado, setEstado] = useState('pendiente');
   const [precio, setPrecio] = useState(precioProp || null);
+  const [fontaneroNombre, setFontaneroNombre] = useState(fontanero?.nombre || null);
 
   useEffect(() => {
     if (!servicioId) return;
-    console.log('[Confirmacion] Iniciando polling para servicioId:', servicioId);
     const intervalo = setInterval(async () => {
       try {
         const res = await axios.get(`${API}/servicios/${servicioId}`);
-        console.log('[Confirmacion] estado:', res.data.estado, 'precio:', res.data.precio);
         setEstado(res.data.estado || 'pendiente');
         if (res.data.precio) setPrecio(res.data.precio);
-      } catch (e) {
-        console.log('[Confirmacion] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
-      }
+        if (res.data.fontanero_nombre) setFontaneroNombre(res.data.fontanero_nombre);
+      } catch (e) {}
     }, 4000);
     return () => clearInterval(intervalo);
   }, [servicioId]);
 
   const estadoActual = ESTADOS[estado] || ESTADOS.pendiente;
+  const esActivo = ['aceptado', 'precio_enviado', 'pago_pendiente'].includes(estado);
 
   return (
     <View style={s.container}>
@@ -51,7 +51,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
         <Text style={s.estadoSub}>{estadoActual.sub}</Text>
 
         <View style={s.progresoWrap}>
-          {[1, 2, 3, 4].map(p => (
+          {[1,2,3,4].map(p => (
             <View key={p} style={s.progresoItem}>
               <View style={[s.progresoPunto, estadoActual.paso >= p && { backgroundColor: estadoActual.color }]}>
                 <Text style={s.progresoPuntoText}>{p}</Text>
@@ -64,11 +64,11 @@ export default function ConfirmacionScreen({ navigation, route }) {
         <View style={s.card}>
           <View style={s.fila}>
             <Text style={s.label}>Servicio</Text>
-            <Text style={s.valor}>{tipo?.emoji} {tipo?.nombre}</Text>
+            <Text style={s.valor}>{tipo?.nombre || tipo}</Text>
           </View>
           <View style={s.fila}>
             <Text style={s.label}>Fontanero</Text>
-            <Text style={s.valor}>{fontanero?.nombre || 'Más cercano'}</Text>
+            <Text style={s.valor}>{fontaneroNombre || 'Asignando...'}</Text>
           </View>
           <View style={s.fila}>
             <Text style={s.label}>Tipo</Text>
@@ -76,29 +76,8 @@ export default function ConfirmacionScreen({ navigation, route }) {
           </View>
           <View style={[s.fila, { borderBottomWidth: 0 }]}>
             <Text style={s.label}>Precio</Text>
-            {precio ? (
-              <Text style={s.precioValor}>{precio}€</Text>
-            ) : (
-              <Text style={s.precioEspera}>Pendiente</Text>
-            )}
+            {precio ? <Text style={s.precioValor}>{precio}€</Text> : <Text style={s.precioEspera}>Pendiente</Text>}
           </View>
-        </View>
-
-        <View style={s.pasos}>
-          <Text style={s.pasosTitulo}>¿Qué pasa ahora?</Text>
-          {[
-            { num: 1, texto: 'El fontanero recibe tu solicitud', activo: estadoActual.paso >= 1 },
-            { num: 2, texto: 'Acepta y va a tu domicilio', activo: estadoActual.paso >= 2 },
-            { num: 3, texto: 'Repara y te envía el precio', activo: estadoActual.paso >= 3 },
-            { num: 4, texto: 'Pagas y dejas una reseña', activo: estadoActual.paso >= 4 },
-          ].map(p => (
-            <View key={p.num} style={s.paso}>
-              <View style={[s.pasoNumWrap, p.activo && { backgroundColor: estadoActual.color }]}>
-                <Text style={s.pasoNum}>{p.activo ? '✓' : p.num}</Text>
-              </View>
-              <Text style={[s.pasoText, p.activo && { color: colors.text }]}>{p.texto}</Text>
-            </View>
-          ))}
         </View>
       </ScrollView>
 
@@ -118,30 +97,34 @@ export default function ConfirmacionScreen({ navigation, route }) {
             </TouchableOpacity>
           </>
         )}
-        {estado === 'pagado' && (
-          <>
-            <TouchableOpacity style={s.btnResena}
-              onPress={() => navigation.navigate('Resena', { servicioId, fontanero, servicio: tipo })}>
-              <Text style={s.btnResenaText}>⭐ Dejar reseña</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.btnPrimario, { marginTop: 10 }]} onPress={() => navigation.navigate('Mapa')}>
-              <Text style={s.btnPrimarioText}>Volver al inicio</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        {estado === 'aceptado' && servicioId && (
+
+        {esActivo && servicioId && (
           <TouchableOpacity
-            style={[s.btnPrimario, { marginBottom: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.blue }]}
-            onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Fontanero' })}
-          >
-            <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el fontanero</Text>
+            style={[s.btnChat]}
+            onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontaneroNombre || 'Fontanero' })}>
+            <Text style={s.btnChatText}>💬 Chatear con el fontanero</Text>
           </TouchableOpacity>
         )}
-        {(estado === 'pendiente' || estado === 'aceptado') && (
-          <TouchableOpacity style={s.btnPrimario} onPress={() => navigation.navigate('Mapa')}>
+
+        {estado === 'pagado' && (
+          <TouchableOpacity style={s.btnResena}
+            onPress={() => navigation.navigate('Resena', { servicioId, fontanero, servicio: tipo })}>
+            <Text style={s.btnResenaText}>⭐ Dejar reseña</Text>
+          </TouchableOpacity>
+        )}
+
+        {estado !== 'pagado' && (
+          <TouchableOpacity style={[s.btnPrimario, { marginTop: 10 }]} onPress={() => navigation.navigate('Mapa')}>
             <Text style={s.btnPrimarioText}>Volver al inicio</Text>
           </TouchableOpacity>
         )}
+
+        {estado === 'pagado' && (
+          <TouchableOpacity style={[s.btnPrimario, { marginTop: 10 }]} onPress={() => navigation.navigate('Mapa')}>
+            <Text style={s.btnPrimarioText}>Volver al inicio</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[s.btnPrimario, { marginTop: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }]}
           onPress={() => navigation.navigate('MisServicios', { clienteId })}>
@@ -170,24 +153,20 @@ const s = StyleSheet.create({
   fila: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   label: { color: colors.textMuted, fontSize: 14 },
   valor: { color: colors.text, fontSize: 14, fontWeight: '500' },
-  precioValor: { color: '#4ade80', fontSize: 18, fontWeight: 'bold' },
+  precioValor: { color: colors.green, fontSize: 18, fontWeight: 'bold' },
   precioEspera: { color: colors.textMuted, fontSize: 14, fontStyle: 'italic' },
-  pasos: { width: '100%', backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: colors.border },
-  pasosTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 16 },
-  paso: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  pasoNumWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.bgCard3, justifyContent: 'center', alignItems: 'center' },
-  pasoNum: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  pasoText: { color: colors.textMuted, fontSize: 13, flex: 1 },
   footer: { padding: 20, paddingBottom: 36 },
   precioCard: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 16, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.green },
   precioCardTitulo: { color: colors.green, fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  precioCardValor: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
+  precioCardValor: { color: colors.text, fontSize: 32, fontWeight: 'bold' },
   btnPago: { backgroundColor: colors.green, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 },
   btnPagoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   btnRechazar: { backgroundColor: colors.redLight, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.red },
   btnRechazarText: { color: colors.red, fontWeight: 'bold', fontSize: 16 },
-  btnResena: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#f59e0b' },
-  btnResenaText: { color: '#f59e0b', fontWeight: 'bold', fontSize: 16 },
+  btnChat: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.blue },
+  btnChatText: { color: colors.blue, fontWeight: 'bold', fontSize: 16 },
+  btnResena: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.amber },
+  btnResenaText: { color: colors.amber, fontWeight: 'bold', fontSize: 16 },
   btnPrimario: { backgroundColor: colors.blue, borderRadius: 14, padding: 16, alignItems: 'center' },
   btnPrimarioText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });
