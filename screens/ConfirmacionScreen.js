@@ -19,13 +19,16 @@ export default function ConfirmacionScreen({ navigation, route }) {
 
   useEffect(() => {
     if (!servicioId) return;
+    console.log('[Confirmacion] Iniciando polling para servicioId:', servicioId);
     const intervalo = setInterval(async () => {
       try {
         const res = await axios.get(`${API}/servicios/${servicioId}`);
-        const nuevoEstado = res.data.estado || 'pendiente';
-        setEstado(nuevoEstado);
+        console.log('[Confirmacion] estado:', res.data.estado, 'precio:', res.data.precio);
+        setEstado(res.data.estado || 'pendiente');
         if (res.data.precio) setPrecio(res.data.precio);
-      } catch (e) {}
+      } catch (e) {
+        console.log('[Confirmacion] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
+      }
     }, 4000);
     return () => clearInterval(intervalo);
   }, [servicioId]);
@@ -118,10 +121,10 @@ export default function ConfirmacionScreen({ navigation, route }) {
         {estado === 'pagado' && (
           <>
             <TouchableOpacity style={s.btnResena}
-              onPress={() => navigation.navigate('Resena', { fontanero, tipo })}>
+              onPress={() => navigation.navigate('Resena', { servicioId, fontanero, servicio: tipo })}>
               <Text style={s.btnResenaText}>⭐ Dejar reseña</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.btnPrimario} onPress={() => navigation.navigate('Mapa')}>
+            <TouchableOpacity style={[s.btnPrimario, { marginTop: 10 }]} onPress={() => navigation.navigate('Mapa')}>
               <Text style={s.btnPrimarioText}>Volver al inicio</Text>
             </TouchableOpacity>
           </>
@@ -139,7 +142,8 @@ export default function ConfirmacionScreen({ navigation, route }) {
             <Text style={s.btnPrimarioText}>Volver al inicio</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={[s.btnPrimario, { marginTop: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }]}
+        <TouchableOpacity
+          style={[s.btnPrimario, { marginTop: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }]}
           onPress={() => navigation.navigate('MisServicios', { clienteId })}>
           <Text style={[s.btnPrimarioText, { color: colors.textMuted }]}>📋 Ver todos mis servicios</Text>
         </TouchableOpacity>
@@ -181,7 +185,7 @@ const s = StyleSheet.create({
   btnPago: { backgroundColor: colors.green, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 },
   btnPagoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   btnRechazar: { backgroundColor: colors.redLight, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.red },
-  btnRechazarText: { color: '#ef4444', fontWeight: 'bold', fontSize: 16 },
+  btnRechazarText: { color: colors.red, fontWeight: 'bold', fontSize: 16 },
   btnResena: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#f59e0b' },
   btnResenaText: { color: '#f59e0b', fontWeight: 'bold', fontSize: 16 },
   btnPrimario: { backgroundColor: colors.blue, borderRadius: 14, padding: 16, alignItems: 'center' },

@@ -12,7 +12,6 @@ const API = 'https://fontap-backend-production.up.railway.app';
 export default function ChatScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const { servicioId, otroNombre } = route.params || {};
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState('');
@@ -20,18 +19,14 @@ export default function ChatScreen({ navigation, route }) {
   const [enviando, setEnviando] = useState(false);
   const flatListRef = useRef(null);
   const pollingRef = useRef(null);
-  const ultimoIdRef = useRef(0);
 
   const cargarMensajes = useCallback(async () => {
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(`${API}/servicios/${servicioId}/mensajes`, { headers: hdrs });
-      const nuevos = res.data || [];
-      setMensajes(nuevos);
-      if (nuevos.length > 0) {
-        ultimoIdRef.current = nuevos[nuevos.length - 1].id;
-      }
+      setMensajes(res.data || []);
     } catch (e) {
+      console.log('[Chat] ERROR cargando:', e?.response?.status, JSON.stringify(e?.response?.data));
     } finally {
       setCargando(false);
     }
@@ -55,27 +50,29 @@ export default function ChatScreen({ navigation, route }) {
     setTexto('');
     setEnviando(true);
 
-    const mensajeTemporal = {
+    const tmp = {
       id: `tmp_${Date.now()}`,
       contenido,
       remitente_tipo: usuario?.tipo,
-      remitente_nombre: usuario?.nombre,
       creado_en: new Date().toISOString(),
       pendiente: true,
     };
-    setMensajes(prev => [...prev, mensajeTemporal]);
+    setMensajes(prev => [...prev, tmp]);
 
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.post(
+      console.log('[Chat] Enviando. servicioId:', servicioId, 'id:', usuario?.id, 'tipo:', usuario?.tipo, 'token:', !!token);
+      const res = await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
         { contenido, remitente_tipo: usuario?.tipo, remitente_id: usuario?.id },
         { headers: hdrs }
       );
+      console.log('[Chat] OK:', res.status);
       await cargarMensajes();
     } catch (e) {
+      console.log('[Chat] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
       setMensajes(prev => prev.map(m =>
-        m.id === mensajeTemporal.id ? { ...m, error: true, pendiente: false } : m
+        m.id === tmp.id ? { ...m, error: true, pendiente: false } : m
       ));
     } finally {
       setEnviando(false);
@@ -152,7 +149,6 @@ export default function ChatScreen({ navigation, route }) {
           onChangeText={setTexto}
           multiline
           maxLength={500}
-          onSubmitEditing={enviar}
           blurOnSubmit={false}
         />
         <TouchableOpacity
@@ -172,9 +168,7 @@ function formatHora(isoString) {
   try {
     const d = new Date(isoString);
     return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '';
-  }
+  } catch { return ''; }
 }
 
 const s = StyleSheet.create({
@@ -187,10 +181,7 @@ const s = StyleSheet.create({
   backBtn: { marginRight: 12, padding: 4 },
   backText: { color: colors.blue, fontSize: 22, fontWeight: '600' },
   headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerAvatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center',
-  },
+  headerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
   headerAvatarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   headerNombre: { color: colors.text, fontWeight: '600', fontSize: 15 },
   headerSub: { color: colors.textMuted, fontSize: 12 },
@@ -199,10 +190,7 @@ const s = StyleSheet.create({
   msgRow: { marginBottom: 8, flexDirection: 'row' },
   msgRowMio: { justifyContent: 'flex-end' },
   msgRowOtro: { justifyContent: 'flex-start' },
-  bubble: {
-    maxWidth: '78%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1,
-  },
+  bubble: { maxWidth: '78%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1 },
   bubbleMio: { backgroundColor: colors.blue, borderColor: colors.blue, borderBottomRightRadius: 4 },
   bubbleOtro: { backgroundColor: colors.bgCard, borderColor: colors.border, borderBottomLeftRadius: 4 },
   bubbleError: { borderColor: colors.red, opacity: 0.7 },
@@ -226,10 +214,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, color: colors.text,
     fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: colors.border2,
   },
-  sendBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blue,
-    justifyContent: 'center', alignItems: 'center',
-  },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled: { backgroundColor: colors.blueLight, opacity: 0.5 },
   sendIcon: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
