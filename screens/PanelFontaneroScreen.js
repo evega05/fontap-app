@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert, Dimensions } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
+import { LineChart } from 'react-native-chart-kit';
+
+const ANCHO = Dimensions.get('window').width;
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -15,9 +18,10 @@ function getSaludo() {
 export default function PanelFontaneroScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const nombre = usuario?.nombre || route.params?.nombre || 'Fontanero';
+  const userId = route.params?.userId || usuario?.id || 1;
 
   const [disponible, setDisponible] = useState(true);
-  const [disponible24h, setDisponible24h] = useState(false); // ✅ FIX: opción 24h
+  const [disponible24h, setDisponible24h] = useState(false);
   const [tab, setTab] = useState('pendientes');
   const [pendientes, setPendientes] = useState([]);
   const [completados, setCompletados] = useState([]);
@@ -27,61 +31,43 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [cargando, setCargando] = useState(true);
 
   const pollingRef = useRef(null);
-
-  // ✅ FIX: Headers con token para autenticación
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-  // ✅ FIX: Cargar solicitudes reales del backend mediante polling
   const cargarSolicitudes = useCallback(async () => {
-    if (!usuario?.id) return;
     try {
-      const res = await axios.get(`${API}/fontaneros/${usuario.id}/solicitudes`, { headers });
+      const res = await axios.get(`${API}/fontaneros/${userId}/solicitudes`, { headers });
       const todas = res.data || [];
       setPendientes(todas.filter(s => s.estado === 'pendiente'));
       setCompletados(todas.filter(s => s.estado === 'completado' || s.estado === 'pagado'));
-    } catch (e) {
-      // Si el endpoint falla, no mostrar error crítico (puede ser primera carga)
-    } finally {
+    } catch (e) {}
+    finally {
       setCargando(false);
     }
-  }, [usuario?.id, token]);
+  }, [userId, token]);
 
-  // ✅ FIX: Polling cada 5 segundos para recibir solicitudes en tiempo real
   useEffect(() => {
     cargarSolicitudes();
     pollingRef.current = setInterval(cargarSolicitudes, 5000);
     return () => clearInterval(pollingRef.current);
   }, [cargarSolicitudes]);
 
-  // ✅ FIX: Cambiar disponibilidad en el backend
   const toggleDisponible = async (valor) => {
     setDisponible(valor);
     try {
-      await axios.put(`${API}/fontaneros/${usuario?.id}/disponibilidad`,
-        { disponible: valor },
-        { headers }
-      );
+      await axios.put(`${API}/fontaneros/${userId}/disponibilidad`, { disponible: valor }, { headers });
     } catch (e) {}
   };
 
-  // ✅ FIX: Toggle 24h — actualiza en backend
   const toggle24h = async (valor) => {
     setDisponible24h(valor);
     try {
-      await axios.put(`${API}/fontaneros/${usuario?.id}/disponibilidad`,
-        { disponible: disponible, disponible_24h: valor },
-        { headers }
-      );
+      await axios.put(`${API}/fontaneros/${userId}/disponibilidad`, { disponible, disponible_24h: valor }, { headers });
     } catch (e) {}
   };
 
-  // ✅ FIX: Aceptar solicitud real del backend
   const aceptar = async (trabajo) => {
     try {
-      await axios.put(`${API}/servicios/${trabajo.id}/aceptar`,
-        null,
-        { params: { fontanero_id: usuario?.id }, headers }
-      );
+      await axios.put(`${API}/servicios/${trabajo.id}/aceptar`, null, { params: { fontanero_id: userId }, headers });
       setPendientes(prev => prev.filter(t => t.id !== trabajo.id));
       setTrabajoActivo(trabajo);
       setMostrarPrecio(true);
@@ -90,7 +76,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
-  // ✅ FIX: Rechazar solicitud real del backend
   const rechazar = async (id) => {
     try {
       await axios.put(`${API}/servicios/${id}/rechazar`, null, { headers });
@@ -100,14 +85,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
-  // ✅ FIX: Enviar precio al cliente — guarda en backend para que cliente lo vea
   const enviarPrecio = async () => {
     if (!precioFinal || !trabajoActivo) return;
     try {
-      await axios.put(`${API}/servicios/${trabajoActivo.id}/precio`,
-        { precio: parseInt(precioFinal) },
-        { headers }
-      );
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/precio`, { precio: parseInt(precioFinal) }, { headers });
       setCompletados(prev => [{
         id: trabajoActivo.id,
         cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
@@ -129,9 +110,17 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   const gananciasTotal = completados.reduce((sum, t) => sum + (t.precio || 0), 0);
 
+  const datosGrafico = {
+    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+    datasets: [{
+      data: [45, 80, 60, 120, 90, 150, gananciasTotal > 0 ? gananciasTotal : 75],
+      color: (opacity = 1) => `rgba(39, 110, 241, ${opacity})`,
+      strokeWidth: 2,
+    }],
+  };
+
   return (
     <View style={s.container}>
-      {/* Modal enviar precio */}
       {mostrarPrecio && trabajoActivo && (
         <View style={s.modalOverlay}>
           <View style={s.modal}>
@@ -152,11 +141,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               />
               <Text style={s.modalEuro}>€</Text>
             </View>
-            <TouchableOpacity
-              style={[s.modalBtn, !precioFinal && s.modalBtnDesactivado]}
-              disabled={!precioFinal}
-              onPress={enviarPrecio}
-            >
+            <TouchableOpacity style={[s.modalBtn, !precioFinal && s.modalBtnDesactivado]} disabled={!precioFinal} onPress={enviarPrecio}>
               <Text style={s.modalBtnText}>Enviar precio al cliente →</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.modalCancelar} onPress={() => setMostrarPrecio(false)}>
@@ -166,58 +151,41 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Header */}
       <View style={s.header}>
         <View>
           <Text style={s.saludo}>{getSaludo()} 👋</Text>
           <Text style={s.nombre}>{nombre}</Text>
+          <Text style={s.idText}>ID: {userId}</Text>
         </View>
         <TouchableOpacity style={s.perfilBtn} onPress={() => navigation.navigate('PerfilFontanero', { nombre })}>
           <Text style={s.perfilLetra}>{nombre[0]}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Disponibilidad */}
       <View style={s.disponibilidadCard}>
         <View style={s.disponibilidadLeft}>
           <View style={[s.indicador, disponible ? s.indicadorVerde : s.indicadorRojo]} />
           <View>
-            <Text style={s.disponibilidadTitulo}>
-              {disponible ? 'Visible para clientes' : 'No disponible'}
-            </Text>
-            <Text style={s.disponibilidadSub}>
-              {disponible ? 'Estás recibiendo solicitudes' : 'Activa para recibir trabajos'}
-            </Text>
+            <Text style={s.disponibilidadTitulo}>{disponible ? 'Visible para clientes' : 'No disponible'}</Text>
+            <Text style={s.disponibilidadSub}>{disponible ? 'Estás recibiendo solicitudes' : 'Activa para recibir trabajos'}</Text>
           </View>
         </View>
-        <Switch
-          value={disponible}
-          onValueChange={toggleDisponible}
-          trackColor={{ false: '#2a2a3e', true: '#1e3a5f' }}
-          thumbColor={disponible ? '#3b82f6' : '#555'}
-        />
+        <Switch value={disponible} onValueChange={toggleDisponible}
+          trackColor={{ false: '#2a2a3e', true: '#1e3a5f' }} thumbColor={disponible ? '#3b82f6' : '#555'} />
       </View>
 
-      {/* ✅ FIX: Opción 24h */}
       <View style={[s.disponibilidadCard, { marginTop: -8 }]}>
         <View style={s.disponibilidadLeft}>
           <Text style={{ fontSize: 20, marginRight: 10 }}>⚡</Text>
           <View>
             <Text style={s.disponibilidadTitulo}>Servicio 24 horas</Text>
-            <Text style={s.disponibilidadSub}>
-              {disponible24h ? 'Aceptas urgencias nocturnas' : 'Solo horario normal'}
-            </Text>
+            <Text style={s.disponibilidadSub}>{disponible24h ? 'Aceptas urgencias nocturnas' : 'Solo horario normal'}</Text>
           </View>
         </View>
-        <Switch
-          value={disponible24h}
-          onValueChange={toggle24h}
-          trackColor={{ false: '#2a2a3e', true: '#2d1a3e' }}
-          thumbColor={disponible24h ? '#a855f7' : '#555'}
-        />
+        <Switch value={disponible24h} onValueChange={toggle24h}
+          trackColor={{ false: '#2a2a3e', true: '#2d1a3e' }} thumbColor={disponible24h ? '#a855f7' : '#555'} />
       </View>
 
-      {/* Stats */}
       <View style={s.statsRow}>
         <View style={s.statCard}>
           <Text style={s.statEmoji}>⭐</Text>
@@ -236,13 +204,36 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Tabs */}
+      <View style={s.graficoWrap}>
+        <View style={s.graficoHeader}>
+          <Text style={s.graficoTitulo}>💰 Ingresos esta semana</Text>
+          <Text style={s.graficoTotal}>{gananciasTotal}€</Text>
+        </View>
+        <LineChart
+          data={datosGrafico}
+          width={ANCHO - 40}
+          height={140}
+          chartConfig={{
+            backgroundColor: '#0D0D1F',
+            backgroundGradientFrom: '#0D0D1F',
+            backgroundGradientTo: '#0D0D1F',
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(39, 110, 241, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(128, 128, 160, ${opacity})`,
+            propsForDots: { r: '4', strokeWidth: '2', stroke: '#276EF1' },
+            propsForBackgroundLines: { stroke: '#1E1E3F' },
+          }}
+          bezier
+          style={{ borderRadius: 14, marginTop: 8 }}
+          withInnerLines={true}
+          withOuterLines={false}
+        />
+      </View>
+
       <View style={s.tabs}>
         <TouchableOpacity style={[s.tab, tab === 'pendientes' && s.tabActivo]} onPress={() => setTab('pendientes')}>
           <Text style={[s.tabText, tab === 'pendientes' && s.tabTextActivo]}>Pendientes</Text>
-          {pendientes.length > 0 && (
-            <View style={s.badge}><Text style={s.badgeText}>{pendientes.length}</Text></View>
-          )}
+          {pendientes.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{pendientes.length}</Text></View>}
         </TouchableOpacity>
         <TouchableOpacity style={[s.tab, tab === 'completados' && s.tabActivo]} onPress={() => setTab('completados')}>
           <Text style={[s.tabText, tab === 'completados' && s.tabTextActivo]}>Completados</Text>
@@ -271,22 +262,16 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                   </View>
                   <View style={s.trabajoInfo}>
                     <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
-                    <Text style={s.trabajoZona}>📍 {t.zona || 'Bilbao'} · 🕐 {t.urgente ? 'Ahora' : t.hora || '—'}</Text>
+                    <Text style={s.trabajoZona}>📍 {t.zona || 'Bilbao'} · 🕐 {t.urgente ? 'Ahora' : '—'}</Text>
                   </View>
-                  {t.urgente && (
-                    <View style={s.urgenteBadge}>
-                      <Text style={s.urgenteText}>⚡ URGENTE</Text>
-                    </View>
-                  )}
+                  {t.urgente && <View style={s.urgenteBadge}><Text style={s.urgenteText}>⚡ URGENTE</Text></View>}
                 </View>
                 <View style={s.trabajoDetalle}>
                   <View style={s.servicioRow}>
                     <Text style={s.servicioEmoji}>🔧</Text>
                     <Text style={s.trabajoServicio}>{t.tipo || t.servicio}</Text>
                   </View>
-                  {t.descripcion ? (
-                    <Text style={s.descripcion}>{t.descripcion}</Text>
-                  ) : null}
+                  {t.descripcion ? <Text style={s.descripcion}>{t.descripcion}</Text> : null}
                 </View>
                 <View style={s.botonesRow}>
                   <TouchableOpacity style={s.btnRechazar} onPress={() => rechazar(t.id)}>
@@ -321,15 +306,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                 </View>
                 <View style={s.valoracionRow}>
                   <Text style={s.trabajoServicio}>{t.tipo || t.servicio}</Text>
-                  {t.pendientePago && (
-                    <View style={s.pendienteBadge}>
-                      <Text style={s.pendienteText}>⏳ Pendiente pago</Text>
-                    </View>
-                  )}
+                  {t.pendientePago && <View style={s.pendienteBadge}><Text style={s.pendienteText}>⏳ Pendiente pago</Text></View>}
                   <View style={s.estrellasRow}>
-                    {[1,2,3,4,5].map(i => (
-                      <Text key={i} style={s.estrella}>{i <= (t.valoracion || 0) ? '⭐' : '☆'}</Text>
-                    ))}
+                    {[1,2,3,4,5].map(i => <Text key={i} style={s.estrella}>{i <= (t.valoracion || 0) ? '⭐' : '☆'}</Text>)}
                   </View>
                 </View>
               </View>
@@ -360,6 +339,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
   saludo: { color: '#aaa', fontSize: 13, marginBottom: 2 },
   nombre: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+  idText: { color: '#3b82f6', fontSize: 11, marginTop: 2 },
   perfilBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
   perfilLetra: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
   disponibilidadCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e1e2e', marginHorizontal: 20, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a3e' },
@@ -413,4 +393,8 @@ const s = StyleSheet.create({
   pendienteText: { color: '#3b82f6', fontSize: 11, fontWeight: '600' },
   estrellasRow: { flexDirection: 'row' },
   estrella: { fontSize: 13 },
+  graficoWrap: { backgroundColor: '#0D0D1F', borderRadius: 16, padding: 16, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderColor: '#1E1E3F' },
+  graficoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  graficoTitulo: { color: '#8080A0', fontSize: 13, fontWeight: '600' },
+  graficoTotal: { color: '#4ade80', fontSize: 18, fontWeight: 'bold' },
 });

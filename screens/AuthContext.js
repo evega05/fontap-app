@@ -6,9 +6,8 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [token, setToken] = useState(null);
-  const [cargando, setCargando] = useState(true); // ← NUEVO: esperar a cargar sesión
+  const [cargando, setCargando] = useState(true);
 
-  // ✅ FIX 1: Cargar sesión guardada al abrir la app
   useEffect(() => {
     const cargarSesion = async () => {
       try {
@@ -19,7 +18,6 @@ export function AuthProvider({ children }) {
           setUsuario(JSON.parse(usuarioGuardado));
         }
       } catch (e) {
-        console.log('Error cargando sesión:', e);
       } finally {
         setCargando(false);
       }
@@ -30,10 +28,11 @@ export function AuthProvider({ children }) {
   const login = async (data) => {
     const usuarioData = {
       tipo: data.tipo_usuario,
-      nombre: data.nombre,
-      id: data.id,           // ← NUEVO: guardar id para llamadas al backend
-      email: data.email,
+      nombre: data.nombre || 'Usuario',
+      id: data.id || data.usuario_id || null,
+      email: data.email || '',
     };
+    console.log('GUARDANDO USUARIO:', JSON.stringify(usuarioData));
     setToken(data.access_token);
     setUsuario(usuarioData);
     try {

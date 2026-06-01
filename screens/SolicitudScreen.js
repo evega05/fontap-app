@@ -34,7 +34,7 @@ export default function SolicitudScreen({ navigation, route }) {
     descripcion,
     urgente,
     fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
-  }, { params: { cliente_id: usuario?.id } }); // ← id real del usuario
+  }, { params: { cliente_id: route.params?.clienteId || usuario?.id || 1 } }); // ← id real del usuario
 
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;

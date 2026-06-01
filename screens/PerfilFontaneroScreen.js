@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../AuthContext'; 
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme';
@@ -25,7 +26,10 @@ const HORARIO_INICIAL = [
 ];
 
 export default function PerfilFontaneroScreen({ navigation, route }) {
-  const nombre = route.params?.nombre || 'Fontanero';
+  const { usuario } = useAuth();
+  const nombre = route.params?.nombre || usuario?.nombre || 'Fontanero';
+  const userId = route.params?.userId || usuario?.id || 1;
+  const PERFIL_KEY = `perfil_${userId}`;
   const [tab, setTab] = useState('perfil');
   const [servicios, setServicios] = useState(SERVICIOS_INICIALES);
   const [horario, setHorario] = useState(HORARIO_INICIAL);
@@ -46,10 +50,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   const cargarDatos = async () => {
     try {
-      const foto = await AsyncStorage.getItem('fotoPerfil');
-      const fotos = await AsyncStorage.getItem('fotosTrabajos');
-      const desc = await AsyncStorage.getItem('descripcion');
-      const zon = await AsyncStorage.getItem('zona');
+      const foto = await AsyncStorage.getItem(`${PERFIL_KEY}_fotoPerfil`);
+      const fotos = await AsyncStorage.getItem(`${PERFIL_KEY}_fotosTrabajos`);
+      const desc = await AsyncStorage.getItem(`${PERFIL_KEY}_descripcion`);
+      const zon = await AsyncStorage.getItem(`${PERFIL_KEY}_zona`);
       if (foto) setFotoPerfil(foto);
       if (fotos) setFotosTrabajos(JSON.parse(fotos));
       if (desc) setDescripcion(desc);
@@ -69,7 +73,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     if (!resultado.canceled) {
       const uri = resultado.assets[0].uri;
       setFotoPerfil(uri);
-      await AsyncStorage.setItem('fotoPerfil', uri);
+      await AsyncStorage.setItem(`${PERFIL_KEY}_fotoPerfil`, uri);
     }
   };
 
@@ -132,10 +136,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   const guardar = async () => {
     try {
-      await AsyncStorage.setItem('fotoPerfil', fotoPerfil || '');
-      await AsyncStorage.setItem('fotosTrabajos', JSON.stringify(fotosTrabajos));
-      await AsyncStorage.setItem('descripcion', descripcion);
-      await AsyncStorage.setItem('zona', zona);
+      await AsyncStorage.setItem(`${PERFIL_KEY}_fotoPerfil`, fotoPerfil || '');
+      await AsyncStorage.setItem(`${PERFIL_KEY}_fotosTrabajos`, JSON.stringify(fotosTrabajos));
+      await AsyncStorage.setItem(`${PERFIL_KEY}_descripcion`, descripcion);
+      await AsyncStorage.setItem(`${PERFIL_KEY}_zona`, zona);
     } catch (e) {}
     setGuardado(true);
     setTimeout(() => setGuardado(false), 2000);

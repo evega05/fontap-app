@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { colors } from '../theme';
+import { useAuth } from '../AuthContext';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -20,7 +21,9 @@ const BADGES = {
   popular: { emoji: '🔥', label: 'Popular', color: '#E74C3C' },
 };
 
-export default function MapaScreen({ navigation }) {
+export default function MapaScreen({ navigation, route }) {
+  const { usuario } = useAuth();
+  const clienteId = route.params?.clienteId || usuario?.id || null;
   const [seleccionado, setSeleccionado] = useState(null);
   const [modo, setModo] = useState('mapa');
   const [fontaneros, setFontaneros] = useState(fontanerosDemo);
@@ -36,7 +39,7 @@ export default function MapaScreen({ navigation }) {
 
   const fontanerosFiltrados = fontaneros.filter(f => {
     if (busqueda && !f.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !f.zona.toLowerCase().includes(busqueda.toLowerCase())) return false;
+        !f.zona?.toLowerCase().includes(busqueda.toLowerCase())) return false;
     if (filtroServicio !== 'Todos' && f.servicios && !f.servicios.includes(filtroServicio)) return false;
     if (mostrar24h && !f.disponible24h) return false;
     return true;
@@ -44,10 +47,9 @@ export default function MapaScreen({ navigation }) {
 
   const ultimoFontanero = fontanerosDemo[0];
 
-  const renderTarjetaFontanero = (f, compact = false) => (
+  const renderTarjetaFontanero = (f) => (
     <TouchableOpacity key={f.id}
-      style={[compact ? s.mapaCard : s.card, !f.disponible && s.cardInactivo,
-        seleccionado?.id === f.id && s.cardActiva]}
+      style={[s.card, !f.disponible && s.cardInactivo, seleccionado?.id === f.id && s.cardActiva]}
       onPress={() => {
         if (!f.disponible) return;
         setSeleccionado(seleccionado?.id === f.id ? null : f);
@@ -59,7 +61,7 @@ export default function MapaScreen({ navigation }) {
         <View style={s.cardInfo}>
           <View style={s.cardNombreRow}>
             <Text style={s.cardNombre}>{f.nombre}</Text>
-            {f.badge && (
+            {f.badge && BADGES[f.badge] && (
               <View style={[s.badgePill, { backgroundColor: BADGES[f.badge].color + '22', borderColor: BADGES[f.badge].color }]}>
                 <Text style={[s.badgePillText, { color: BADGES[f.badge].color }]}>
                   {BADGES[f.badge].emoji} {BADGES[f.badge].label}
@@ -72,8 +74,7 @@ export default function MapaScreen({ navigation }) {
             <Text style={s.cardStat}>⭐ {f.valoracion}</Text>
             <Text style={s.cardStatDot}>·</Text>
             <Text style={s.cardStat}>💰 {f.precio}</Text>
-            <Text style={s.cardStatDot}>·</Text>
-            <Text style={s.cardStat}>🕐 {f.llegada}</Text>
+            {f.llegada && <><Text style={s.cardStatDot}>·</Text><Text style={s.cardStat}>🕐 {f.llegada}</Text></>}
           </View>
         </View>
         <View style={[s.estadoBadge, f.disponible ? s.estadoVerde : s.estadoGris]}>
@@ -99,7 +100,8 @@ export default function MapaScreen({ navigation }) {
       )}
 
       {seleccionado?.id === f.id && f.disponible && (
-        <TouchableOpacity style={s.btnContratar} onPress={() => navigation.navigate('Solicitud', { fontanero: f })}>
+        <TouchableOpacity style={s.btnContratar}
+          onPress={() => navigation.navigate('Solicitud', { fontanero: f, clienteId })}>
           <Text style={s.btnContratarText}>Contratar a {f.nombre.split(' ')[0]} →</Text>
         </TouchableOpacity>
       )}
@@ -125,37 +127,24 @@ export default function MapaScreen({ navigation }) {
 
       <View style={s.searchWrap}>
         <Text style={s.searchIcon}>🔍</Text>
-        <TextInput
-          style={s.searchInput}
-          placeholder="Buscar fontanero o zona..."
-          placeholderTextColor={colors.textFaint}
-          value={busqueda}
-          onChangeText={setBusqueda}
-        />
-        {busqueda ? (
-          <TouchableOpacity onPress={() => setBusqueda('')}>
-            <Text style={s.searchClear}>✕</Text>
-          </TouchableOpacity>
-        ) : null}
+        <TextInput style={s.searchInput} placeholder="Buscar fontanero o zona..."
+          placeholderTextColor={colors.textFaint} value={busqueda} onChangeText={setBusqueda} />
+        {busqueda ? <TouchableOpacity onPress={() => setBusqueda('')}><Text style={s.searchClear}>✕</Text></TouchableOpacity> : null}
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
-        <TouchableOpacity
-          style={[s.filtro24h, mostrar24h && s.filtro24hActivo]}
-          onPress={() => setMostrar24h(!mostrar24h)}>
+        <TouchableOpacity style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} onPress={() => setMostrar24h(!mostrar24h)}>
           <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>🌙 24h</Text>
         </TouchableOpacity>
         {SERVICIOS_FILTRO.map(sv => (
-          <TouchableOpacity key={sv}
-            style={[s.filtro, filtroServicio === sv && s.filtroActivo]}
-            onPress={() => setFiltroServicio(sv)}>
+          <TouchableOpacity key={sv} style={[s.filtro, filtroServicio === sv && s.filtroActivo]} onPress={() => setFiltroServicio(sv)}>
             <Text style={[s.filtroText, filtroServicio === sv && s.filtroTextActivo]}>{sv}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       <View style={s.botonesUrgencia}>
-        <TouchableOpacity style={s.btnUrgente} onPress={() => navigation.navigate('Solicitud', { urgente: true })}>
+        <TouchableOpacity style={s.btnUrgente} onPress={() => navigation.navigate('Solicitud', { urgente: true, clienteId })}>
           <View style={s.btnUrgenteLeft}>
             <Text style={s.btnUrgenteIcon}>⚡</Text>
             <View>
@@ -165,7 +154,7 @@ export default function MapaScreen({ navigation }) {
           </View>
           <Text style={s.btnArrow}>→</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.btnCita} onPress={() => navigation.navigate('Solicitud', { urgente: false })}>
+        <TouchableOpacity style={s.btnCita} onPress={() => navigation.navigate('Solicitud', { urgente: false, clienteId })}>
           <View style={s.btnUrgenteLeft}>
             <Text style={s.btnUrgenteIcon}>📅</Text>
             <View>
@@ -177,11 +166,12 @@ export default function MapaScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {modo === 'mapa' ? (
-        <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
+        {modo === 'mapa' && (
           <View style={s.ultimoWrap}>
-            <Text style={s.ultimoTitulo}>🔄 Tu último fontanero</Text>
-            <TouchableOpacity style={s.ultimoCard} onPress={() => navigation.navigate('Solicitud', { fontanero: ultimoFontanero })}>
+            <Text style={s.ultimoTitulo}>🔄 TU ÚLTIMO FONTANERO</Text>
+            <TouchableOpacity style={s.ultimoCard}
+              onPress={() => navigation.navigate('Solicitud', { fontanero: ultimoFontanero, clienteId })}>
               <View style={s.avatar}>
                 <Text style={s.avatarText}>{ultimoFontanero.nombre[0]}</Text>
               </View>
@@ -194,24 +184,19 @@ export default function MapaScreen({ navigation }) {
               </View>
             </TouchableOpacity>
           </View>
+        )}
 
-          <Text style={s.listaLabel}>FONTANEROS CERCANOS</Text>
-          {fontanerosFiltrados.length === 0 ? (
-            <View style={s.vacio}>
-              <Text style={s.vacioEmoji}>🔍</Text>
-              <Text style={s.vacioTitulo}>Sin resultados</Text>
-              <Text style={s.vacioSub}>Prueba con otros filtros</Text>
-            </View>
-          ) : (
-            fontanerosFiltrados.map(f => renderTarjetaFontanero(f))
-          )}
-        </ScrollView>
-      ) : (
-        <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
-          <Text style={s.listaLabel}>LISTA COMPLETA</Text>
-          {fontanerosFiltrados.map(f => renderTarjetaFontanero(f))}
-        </ScrollView>
-      )}
+        <Text style={s.listaLabel}>FONTANEROS CERCANOS</Text>
+        {fontanerosFiltrados.length === 0 ? (
+          <View style={s.vacio}>
+            <Text style={s.vacioEmoji}>🔍</Text>
+            <Text style={s.vacioTitulo}>Sin resultados</Text>
+            <Text style={s.vacioSub}>Prueba con otros filtros</Text>
+          </View>
+        ) : (
+          fontanerosFiltrados.map(f => renderTarjetaFontanero(f))
+        )}
+      </ScrollView>
     </View>
   );
 }

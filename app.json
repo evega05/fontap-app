@@ -40,7 +40,8 @@
           "merchantIdentifier": "merchant.com.fontap.app",
           "enableGooglePay": true
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

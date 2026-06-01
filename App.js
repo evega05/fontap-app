@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { AuthProvider, useAuth } from './AuthContext';
+import { AuthProvider } from './AuthContext';
+import StripeWrapper from './StripeWrapper';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import LoginScreen from './screens/LoginScreen';
 import RegistroScreen from './screens/RegistroScreen';
 import MapaScreen from './screens/MapaScreen';
@@ -15,59 +16,74 @@ import PagoScreen from './screens/PagoScreen';
 
 const Stack = createStackNavigator();
 
-// ✅ FIX 2: Navegador que decide ruta inicial según sesión guardada
-function AppNavigator() {
-  const { usuario, cargando } = useAuth();
+function SplashScreen({ onFinish }) {
+  const escala = new Animated.Value(0.3);
+  const opacidad = new Animated.Value(0);
+  const opacidadTexto = new Animated.Value(0);
 
-  // Mientras carga la sesión guardada, mostrar spinner
-  if (cargando) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#0f0f1a', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#3b82f6" />
-      </View>
-    );
-  }
-
-  // Determinar pantalla inicial según sesión
-  let initialRoute = 'Login';
-  let initialParams = undefined;
-  if (usuario) {
-    if (usuario.tipo === 'fontanero') {
-      initialRoute = 'PanelFontanero';
-      initialParams = { nombre: usuario.nombre };
-    } else {
-      initialRoute = 'Mapa';
-    }
-  }
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(escala, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+        Animated.timing(opacidad, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ]),
+      Animated.timing(opacidadTexto, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.delay(800),
+      Animated.timing(opacidad, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(() => onFinish());
+  }, []);
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Registro" component={RegistroScreen} />
-      <Stack.Screen name="Mapa" component={MapaScreen} />
-      <Stack.Screen name="Solicitud" component={SolicitudScreen} />
-      <Stack.Screen name="Confirmacion" component={ConfirmacionScreen} />
-      <Stack.Screen
-        name="PanelFontanero"
-        component={PanelFontaneroScreen}
-        initialParams={initialParams}
-      />
-      <Stack.Screen name="PerfilFontanero" component={PerfilFontaneroScreen} />
-      <Stack.Screen name="Resena" component={ReseñaScreen} />
-      <Stack.Screen name="Pago" component={PagoScreen} />
-    </Stack.Navigator>
+    <View style={s.splash}>
+      <Animated.View style={[s.splashLogo, { transform: [{ scale: escala }], opacity: opacidad }]}>
+        <Text style={s.splashEmoji}>🔧</Text>
+      </Animated.View>
+      <Animated.Text style={[s.splashNombre, { opacity: opacidadTexto }]}>FonTap</Animated.Text>
+      <Animated.Text style={[s.splashSub, { opacity: opacidadTexto }]}>Fontaneros profesionales</Animated.Text>
+    </View>
+  );
+}
+
+function NavegadorPrincipal() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ animationEnabled: true, cardStyleInterpolator: ({ current }) => ({ cardStyle: { opacity: current.progress } }) }}>
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Registro" component={RegistroScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Mapa" component={MapaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Solicitud" component={SolicitudScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Confirmacion" component={ConfirmacionScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PanelFontanero" component={PanelFontaneroScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PerfilFontanero" component={PerfilFontaneroScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Resena" component={ReseñaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Pago" component={PagoScreen} options={{ headerShown: false }} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
 export default function App() {
+  const [splashListo, setSplashListo] = useState(false);
+
+  if (!splashListo) {
+    return (
+      <SplashScreen onFinish={() => setSplashListo(true)} />
+    );
+  }
+
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <StripeWrapper>
+      <AuthProvider>
+        <NavegadorPrincipal />
+      </AuthProvider>
+    </StripeWrapper>
   );
 }
+
+const s = StyleSheet.create({
+  splash: { flex: 1, backgroundColor: '#05050F', justifyContent: 'center', alignItems: 'center' },
+  splashLogo: { width: 120, height: 120, borderRadius: 36, backgroundColor: '#0A1F4E', justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: '#276EF1' },
+  splashEmoji: { fontSize: 56 },
+  splashNombre: { fontSize: 42, fontWeight: 'bold', color: '#F0F0FF', letterSpacing: -1, marginBottom: 8 },
+  splashSub: { fontSize: 15, color: '#8080A0' },
+});

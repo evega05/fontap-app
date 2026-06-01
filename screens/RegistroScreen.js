@@ -23,7 +23,7 @@ export default function RegistroScreen({ navigation }) {
     { nombre: 'Grifo / ducha', emoji: '🚿', precio: '' },
     { nombre: 'Radiador', emoji: '♨️', precio: '' },
   ]);
- 
+
   const registrar = async () => {
     setError('');
     if (!nombre || !email || !telefono || !password) { setError('Rellena todos los campos'); return; }
@@ -33,9 +33,9 @@ export default function RegistroScreen({ navigation }) {
       const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo });
       await guardarSesion(res.data);
       if (tipo === 'fontanero') {
-        navigation.replace('PanelFontanero', { nombre });
+        navigation.replace('PanelFontanero', { nombre: res.data.nombre || nombre, userId: res.data.id });
       } else {
-        navigation.replace('Mapa');
+        navigation.replace('Mapa', { clienteId: res.data.id });
       }
     } catch (e) {
       setError('Este email ya está registrado');
@@ -110,10 +110,8 @@ export default function RegistroScreen({ navigation }) {
             <Text style={s.infoTitulo}>🎉 Primer mes gratis</Text>
             <Text style={s.infoSub}>Después solo 50€/mes · Cancela cuando quieras</Text>
           </View>
-
           <Text style={s.inputLabel}>Tus servicios y precios base</Text>
           <Text style={s.inputSublabel}>El cliente los verá antes de contratarte</Text>
-
           {serviciosRegistro.map((sv, i) => (
             <View key={i} style={s.servicioRow}>
               <Text style={s.servicioEmoji}>{sv.emoji}</Text>

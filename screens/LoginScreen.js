@@ -20,9 +20,10 @@ export default function LoginScreen({ navigation }) {
     setCargando(true);
     try {
       const res = await axios.post(`${API}/login`, { email, password });
+      console.log('RESPUESTA LOGIN:', JSON.stringify(res.data));
       await guardarSesion(res.data);
       if (res.data.tipo_usuario === 'fontanero') {
-        navigation.replace('PanelFontanero', { nombre: res.data.nombre || email.split('@')[0] });
+        navigation.replace('PanelFontanero', { nombre: res.data.nombre || email.split('@')[0], userId: res.data.id });
       } else {
         navigation.replace('Mapa');
       }
