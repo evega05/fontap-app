@@ -26,9 +26,19 @@ export default function NotificacionesScreen({ navigation }) {
 
   const marcarLeida = async (id) => {
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
-    try {
-      await axios.put(`${API}/notificaciones/${id}/leida`, null, { headers });
-    } catch (e) {}
+    try { await axios.put(`${API}/notificaciones/${id}/leida`, null, { headers }); } catch (e) {}
+  };
+
+  const abrirNotif = async (n) => {
+    await marcarLeida(n.id);
+    const sid = n.servicio_id || n.data?.servicio_id;
+    if (n.tipo === 'precio' && sid) {
+      navigation.navigate('Pago', { servicioId: sid, precio: n.precio || n.data?.precio });
+    } else if (n.tipo === 'aceptado' && sid) {
+      navigation.navigate('Confirmacion', { servicioId: sid });
+    } else if ((n.tipo === 'pago' || n.tipo === 'resena') && sid) {
+      navigation.navigate('MisServicios');
+    }
   };
 
   const marcarTodasLeidas = async () => {
@@ -78,7 +88,7 @@ export default function NotificacionesScreen({ navigation }) {
               <TouchableOpacity
                 key={n.id}
                 style={[s.card, !n.leida && s.cardNoLeida]}
-                onPress={() => marcarLeida(n.id)}
+                onPress={() => abrirNotif(n)}
               >
                 <View style={s.cardIcono}>
                   <Text style={s.icono}>{tipoIcono(n.tipo)}</Text>
