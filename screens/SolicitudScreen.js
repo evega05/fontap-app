@@ -75,6 +75,7 @@ export default function SolicitudScreen({ navigation, route }) {
     fontanero, tipo, descripcion, urgente,
     diaSeleccionado, horaSeleccionada,
     servicioId, // ← pasar el id
+    clienteId,
   });
 } catch (e) {
   navigation.navigate('Confirmacion', {

@@ -19,7 +19,7 @@ const ACTIVOS = new Set(['pendiente', 'aceptado', 'precio_enviado', 'pago_pendie
 const COMPLETADOS_RESEÑA = new Set(['pagado']);
 
 export default function MisServiciosScreen({ navigation, route }) {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const clienteId = route.params?.clienteId || usuario?.id;
   const [servicios, setServicios] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -28,11 +28,14 @@ export default function MisServiciosScreen({ navigation, route }) {
   const cargar = useCallback(async () => {
     if (!clienteId) { setCargando(false); return; }
     try {
-      const res = await axios.get(`${API}/clientes/${clienteId}/servicios`);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/clientes/${clienteId}/servicios`, { headers });
       setServicios(res.data || []);
-    } catch (e) {}
+    } catch (e) {
+      console.log('[MisServicios] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
+    }
     finally { setCargando(false); setRefrescando(false); }
-  }, [clienteId]);
+  }, [clienteId, token]);
 
   useEffect(() => {
     cargar();

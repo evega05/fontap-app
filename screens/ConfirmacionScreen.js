@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors } from '../theme';
+import { useAuth } from '../AuthContext';
 import axios from 'axios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -13,25 +14,28 @@ const ESTADOS = {
 };
 
 export default function ConfirmacionScreen({ navigation, route }) {
+  const { token } = useAuth();
   const { fontanero, tipo, urgente, servicioId, precio: precioProp, clienteId } = route.params || {};
   const [estado, setEstado] = useState('pendiente');
   const [precio, setPrecio] = useState(precioProp || null);
 
   useEffect(() => {
     if (!servicioId) return;
-    const intervalo = setInterval(async () => {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const consultar = async () => {
       try {
-        const res = await axios.get(`${API}/servicios/${servicioId}`);
-        console.log('[Confirmacion] servicio:', JSON.stringify(res.data));
+        const res = await axios.get(`${API}/servicios/${servicioId}`, { headers });
         const nuevoEstado = res.data.estado || 'pendiente';
         setEstado(nuevoEstado);
         if (res.data.precio) setPrecio(res.data.precio);
       } catch (e) {
         console.log('[Confirmacion] ERROR polling:', e?.response?.status, JSON.stringify(e?.response?.data));
       }
-    }, 4000);
+    };
+    consultar();
+    const intervalo = setInterval(consultar, 4000);
     return () => clearInterval(intervalo);
-  }, [servicioId]);
+  }, [servicioId, token]);
 
   const estadoActual = ESTADOS[estado] || ESTADOS.pendiente;
 
