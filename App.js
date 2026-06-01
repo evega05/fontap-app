@@ -97,9 +97,9 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: '#05050F', justifyContent: 'center', alignItems: 'center' },
-  splashLogo: { width: 120, height: 120, borderRadius: 36, backgroundColor: '#0A1F4E', justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: '#276EF1' },
+  splash: { flex: 1, backgroundColor: '#070B14', justifyContent: 'center', alignItems: 'center' },
+  splashLogo: { width: 120, height: 120, borderRadius: 36, backgroundColor: '#0A1836', justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: '#3D7EFF' },
   splashEmoji: { fontSize: 56 },
-  splashNombre: { fontSize: 42, fontWeight: 'bold', color: '#F0F0FF', letterSpacing: -1, marginBottom: 8 },
-  splashSub: { fontSize: 15, color: '#8080A0' },
+  splashNombre: { fontSize: 42, fontWeight: 'bold', color: '#E8EDF5', letterSpacing: -1, marginBottom: 8 },
+  splashSub: { fontSize: 15, color: '#7A8BA8' },
 });

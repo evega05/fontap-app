@@ -244,14 +244,14 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           width={ANCHO - 40}
           height={140}
           chartConfig={{
-            backgroundColor: '#FAF8F5',
-            backgroundGradientFrom: '#FAF8F5',
-            backgroundGradientTo: '#FAF8F5',
+            backgroundColor: '#0D1424',
+            backgroundGradientFrom: '#0D1424',
+            backgroundGradientTo: '#0D1424',
             decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(26, 86, 219, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(107, 101, 96, ${opacity})`,
-            propsForDots: { r: '4', strokeWidth: '2', stroke: '#1A56DB' },
-            propsForBackgroundLines: { stroke: '#E8E3DB' },
+            color: (opacity = 1) => `rgba(61, 126, 255, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(122, 139, 168, ${opacity})`,
+            propsForDots: { r: '4', strokeWidth: '2', stroke: '#3D7EFF' },
+            propsForBackgroundLines: { stroke: '#1E2D4A' },
           }}
           bezier
           style={{ borderRadius: 14, marginTop: 8 }}
