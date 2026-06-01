@@ -17,7 +17,7 @@ function getSaludo() {
 }
 
 export default function PanelFontaneroScreen({ navigation, route }) {
-  const { usuario, token } = useAuth();
+  const { usuario, token, logout } = useAuth();
   const nombre = usuario?.nombre || route.params?.nombre || 'Fontanero';
   const userId = route.params?.userId || usuario?.id || 1;
 
@@ -188,6 +188,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           </TouchableOpacity>
           <TouchableOpacity style={s.perfilBtn} onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
             <Text style={s.perfilLetra}>{nombre[0]}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.logoutBtn} onPress={() => Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Salir', style: 'destructive', onPress: () => { logout(); navigation.replace('Login'); } },
+          ])}>
+            <Text style={s.logoutBtnText}>🚪</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -415,6 +421,8 @@ const s = StyleSheet.create({
   idText: { color: colors.blue, fontSize: 11, marginTop: 2 },
   perfilBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
   perfilLetra: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
+  logoutBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.redLight, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.red },
+  logoutBtnText: { fontSize: 16 },
   disponibilidadCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, marginHorizontal: 20, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   disponibilidadLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   indicador: { width: 10, height: 10, borderRadius: 5 },
