@@ -12,11 +12,14 @@ export default function NotificacionesScreen({ navigation }) {
   const [notifs, setNotifs] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  // IDs marcados localmente para no depender del backend
+  const [leidasLocal, setLeidasLocal] = useState(new Set());
 
   const cargar = useCallback(async () => {
     if (!usuario?.id) { setCargando(false); return; }
     try {
       const res = await axios.get(`${API}/usuarios/${usuario.id}/notificaciones`, { headers });
+      console.log('[Notif] primera notif:', JSON.stringify((res.data || [])[0]));
       setNotifs(res.data || []);
     } catch (e) {}
     finally { setCargando(false); setRefrescando(false); }
@@ -25,15 +28,21 @@ export default function NotificacionesScreen({ navigation }) {
   useEffect(() => { cargar(); }, [cargar]);
 
   const marcarLeida = async (id) => {
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
+    setLeidasLocal(prev => new Set([...prev, id]));
     try { await axios.put(`${API}/notificaciones/${id}/leida`, null, { headers }); } catch (e) {}
   };
+
+  const esLeida = (n) => n.leida || leidasLocal.has(n.id);
 
   const abrirNotif = async (n) => {
     await marcarLeida(n.id);
     const sid = n.servicio_id || n.data?.servicio_id;
+    console.log('[Notif] tap tipo:', n.tipo, 'servicio_id:', sid, 'keys:', Object.keys(n).join(','));
     if (n.tipo === 'precio' && sid) {
       navigation.navigate('Pago', { servicioId: sid, precio: n.precio || n.data?.precio });
+    } else if (n.tipo === 'precio' && !sid) {
+      // intenta igual navegar a MisServicios para que paguen desde ahí
+      navigation.navigate('MisServicios');
     } else if (n.tipo === 'aceptado' && sid) {
       navigation.navigate('Confirmacion', { servicioId: sid });
     } else if ((n.tipo === 'pago' || n.tipo === 'resena') && sid) {
@@ -42,13 +51,13 @@ export default function NotificacionesScreen({ navigation }) {
   };
 
   const marcarTodasLeidas = async () => {
-    setNotifs(prev => prev.map(n => ({ ...n, leida: true })));
+    setLeidasLocal(new Set(notifs.map(n => n.id)));
     try {
       await axios.put(`${API}/usuarios/${usuario.id}/notificaciones/leidas`, null, { headers });
     } catch (e) {}
   };
 
-  const noLeidas = notifs.filter(n => !n.leida).length;
+  const noLeidas = notifs.filter(n => !esLeida(n)).length;
 
   const tipoIcono = (tipo) => {
     const iconos = { nuevo_servicio: '🔔', aceptado: '✅', precio: '💰', pago: '💳', resena: '⭐', sistema: 'ℹ️' };
@@ -87,15 +96,15 @@ export default function NotificacionesScreen({ navigation }) {
             notifs.map(n => (
               <TouchableOpacity
                 key={n.id}
-                style={[s.card, !n.leida && s.cardNoLeida]}
+                style={[s.card, !esLeida(n) && s.cardNoLeida]}
                 onPress={() => abrirNotif(n)}
               >
                 <View style={s.cardIcono}>
                   <Text style={s.icono}>{tipoIcono(n.tipo)}</Text>
-                  {!n.leida && <View style={s.puntito} />}
+                  {!esLeida(n) && <View style={s.puntito} />}
                 </View>
                 <View style={s.cardBody}>
-                  <Text style={[s.cardTitulo, !n.leida && s.cardTituloDestacado]}>{n.titulo}</Text>
+                  <Text style={[s.cardTitulo, !esLeida(n) && s.cardTituloDestacado]}>{n.titulo}</Text>
                   <Text style={s.cardMensaje}>{n.mensaje}</Text>
                   <Text style={s.cardFecha}>{formatFecha(n.creado_en)}</Text>
                 </View>
