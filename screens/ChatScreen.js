@@ -24,7 +24,8 @@ export default function ChatScreen({ navigation, route }) {
 
   const cargarMensajes = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/servicios/${servicioId}/mensajes`, { headers });
+      const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/servicios/${servicioId}/mensajes`, { headers: hdrs });
       const nuevos = res.data || [];
       setMensajes(nuevos);
       if (nuevos.length > 0) {
@@ -65,10 +66,11 @@ export default function ChatScreen({ navigation, route }) {
     setMensajes(prev => [...prev, mensajeTemporal]);
 
     try {
+      const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
-        { contenido, remitente_tipo: usuario?.tipo },
-        { headers }
+        { contenido, remitente_tipo: usuario?.tipo, remitente_id: usuario?.id },
+        { headers: hdrs }
       );
       await cargarMensajes();
     } catch (e) {
