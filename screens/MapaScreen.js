@@ -36,8 +36,11 @@ export default function MapaScreen({ navigation, route }) {
 
   useEffect(() => {
     axios.get(`${API}/fontaneros`)
-      .then(res => { if (res.data && res.data.length > 0) setFontaneros(res.data); })
-      .catch(() => {});
+      .then(res => {
+        console.log('[Mapa] Fontaneros del backend:', JSON.stringify(res.data));
+        if (res.data && res.data.length > 0) setFontaneros(res.data);
+      })
+      .catch(e => console.log('[Mapa] Error cargando fontaneros:', e?.response?.status, e?.message));
     const hds = token ? { Authorization: `Bearer ${token}` } : {};
     if (clienteId) {
       axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers: hds })
