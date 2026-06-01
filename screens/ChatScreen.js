@@ -45,36 +45,35 @@ export default function ChatScreen({ navigation, route }) {
   }, [mensajes.length]);
 
   const enviar = async () => {
-    const contenido = texto.trim();
-    if (!contenido || enviando) return;
+    const msg = texto.trim();
+    if (!msg || enviando) return;
     setTexto('');
     setEnviando(true);
-    const tmp = { id: `tmp_${Date.now()}`, contenido, remitente_tipo: usuario?.tipo, creado_en: new Date().toISOString(), pendiente: true };
+    const tmp = { id: `tmp_${Date.now()}`, texto: msg, emisor_id: usuario?.id, creado_en: new Date().toISOString(), pendiente: true };
     setMensajes(prev => [...prev, tmp]);
     try {
-      console.log('[Chat] POST body:', { contenido, remitente_tipo: usuario?.tipo });
       await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
-        { contenido, remitente_tipo: usuario?.tipo },
+        { texto: msg },
         { headers: hdrs() }
       );
       await cargarMensajes();
     } catch (e) {
-      console.log('[Chat] ERROR enviando:', e?.response?.status, JSON.stringify(e?.response?.data));
+      console.log('[Chat] ERROR:', e?.response?.status, JSON.stringify(e?.response?.data));
       setMensajes(prev => prev.map(m => m.id === tmp.id ? { ...m, error: true, pendiente: false } : m));
     } finally {
       setEnviando(false);
     }
   };
 
-  const esMio = (msg) => msg.remitente_tipo === usuario?.tipo;
+  const esMio = (msg) => msg.emisor_id === usuario?.id;
 
   const renderMensaje = ({ item }) => {
     const mio = esMio(item);
     return (
       <View style={[s.msgRow, mio ? s.msgRowMio : s.msgRowOtro]}>
         <View style={[s.bubble, mio ? s.bubbleMio : s.bubbleOtro, item.error && s.bubbleError]}>
-          <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>{item.contenido}</Text>
+          <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>{item.texto}</Text>
           <Text style={[s.bubbleHora, mio ? s.bubbleHoraMio : s.bubbleHoraOtro]}>
             {item.pendiente ? '⏳' : item.error ? '⚠️' : formatHora(item.creado_en)}
           </Text>
