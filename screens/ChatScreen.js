@@ -38,11 +38,26 @@ export default function ChatScreen({ navigation, route }) {
     }
   }, [servicioId, token]);
 
+  const marcarLeidos = useCallback(async () => {
+    if (!token) return;
+    try {
+      await axios.put(
+        `${API}/servicios/${servicioId}/mensajes/leer`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (_) {}
+  }, [servicioId, token]);
+
   useEffect(() => {
     cargarMensajes();
-    pollingRef.current = setInterval(cargarMensajes, 4000);
+    marcarLeidos();
+    pollingRef.current = setInterval(() => {
+      cargarMensajes();
+      marcarLeidos();
+    }, 4000);
     return () => clearInterval(pollingRef.current);
-  }, [cargarMensajes]);
+  }, [cargarMensajes, marcarLeidos]);
 
   useEffect(() => {
     if (mensajes.length > 0) {
@@ -86,7 +101,7 @@ export default function ChatScreen({ navigation, route }) {
     }
   };
 
-  const esMio = (msg) => msg.emisor_id === usuario?.id;
+  const esMio = (msg) => Number(msg.emisor_id) === Number(usuario?.id);
 
   const renderMensaje = ({ item }) => {
     const mio = esMio(item);
