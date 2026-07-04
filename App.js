@@ -46,7 +46,7 @@ function SplashScreen({ onFinish }) {
       <Animated.View style={[s.splashLogo, { transform: [{ scale: escala }], opacity: opacidad }]}>
         <Text style={s.splashEmoji}>🔧</Text>
       </Animated.View>
-      <Animated.Text style={[s.splashNombre, { opacity: opacidadTexto }]}>🔥 FonTap TEST</Animated.Text>
+      <Animated.Text style={[s.splashNombre, { opacity: opacidadTexto }]}>FonTap</Animated.Text>
       <Animated.Text style={[s.splashSub, { opacity: opacidadTexto }]}>Fontaneros profesionales</Animated.Text>
     </View>
   );
