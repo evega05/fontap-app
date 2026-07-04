@@ -476,7 +476,7 @@ export default function MapaScreen({ navigation, route }) {
 
         {/* Title + online count */}
         <View style={s.headerCenter}>
-          <Text style={s.logo}>FonTap</Text>
+          <Text style={s.logo}>🔥 FonTap TEST</Text>
           <View style={s.onlineRow}>
             <PulsingDot color={colors.green} size={7} />
             <Text style={s.onlineText}>
