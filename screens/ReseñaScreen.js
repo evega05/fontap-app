@@ -37,10 +37,11 @@ export default function ReseñaScreen({ navigation, route }) {
       const sid = servicioId || route.params?.servicioId;
       if (sid) {
         await axios.post(`${API}/servicios/${sid}/resena`, {
-          valoracion,
+          puntualidad: categorias.puntualidad,
+          calidad: categorias.calidad,
+          precio_justo: categorias.precio_justo,
+          trato: categorias.limpieza,
           comentario,
-          etiquetas: etiquetasSelec,
-          ...categorias,
         }, { headers });
       }
       setEnviado(true);

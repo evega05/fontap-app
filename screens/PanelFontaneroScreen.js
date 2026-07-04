@@ -83,7 +83,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   const aceptar = async (trabajo) => {
     try {
-      await axios.put(`${API}/servicios/${trabajo.id}/aceptar`, null, { params: { fontanero_id: userId }, headers });
+      await axios.put(`${API}/servicios/${trabajo.id}/aceptar`, null, { headers });
       setPendientes(prev => prev.filter(t => t.id !== trabajo.id));
       setTrabajoActivo(trabajo);
       setMostrarPrecio(true);

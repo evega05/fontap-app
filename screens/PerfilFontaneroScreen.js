@@ -64,7 +64,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     } catch (e) {}
 
     try {
-      const res = await axios.get(`${API}/fontaneros/${userId}/fotos`, { headers });
+      const res = await axios.get(`${API}/fontaneros/${userId}/galeria`, { headers });
       if (res.data && Array.isArray(res.data)) {
         setFotosTrabajos(res.data.map(f => ({ id: f.id, uri: f.url, desc: f.descripcion || 'Trabajo realizado' })));
       }
@@ -108,9 +108,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
     try {
       const form = new FormData();
-      form.append('foto', { uri, name: 'foto.jpg', type: 'image/jpeg' });
-      form.append('descripcion', 'Trabajo realizado');
-      const res = await axios.post(`${API}/fontaneros/${userId}/fotos`, form, {
+      form.append('archivo', { uri, name: 'foto.jpg', type: 'image/jpeg' });
+      const res = await axios.post(`${API}/fontaneros/${userId}/galeria`, form, {
+        params: { descripcion: 'Trabajo realizado' },
         headers: { ...headers, 'Content-Type': 'multipart/form-data' },
       });
       const fotoBackend = res.data;
@@ -132,7 +132,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const eliminarFoto = async (id) => {
     setFotosTrabajos(prev => prev.filter(f => f.id !== id));
     try {
-      await axios.delete(`${API}/fontaneros/${userId}/fotos/${id}`, { headers });
+      await axios.delete(`${API}/fontaneros/${userId}/galeria/${id}`, { headers });
     } catch (e) {}
   };
 

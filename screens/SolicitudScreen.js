@@ -40,8 +40,8 @@ export default function SolicitudScreen({ navigation, route }) {
     for (const uri of fotosProblema) {
       try {
         const form = new FormData();
-        form.append('foto', { uri, name: 'foto.jpg', type: 'image/jpeg' });
-        await axios.post(`${API}/servicios/${servicioId}/fotos`, form, {
+        form.append('archivo', { uri, name: 'foto.jpg', type: 'image/jpeg' });
+        await axios.post(`${API}/servicios/${servicioId}/imagenes`, form, {
           headers: { 'Content-Type': 'multipart/form-data', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
       } catch (e) {}
