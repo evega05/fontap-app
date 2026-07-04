@@ -115,7 +115,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
                           {o.fontanero_zona && <Text style={s.fontaneroZona}>📍 {o.fontanero_zona}</Text>}
                         </View>
                         <View style={s.precioWrap}>
-                          <Text style={s.precio}>{o.precio_oferta}€</Text>
+                          <Text style={s.precio}>{o.precio}€</Text>
                           <Text style={s.precioLabel}>oferta</Text>
                         </View>
                       </View>
@@ -166,7 +166,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
                           <Text style={s.fontaneroNombre}>{o.fontanero_nombre}</Text>
                         </View>
                         <View style={s.precioWrap}>
-                          <Text style={[s.precio, { fontSize: 16 }]}>{o.precio_oferta}€</Text>
+                          <Text style={[s.precio, { fontSize: 16 }]}>{o.precio}€</Text>
                           <View style={[s.estadoPill, { borderColor: estadoColor(o.estado) }]}>
                             <Text style={[s.estadoText, { color: estadoColor(o.estado) }]}>{estadoLabel(o.estado)}</Text>
                           </View>

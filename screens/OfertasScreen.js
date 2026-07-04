@@ -38,8 +38,7 @@ export default function OfertasScreen({ navigation }) {
     setEnviando(true);
     try {
       await axios.post(`${API}/servicios/${ofertando.id}/ofertas`, {
-        fontanero_id: usuario?.id,
-        precio_oferta: parseInt(precioOferta),
+        precio: parseInt(precioOferta),
         mensaje: mensajeOferta,
       }, { headers });
       Alert.alert('✅ Oferta enviada', 'El cliente recibirá tu propuesta');
@@ -177,7 +176,7 @@ export default function OfertasScreen({ navigation }) {
                       </Text>
                     </View>
                   </View>
-                  <Text style={s.ofertaPrecio}>{o.precio_oferta}€</Text>
+                  <Text style={s.ofertaPrecio}>{o.precio}€</Text>
                   {o.mensaje ? <Text style={s.ofertaMensaje}>"{o.mensaje}"</Text> : null}
                 </View>
               ))
