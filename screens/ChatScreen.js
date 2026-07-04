@@ -73,8 +73,8 @@ export default function ChatScreen({ navigation, route }) {
 
     const mensajeTemporal = {
       id: `tmp_${Date.now()}`,
-      texto: msg,
-      emisor_id: usuario?.id,
+      contenido: msg,
+      remitente_tipo: usuario?.tipo,
       creado_en: new Date().toISOString(),
       pendiente: true,
     };
@@ -82,7 +82,7 @@ export default function ChatScreen({ navigation, route }) {
 
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      const body = { texto: msg };
+      const body = { contenido: msg };
       console.log('[Chat] POST body:', JSON.stringify(body), 'servicioId:', servicioId, 'token:', !!token);
       const res = await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
@@ -101,7 +101,7 @@ export default function ChatScreen({ navigation, route }) {
     }
   };
 
-  const esMio = (msg) => Number(msg.emisor_id) === Number(usuario?.id);
+  const esMio = (msg) => msg.remitente_tipo === usuario?.tipo;
 
   const renderMensaje = ({ item }) => {
     const mio = esMio(item);
@@ -109,7 +109,7 @@ export default function ChatScreen({ navigation, route }) {
       <View style={[s.msgRow, mio ? s.msgRowMio : s.msgRowOtro]}>
         <View style={[s.bubble, mio ? s.bubbleMio : s.bubbleOtro, item.error && s.bubbleError]}>
           <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>
-            {item.texto}
+            {item.contenido}
           </Text>
           <Text style={[s.bubbleHora, mio ? s.bubbleHoraMio : s.bubbleHoraOtro]}>
             {item.pendiente ? '⏳' : item.error ? '⚠️' : formatHora(item.creado_en)}
