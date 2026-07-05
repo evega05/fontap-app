@@ -21,6 +21,7 @@ import CalendarioScreen from './screens/CalendarioScreen';
 import MisServiciosScreen from './screens/MisServiciosScreen';
 import EstadisticasScreen from './screens/EstadisticasScreen';
 import OfertasClienteScreen from './screens/OfertasClienteScreen';
+import ChatsRecientesScreen from './screens/ChatsRecientesScreen';
 
 const Stack = createStackNavigator();
 
@@ -73,6 +74,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="MisServicios" component={MisServiciosScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Estadisticas" component={EstadisticasScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OfertasCliente" component={OfertasClienteScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ChatsRecientes" component={ChatsRecientesScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -417,6 +417,11 @@ export default function MapaScreen({ navigation, route }) {
             badge: notifNoLeidas,
             action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); },
           },
+          {
+            icon: '💬',
+            label: 'Chats recientes',
+            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); },
+          },
         ].map((item, idx) => (
           <TouchableOpacity
             key={idx}
