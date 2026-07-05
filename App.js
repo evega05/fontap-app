@@ -1,5 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './AuthContext';
 import StripeWrapper from './StripeWrapper';
 import { useState, useEffect } from 'react';
@@ -24,7 +24,7 @@ import OfertasClienteScreen from './screens/OfertasClienteScreen';
 import ChatsRecientesScreen from './screens/ChatsRecientesScreen';
 import PerfilFontaneroPublicoScreen from './screens/PerfilFontaneroPublicoScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 function SplashScreen({ onFinish }) {
   const escala = new Animated.Value(0.3);
@@ -57,7 +57,7 @@ function SplashScreen({ onFinish }) {
 function NavegadorPrincipal() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login" screenOptions={{ animationEnabled: true, cardStyleInterpolator: ({ current }) => ({ cardStyle: { opacity: current.progress } }) }}>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#070B14' } }}>
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Registro" component={RegistroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Mapa" component={MapaScreen} options={{ headerShown: false }} />

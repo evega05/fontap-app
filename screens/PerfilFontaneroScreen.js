@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { colors } from '../theme';
+import { colors, spacing, radius, type, shadow } from '../theme';
 import axios from 'axios';
 import { agregarArchivo } from '../subirArchivo';
+import Pressable from '../components/Pressable';
+import FadeInUp from '../components/FadeInUp';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -19,6 +22,14 @@ const HORARIO_INICIAL = [
   { dia: 4, activo: true, inicio: '08:00', fin: '18:00' },
   { dia: 5, activo: false, inicio: '09:00', fin: '14:00' },
   { dia: 6, activo: false, inicio: '09:00', fin: '14:00' },
+];
+
+const TABS = [
+  { key: 'perfil', label: 'Perfil', icon: 'person-outline' },
+  { key: 'horario', label: 'Horario', icon: 'time-outline' },
+  { key: 'servicios', label: 'Servicios', icon: 'construct-outline' },
+  { key: 'trabajos', label: 'Trabajos', icon: 'images-outline' },
+  { key: 'resenas', label: 'Reseñas', icon: 'star-outline' },
 ];
 
 export default function PerfilFontaneroScreen({ navigation, route }) {
@@ -195,38 +206,31 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     }
   };
 
-  const TABS = [
-    { key: 'perfil', label: 'Perfil', emoji: '👤' },
-    { key: 'horario', label: 'Horario', emoji: '🗓' },
-    { key: 'servicios', label: 'Servicios', emoji: '🔧' },
-    { key: 'trabajos', label: 'Trabajos', emoji: '📸' },
-    { key: 'resenas', label: 'Reseñas', emoji: '⭐' },
-  ];
-
   return (
     <View style={s.container}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Text style={s.backText}>← Volver</Text>
+          <Ionicons name="chevron-back" size={20} color={colors.blue} />
+          <Text style={s.backText}>Volver</Text>
         </TouchableOpacity>
         <Text style={s.titulo}>Mi perfil</Text>
-        <TouchableOpacity onPress={guardar} style={s.guardarBtnWrap}>
+        <Pressable onPress={guardar} haptic style={s.guardarBtnWrap}>
           <Text style={[s.guardarBtn, guardado && s.guardarBtnOk]}>
             {guardado ? '✓ Guardado' : 'Guardar'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabsScroll} contentContainerStyle={s.tabs}>
         {TABS.map(t => (
-          <TouchableOpacity key={t.key} style={[s.tab, tab === t.key && s.tabActivo]} onPress={() => setTab(t.key)}>
-            <Text style={s.tabEmoji}>{t.emoji}</Text>
+          <Pressable key={t.key} style={[s.tab, tab === t.key && s.tabActivo]} haptic onPress={() => setTab(t.key)}>
+            <Ionicons name={t.icon} size={14} color={tab === t.key ? colors.blue : colors.textMuted} />
             <Text style={[s.tabText, tab === t.key && s.tabTextActivo]}>{t.label}</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </ScrollView>
 
-      <ScrollView style={s.contenido} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+      <ScrollView style={s.contenido} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60 }}>
 
         {tab === 'perfil' && (
           <>
@@ -242,34 +246,41 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                   </View>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={s.fotoBtn} onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
-                <Text style={s.fotoBtnText}>📷 Cambiar foto</Text>
-              </TouchableOpacity>
+              <Pressable style={s.fotoBtn} haptic onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
+                <Ionicons name="camera-outline" size={14} color={colors.blue} />
+                <Text style={s.fotoBtnText}>Cambiar foto</Text>
+              </Pressable>
             </View>
 
             <Text style={s.nombreGrande}>{nombre}</Text>
-            <Text style={verificado ? s.verificado : s.noVerificado}>
-              {verificado ? '✅ Identidad verificada' : '⏳ Verificación pendiente'}
-            </Text>
+            <View style={s.verificadoRow}>
+              <Ionicons name={verificado ? 'checkmark-circle' : 'time-outline'} size={14} color={verificado ? colors.green : colors.amber} />
+              <Text style={verificado ? s.verificado : s.noVerificado}>
+                {verificado ? 'Identidad verificada' : 'Verificación pendiente'}
+              </Text>
+            </View>
 
             <View style={s.statsRow}>
               <View style={s.statCard}>
+                <Ionicons name="star" size={16} color={colors.amber} />
                 <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
-                <Text style={s.statLabel}>⭐ Valoración</Text>
+                <Text style={s.statLabel}>Valoración</Text>
               </View>
               <View style={s.statCard}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
                 <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
-                <Text style={s.statLabel}>✅ Trabajos</Text>
+                <Text style={s.statLabel}>Trabajos</Text>
               </View>
               <View style={s.statCard}>
+                <Ionicons name="cash" size={16} color={colors.blue} />
                 <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
-                <Text style={s.statLabel}>💰 Total ganado</Text>
+                <Text style={s.statLabel}>Total ganado</Text>
               </View>
             </View>
 
             <Text style={s.seccionTitulo}>Zona de trabajo</Text>
             <View style={s.inputWrap}>
-              <Text style={s.inputIcon}>📍</Text>
+              <Ionicons name="location-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
               <TextInput style={s.input} placeholder="Ej: Bilbao y alrededores"
                 placeholderTextColor={colors.textFaint} value={zona} onChangeText={setZona} />
             </View>
@@ -287,17 +298,20 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
             <Text style={s.seccionTitulo}>Contacto</Text>
             <View style={s.inputWrap}>
-              <Text style={s.inputIcon}>📱</Text>
+              <Ionicons name="call-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
               <TextInput style={s.input} placeholder="Teléfono" placeholderTextColor={colors.textFaint} keyboardType="phone-pad" />
             </View>
             <View style={s.inputWrap}>
-              <Text style={s.inputIcon}>✉️</Text>
+              <Ionicons name="mail-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
               <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.textFaint} keyboardType="email-address" autoCapitalize="none" />
             </View>
 
             <View style={[s.suscripcionCard, !suscripcionActiva && s.suscripcionInactiva]}>
               <View style={s.suscripcionHeader}>
-                <Text style={s.suscripcionTitulo}>{suscripcionActiva ? '💎 Suscripción activa' : '⚠️ Suscripción inactiva'}</Text>
+                <View style={s.suscripcionTituloRow}>
+                  <Ionicons name={suscripcionActiva ? 'diamond' : 'warning'} size={15} color={suscripcionActiva ? colors.blue : colors.red} />
+                  <Text style={s.suscripcionTitulo}>{suscripcionActiva ? 'Suscripción activa' : 'Suscripción inactiva'}</Text>
+                </View>
                 <View style={[s.suscripcionBadge, !suscripcionActiva && s.suscripcionBadgeInactiva]}>
                   <Text style={s.suscripcionBadgeText}>{suscripcionActiva ? 'PRO' : 'INACTIVA'}</Text>
                 </View>
@@ -306,13 +320,13 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 {suscripcionActiva ? '50€/mes · Próxima renovación: 01/07/26' : 'Reactiva tu suscripción para recibir trabajos'}
               </Text>
               <View style={s.suscripcionBotones}>
-                <TouchableOpacity style={s.btnGestionar} onPress={() => setSuscripcionActiva(!suscripcionActiva)}>
+                <Pressable style={s.btnGestionar} haptic onPress={() => setSuscripcionActiva(!suscripcionActiva)}>
                   <Text style={s.btnGestionarText}>{suscripcionActiva ? 'Cancelar suscripción' : 'Reactivar suscripción'}</Text>
-                </TouchableOpacity>
+                </Pressable>
                 {suscripcionActiva && (
-                  <TouchableOpacity style={s.btnFacturas}>
+                  <Pressable style={s.btnFacturas} haptic>
                     <Text style={s.btnFacturasText}>Ver facturas</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
             </View>
@@ -335,7 +349,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                     <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: i, tipo: 'inicio' })}>
                       <Text style={s.horaBtnText}>{h.inicio}</Text>
                     </TouchableOpacity>
-                    <Text style={s.horaFlecha}>→</Text>
+                    <Ionicons name="arrow-forward" size={12} color={colors.textMuted} />
                     <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: i, tipo: 'fin' })}>
                       <Text style={s.horaBtnText}>{h.fin}</Text>
                     </TouchableOpacity>
@@ -378,37 +392,40 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <View key={sv.id} style={s.servicioCard}>
                 <View style={s.servicioInfo}>
                   <Text style={s.servicioNombre}>{sv.nombre}</Text>
-                  <Text style={s.servicioDuracion}>⏱ {sv.duracion_minutos} min</Text>
+                  <View style={s.servicioDuracionRow}>
+                    <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                    <Text style={s.servicioDuracion}>{sv.duracion_minutos} min</Text>
+                  </View>
                 </View>
                 <Text style={s.servicioPrecio}>desde {sv.precio}€</Text>
-                <TouchableOpacity onPress={() => eliminarServicio(sv.id)} style={s.eliminarBtn}>
-                  <Text style={s.eliminarBtnText}>✕</Text>
-                </TouchableOpacity>
+                <Pressable onPress={() => eliminarServicio(sv.id)} haptic style={s.eliminarBtn}>
+                  <Ionicons name="close" size={14} color={colors.red} />
+                </Pressable>
               </View>
             ))}
 
             <View style={s.añadirCard}>
-              <Text style={s.añadirTitulo}>➕ Añadir servicio</Text>
+              <Text style={s.añadirTitulo}>Añadir servicio</Text>
               <View style={s.inputWrap}>
-                <Text style={s.inputIcon}>🔧</Text>
+                <Ionicons name="construct-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
                 <TextInput style={s.input} placeholder="Nombre del servicio" placeholderTextColor={colors.textFaint}
                   value={nuevoServicio} onChangeText={setNuevoServicio} />
               </View>
               <View style={s.dobleInput}>
                 <View style={[s.inputWrap, { flex: 1 }]}>
-                  <Text style={s.inputIcon}>💰</Text>
+                  <Ionicons name="cash-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
                   <TextInput style={s.input} placeholder="Precio €" placeholderTextColor={colors.textFaint}
                     value={nuevoPrecio} onChangeText={setNuevoPrecio} keyboardType="numeric" />
                 </View>
                 <View style={[s.inputWrap, { flex: 1 }]}>
-                  <Text style={s.inputIcon}>⏱</Text>
+                  <Ionicons name="time-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
                   <TextInput style={s.input} placeholder="Min" placeholderTextColor={colors.textFaint}
                     value={nuevaDuracion} onChangeText={setNuevaDuracion} keyboardType="numeric" />
                 </View>
               </View>
-              <TouchableOpacity style={s.btnAñadir} onPress={añadirServicio}>
+              <Pressable style={s.btnAñadir} haptic onPress={añadirServicio}>
                 <Text style={s.btnAñadirText}>Añadir servicio</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </>
         )}
@@ -418,19 +435,23 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             <Text style={s.seccionTitulo}>Mis trabajos realizados</Text>
             <Text style={s.seccionSub}>Sube fotos para que los clientes vean la calidad de tu trabajo</Text>
 
-            <TouchableOpacity style={s.subirFotoBtn} onPress={subirFoto} disabled={subiendoFoto}>
+            <Pressable style={s.subirFotoBtn} haptic onPress={subirFoto} disabled={subiendoFoto}>
               {subiendoFoto ? (
-                <ActivityIndicator color={colors.blue} style={{ marginBottom: 8 }} />
+                <ActivityIndicator color={colors.blue} style={{ marginBottom: spacing.sm }} />
               ) : (
-                <Text style={s.subirFotoEmoji}>📸</Text>
+                <View style={s.subirFotoIconWrap}>
+                  <Ionicons name="camera" size={22} color={colors.blue} />
+                </View>
               )}
               <Text style={s.subirFotoText}>{subiendoFoto ? 'Subiendo...' : 'Subir foto de trabajo'}</Text>
               <Text style={s.subirFotoSub}>Toca para seleccionar de tu galería</Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {fotosTrabajos.length === 0 ? (
               <View style={s.fotosVacio}>
-                <Text style={s.fotosVacioEmoji}>🖼️</Text>
+                <View style={s.vacioIconWrap}>
+                  <Ionicons name="images-outline" size={32} color={colors.textMuted} />
+                </View>
                 <Text style={s.fotosVacioText}>Aún no has subido fotos</Text>
                 <Text style={s.fotosVacioSub}>Las fotos generan más confianza y más contratos</Text>
               </View>
@@ -446,9 +467,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                       placeholder="Descripción..."
                       placeholderTextColor={colors.textFaint}
                     />
-                    <TouchableOpacity style={s.fotoEliminar} onPress={() => eliminarFoto(f.id)}>
-                      <Text style={s.fotoEliminarText}>✕</Text>
-                    </TouchableOpacity>
+                    <Pressable style={s.fotoEliminar} haptic onPress={() => eliminarFoto(f.id)}>
+                      <Ionicons name="close" size={12} color="#fff" />
+                    </Pressable>
                   </View>
                 ))}
               </View>
@@ -463,31 +484,35 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
             {resenas.length === 0 ? (
               <View style={s.fotosVacio}>
-                <Text style={s.fotosVacioEmoji}>⭐</Text>
+                <View style={s.vacioIconWrap}>
+                  <Ionicons name="star-outline" size={32} color={colors.textMuted} />
+                </View>
                 <Text style={s.fotosVacioText}>Aún no tienes reseñas</Text>
                 <Text style={s.fotosVacioSub}>Aparecerán aquí cuando un cliente reseñe un servicio</Text>
               </View>
             ) : (
-              resenas.map(r => {
+              resenas.map((r, i) => {
                 const media = (r.puntualidad + r.calidad + r.precio_justo + r.trato) / 4;
                 return (
-                  <View key={r.id} style={s.resenaCard}>
-                    <View style={s.resenaTop}>
-                      <View style={s.estrellasRow}>
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <Text key={i} style={s.estrella}>{i <= Math.round(media) ? '⭐' : '☆'}</Text>
-                        ))}
+                  <FadeInUp key={r.id} index={i}>
+                    <View style={s.resenaCard}>
+                      <View style={s.resenaTop}>
+                        <View style={s.estrellasRow}>
+                          {[1, 2, 3, 4, 5].map(i => (
+                            <Ionicons key={i} name={i <= Math.round(media) ? 'star' : 'star-outline'} size={14} color={colors.amber} />
+                          ))}
+                        </View>
+                        <Text style={s.resenaFecha}>{new Date(r.creado_en).toLocaleDateString('es-ES')}</Text>
                       </View>
-                      <Text style={s.resenaFecha}>{new Date(r.creado_en).toLocaleDateString('es-ES')}</Text>
+                      {r.comentario ? <Text style={s.resenaComentario}>"{r.comentario}"</Text> : null}
+                      <View style={s.resenaDetalle}>
+                        <Text style={s.resenaDetalleItem}>Puntualidad {r.puntualidad}</Text>
+                        <Text style={s.resenaDetalleItem}>Calidad {r.calidad}</Text>
+                        <Text style={s.resenaDetalleItem}>Precio {r.precio_justo}</Text>
+                        <Text style={s.resenaDetalleItem}>Trato {r.trato}</Text>
+                      </View>
                     </View>
-                    {r.comentario ? <Text style={s.resenaComentario}>"{r.comentario}"</Text> : null}
-                    <View style={s.resenaDetalle}>
-                      <Text style={s.resenaDetalleItem}>🕐 Puntualidad {r.puntualidad}</Text>
-                      <Text style={s.resenaDetalleItem}>⭐ Calidad {r.calidad}</Text>
-                      <Text style={s.resenaDetalleItem}>💰 Precio {r.precio_justo}</Text>
-                      <Text style={s.resenaDetalleItem}>🤝 Trato {r.trato}</Text>
-                    </View>
-                  </View>
+                  </FadeInUp>
                 );
               })
             )}
@@ -500,100 +525,100 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
-  backBtn: { padding: 4 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.xl, paddingTop: 50 },
+  backBtn: { flexDirection: 'row', alignItems: 'center' },
   backText: { color: colors.blue, fontSize: 15, fontWeight: '500' },
-  titulo: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  titulo: { color: colors.text, fontSize: 16, fontWeight: '700' },
   guardarBtnWrap: { padding: 4 },
   guardarBtn: { color: colors.blue, fontSize: 15, fontWeight: '600' },
   guardarBtnOk: { color: colors.green },
   tabsScroll: { maxHeight: 60 },
-  tabs: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
-  tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.bgCard, gap: 6, borderWidth: 1, borderColor: colors.border },
-  tabActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
-  tabEmoji: { fontSize: 14 },
+  tabs: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.sm },
+  tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.full, backgroundColor: colors.bgCard, gap: 6 },
+  tabActivo: { backgroundColor: colors.blueLight },
   tabText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
-  tabTextActivo: { color: colors.blue },
+  tabTextActivo: { color: colors.blue, fontWeight: '700' },
   contenido: { flex: 1 },
-  avatarWrap: { alignItems: 'center', marginBottom: 12 },
-  avatarGrande: { width: 92, height: 92, borderRadius: 46, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 3, borderColor: colors.blueLight },
+  avatarWrap: { alignItems: 'center', marginBottom: spacing.md },
+  avatarGrande: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, ...shadow.glow(colors.blue) },
   avatarGrandeText: { color: '#fff', fontWeight: 'bold', fontSize: 38 },
-  fotoBtn: { backgroundColor: colors.bgCard, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: colors.border2 },
+  fotoBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.bgCard, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, ...shadow.sm },
   fotoBtnText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
-  nombreGrande: { color: colors.text, fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
-  verificado: { color: colors.green, fontSize: 13, textAlign: 'center', marginBottom: 20 },
-  noVerificado: { color: colors.amber, fontSize: 13, textAlign: 'center', marginBottom: 20 },
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
-  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-  statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
+  nombreGrande: { color: colors.text, ...type.h1, textAlign: 'center', marginBottom: spacing.sm },
+  verificadoRow: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'center', marginBottom: spacing.xl },
+  verificado: { color: colors.green, fontSize: 13 },
+  noVerificado: { color: colors.amber, fontSize: 13 },
+  statsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
+  statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold' },
   statLabel: { color: colors.textMuted, fontSize: 11 },
-  seccionTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 6, marginTop: 8 },
-  seccionSub: { color: colors.textMuted, fontSize: 12, marginBottom: 14 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, paddingHorizontal: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border2 },
-  inputIcon: { fontSize: 16, marginRight: 8 },
-  input: { flex: 1, color: colors.text, paddingVertical: 13, fontSize: 14 },
-  textArea: { backgroundColor: colors.bgCard, color: colors.text, borderRadius: 12, padding: 14, fontSize: 14, minHeight: 120, textAlignVertical: 'top', borderWidth: 1, borderColor: colors.border2, marginBottom: 16 },
-  suscripcionCard: { backgroundColor: colors.blueLight, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.blue, marginTop: 8 },
-  suscripcionInactiva: { backgroundColor: colors.redLight, borderColor: colors.red },
+  seccionTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 6, marginTop: spacing.sm },
+  seccionSub: { color: colors.textMuted, fontSize: 12, marginBottom: spacing.lg },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, paddingHorizontal: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
+  inputIcon: { marginRight: spacing.sm },
+  input: { flex: 1, color: colors.text, paddingVertical: spacing.md, fontSize: 14 },
+  textArea: { backgroundColor: colors.bgCard, color: colors.text, borderRadius: radius.md, padding: spacing.lg, fontSize: 14, minHeight: 120, textAlignVertical: 'top', marginBottom: spacing.lg, ...shadow.sm },
+  suscripcionCard: { backgroundColor: colors.blueLight, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm },
+  suscripcionInactiva: { backgroundColor: colors.redLight },
   suscripcionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  suscripcionTituloRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   suscripcionTitulo: { color: colors.text, fontWeight: '600', fontSize: 15 },
   suscripcionBadge: { backgroundColor: colors.blue, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   suscripcionBadgeInactiva: { backgroundColor: colors.red },
   suscripcionBadgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  suscripcionSub: { color: colors.textMuted, fontSize: 13, marginBottom: 14 },
-  suscripcionBotones: { flexDirection: 'row', gap: 10 },
-  btnGestionar: { flex: 1, borderWidth: 1, borderColor: colors.blue, borderRadius: 10, padding: 10, alignItems: 'center' },
+  suscripcionSub: { color: colors.textMuted, fontSize: 13, marginBottom: spacing.lg },
+  suscripcionBotones: { flexDirection: 'row', gap: spacing.md },
+  btnGestionar: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
   btnGestionarText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
-  btnFacturas: { flex: 1, borderWidth: 1, borderColor: colors.border2, borderRadius: 10, padding: 10, alignItems: 'center' },
+  btnFacturas: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
   btnFacturasText: { color: colors.textMuted, fontSize: 13 },
-  diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, padding: 14, marginBottom: 8, gap: 10, borderWidth: 1, borderColor: colors.border },
+  diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
   diaCardInactivo: { opacity: 0.5 },
   diaNombre: { color: colors.text, fontWeight: '500', fontSize: 14, flex: 1 },
   diaInactivo: { color: colors.textFaint },
   horasRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  horaBtn: { backgroundColor: colors.bgCard2, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: colors.blue },
+  horaBtn: { backgroundColor: colors.bgCard2, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6 },
   horaBtnText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
-  horaFlecha: { color: colors.textMuted, fontSize: 13 },
-  horaSelectorWrap: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.blue },
-  horaSelectorTitulo: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 12 },
-  horaScroll: { marginBottom: 12 },
-  horaPill: { backgroundColor: colors.bgCard2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: colors.border },
-  horaPillActiva: { backgroundColor: colors.blue, borderColor: colors.blue },
+  horaSelectorWrap: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm, ...shadow.md },
+  horaSelectorTitulo: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: spacing.md },
+  horaScroll: { marginBottom: spacing.md },
+  horaPill: { backgroundColor: colors.bgCard2, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginRight: spacing.sm },
+  horaPillActiva: { backgroundColor: colors.blue },
   horaPillText: { color: colors.textMuted, fontSize: 13 },
   horaPillTextActiva: { color: '#fff', fontWeight: '600' },
-  cerrarSelector: { alignItems: 'center', paddingTop: 8 },
+  cerrarSelector: { alignItems: 'center', paddingTop: spacing.sm },
   cerrarSelectorText: { color: colors.textMuted, fontSize: 13 },
-  servicioCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, padding: 14, marginBottom: 8, gap: 10, borderWidth: 1, borderColor: colors.border },
+  servicioCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
   servicioInfo: { flex: 1 },
   servicioNombre: { color: colors.text, fontWeight: '500', fontSize: 14 },
-  servicioDuracion: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  servicioDuracionRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  servicioDuracion: { color: colors.textMuted, fontSize: 11 },
   servicioPrecio: { color: colors.green, fontWeight: 'bold', fontSize: 14 },
-  eliminarBtn: { backgroundColor: colors.redLight, borderRadius: 8, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
-  eliminarBtnText: { color: colors.red, fontSize: 14, fontWeight: 'bold' },
-  añadirCard: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.border },
-  añadirTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 14 },
-  dobleInput: { flexDirection: 'row', gap: 10 },
-  btnAñadir: { backgroundColor: colors.blue, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 4 },
+  eliminarBtn: { backgroundColor: colors.redLight, borderRadius: radius.sm, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
+  añadirCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm, ...shadow.sm },
+  añadirTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: spacing.lg },
+  dobleInput: { flexDirection: 'row', gap: spacing.md },
+  btnAñadir: { backgroundColor: colors.blue, borderRadius: radius.md, padding: 13, alignItems: 'center', marginTop: 4, ...shadow.glow(colors.blue) },
   btnAñadirText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  subirFotoBtn: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 20, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border, marginBottom: 16 },
-  subirFotoEmoji: { fontSize: 36, marginBottom: 8 },
+  subirFotoBtn: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.xl, alignItems: 'center', marginBottom: spacing.lg, ...shadow.sm },
+  subirFotoIconWrap: { width: 52, height: 52, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
   subirFotoText: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 4 },
   subirFotoSub: { color: colors.textMuted, fontSize: 12 },
   fotosVacio: { alignItems: 'center', paddingVertical: 40 },
-  fotosVacioEmoji: { fontSize: 48, marginBottom: 12 },
+  vacioIconWrap: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, ...shadow.sm },
   fotosVacioText: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 6 },
   fotosVacioSub: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
-  fotosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  fotoCard: { width: '47%', backgroundColor: colors.bgCard, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  fotosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  fotoCard: { width: '47%', backgroundColor: colors.bgCard, borderRadius: radius.lg, overflow: 'hidden', ...shadow.sm },
   fotoImagen: { width: '100%', height: 120 },
-  fotoDescInput: { color: colors.textMuted, fontSize: 12, padding: 8, borderTopWidth: 0.5, borderTopColor: colors.border },
-  fotoEliminar: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
-  fotoEliminarText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  avatarGrandeImagen: { width: 92, height: 92, borderRadius: 46, marginBottom: 12 },
-  resenaCard: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
-  resenaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  fotoDescInput: { color: colors.textMuted, fontSize: 12, padding: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.border },
+  fotoEliminar: { position: 'absolute', top: spacing.sm, right: spacing.sm, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: radius.full, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
+  avatarGrandeImagen: { width: 96, height: 96, borderRadius: 48, marginBottom: spacing.md },
+  resenaCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md, ...shadow.sm },
+  resenaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  estrellasRow: { flexDirection: 'row', gap: 1 },
   resenaFecha: { color: colors.textFaint, fontSize: 11 },
-  resenaComentario: { color: colors.text, fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
-  resenaDetalle: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  resenaComentario: { color: colors.text, fontSize: 14, fontStyle: 'italic', marginBottom: spacing.sm },
+  resenaDetalle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   resenaDetalleItem: { color: colors.textMuted, fontSize: 12 },
 });

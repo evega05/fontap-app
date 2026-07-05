@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { useAuth } from '../AuthContext';
-import { colors } from '../theme';
+import { colors, spacing, radius, type, shadow } from '../theme';
+import Pressable from '../components/Pressable';
+import FadeInUp from '../components/FadeInUp';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -13,6 +16,12 @@ function getSaludo() {
   if (hora < 20) return 'Buenas tardes';
   return 'Buenas noches';
 }
+
+const ESTADO_PILL = {
+  precio_enviado: { icon: 'cash-outline', label: 'Precio enviado' },
+  pago_pendiente: { icon: 'hourglass-outline', label: 'Esperando pago' },
+  aceptado: { icon: 'car-outline', label: 'En camino' },
+};
 
 export default function PanelFontaneroScreen({ navigation, route }) {
   const { usuario, token, logout } = useAuth();
@@ -150,7 +159,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       setMostrarPrecio(false);
       setTrabajoActivo(null);
       setPrecioFinal('');
-      Alert.alert('✅ Precio enviado', 'El cliente puede ver el precio y proceder al pago');
+      Alert.alert('Precio enviado', 'El cliente puede ver el precio y proceder al pago');
     } catch (e) {
       Alert.alert('Error', 'No se pudo enviar el precio');
     }
@@ -161,12 +170,15 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       {mostrarPrecio && trabajoActivo && (
         <View style={s.modalOverlay}>
           <View style={s.modal}>
-            <Text style={s.modalTitulo}>🔧 Trabajo en curso</Text>
+            <View style={s.modalIconWrap}>
+              <Ionicons name="construct" size={22} color={colors.blue} />
+            </View>
+            <Text style={s.modalTitulo}>Trabajo en curso</Text>
             <Text style={s.modalSub}>Cuando termines, indica el precio final al cliente</Text>
             <Text style={s.modalCliente}>
               {trabajoActivo.cliente_nombre || trabajoActivo.cliente} · {trabajoActivo.tipo || trabajoActivo.servicio}
             </Text>
-            <Text style={s.modalSeccion}>💰 Precio del servicio</Text>
+            <Text style={s.modalSeccion}>Precio del servicio</Text>
             <View style={s.modalInput}>
               <TextInput
                 style={s.modalInputText}
@@ -178,10 +190,11 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               />
               <Text style={s.modalEuro}>€</Text>
             </View>
-            <TouchableOpacity style={[s.modalBtn, !precioFinal && s.modalBtnDesactivado]} disabled={!precioFinal} onPress={enviarPrecio}>
-              <Text style={s.modalBtnText}>Enviar precio al cliente →</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.modalCancelar} onPress={() => setMostrarPrecio(false)}>
+            <Pressable style={[s.modalBtn, !precioFinal && s.modalBtnDesactivado]} haptic disabled={!precioFinal} onPress={enviarPrecio}>
+              <Text style={s.modalBtnText}>Enviar precio al cliente</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </Pressable>
+            <TouchableOpacity onPress={() => setMostrarPrecio(false)} style={s.modalCancelar}>
               <Text style={s.modalCancelarText}>Seguir trabajando</Text>
             </TouchableOpacity>
           </View>
@@ -189,37 +202,39 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       )}
 
       <View style={s.header}>
-        <View>
-          <Text style={s.saludo}>{getSaludo()} 👋</Text>
-          <Text style={s.nombre}>{nombre}</Text>
-          <Text style={s.idText}>ID: {userId}</Text>
-        </View>
-        <View style={s.headerRight}>
-          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Notificaciones')}>
-            <Text style={s.iconBtnText}>🔔</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Calendario', { userId })}>
-            <Text style={s.iconBtnText}>📅</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Ofertas')}>
-            <Text style={s.iconBtnText}>💼</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('ChatsRecientes')}>
-            <Text style={s.iconBtnText}>💬</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.navigate('Estadisticas', { userId })}>
-            <Text style={s.iconBtnText}>📊</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.perfilBtn} onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
+        <View style={s.headerTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.saludo}>{getSaludo()} 👋</Text>
+            <Text style={s.nombre} numberOfLines={1}>{nombre}</Text>
+            <Text style={s.idText}>ID: {userId}</Text>
+          </View>
+          <Pressable style={s.perfilBtn} haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
             <Text style={s.perfilLetra}>{nombre[0]}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.logoutBtn} onPress={() => Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
+          </Pressable>
+          <Pressable style={s.logoutBtn} haptic onPress={() => Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Salir', style: 'destructive', onPress: () => { logout(); navigation.replace('Login'); } },
           ])}>
-            <Text style={s.logoutBtnText}>🚪</Text>
-          </TouchableOpacity>
+            <Ionicons name="log-out-outline" size={18} color={colors.red} />
+          </Pressable>
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.headerActions}>
+          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Notificaciones')}>
+            <Ionicons name="notifications-outline" size={18} color={colors.text} />
+          </Pressable>
+          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Calendario', { userId })}>
+            <Ionicons name="calendar-outline" size={18} color={colors.text} />
+          </Pressable>
+          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Ofertas')}>
+            <Ionicons name="briefcase-outline" size={18} color={colors.text} />
+          </Pressable>
+          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('ChatsRecientes')}>
+            <Ionicons name="chatbubbles-outline" size={18} color={colors.text} />
+          </Pressable>
+          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Estadisticas', { userId })}>
+            <Ionicons name="stats-chart-outline" size={18} color={colors.text} />
+          </Pressable>
+        </ScrollView>
       </View>
 
       <View style={s.disponibilidadCard}>
@@ -231,152 +246,194 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           </View>
         </View>
         <Switch value={disponible} onValueChange={toggleDisponible}
-          trackColor={{ false: '#2a2a3e', true: '#1e3a5f' }} thumbColor={disponible ? '#3b82f6' : '#555'} />
+          trackColor={{ false: colors.bgCard3, true: colors.blueLight }} thumbColor={disponible ? colors.blue : colors.textFaint} />
       </View>
 
-      <View style={[s.disponibilidadCard, { marginTop: -8 }]}>
+      <View style={[s.disponibilidadCard, { marginTop: -4 }]}>
         <View style={s.disponibilidadLeft}>
-          <Text style={{ fontSize: 20, marginRight: 10 }}>⚡</Text>
+          <View style={s.disponibilidadIconWrap}>
+            <Ionicons name="flash" size={16} color={colors.purple} />
+          </View>
           <View>
             <Text style={s.disponibilidadTitulo}>Servicio 24 horas</Text>
             <Text style={s.disponibilidadSub}>{disponible24h ? 'Aceptas urgencias nocturnas' : 'Solo horario normal'}</Text>
           </View>
         </View>
         <Switch value={disponible24h} onValueChange={toggle24h}
-          trackColor={{ false: '#2a2a3e', true: '#2d1a3e' }} thumbColor={disponible24h ? '#a855f7' : '#555'} />
+          trackColor={{ false: colors.bgCard3, true: '#2d1a3e' }} thumbColor={disponible24h ? colors.purple : colors.textFaint} />
       </View>
 
       <View style={s.statsRow}>
         <View style={s.statCard}>
-          <Text style={s.statEmoji}>⭐</Text>
+          <Ionicons name="star" size={18} color={colors.amber} />
           <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
           <Text style={s.statLabel}>Valoración</Text>
         </View>
         <View style={s.statCard}>
-          <Text style={s.statEmoji}>✅</Text>
+          <Ionicons name="checkmark-circle" size={18} color={colors.green} />
           <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
           <Text style={s.statLabel}>Trabajos</Text>
         </View>
         <View style={s.statCard}>
-          <Text style={s.statEmoji}>💰</Text>
+          <Ionicons name="cash" size={18} color={colors.blue} />
           <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
           <Text style={s.statLabel}>Total ganado</Text>
         </View>
       </View>
 
-
       {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
         <View style={s.enCursoCard}>
           <View style={s.enCursoHeader}>
-            <Text style={s.enCursoTitulo}>🔧 Trabajo en curso</Text>
+            <View style={s.enCursoTituloRow}>
+              <Ionicons name="construct" size={15} color={colors.green} />
+              <Text style={s.enCursoTitulo}>Trabajo en curso</Text>
+            </View>
             <View style={s.enCursoPill}>
-              <Text style={s.enCursoPillText}>
-                {trabajoActivo.estado === 'precio_enviado' ? '💰 Precio enviado' : trabajoActivo.estado === 'pago_pendiente' ? '💵 Esperando pago' : '🚗 En camino'}
-              </Text>
+              <Ionicons name={ESTADO_PILL[trabajoActivo.estado]?.icon || 'car-outline'} size={11} color={colors.green} />
+              <Text style={s.enCursoPillText}>{ESTADO_PILL[trabajoActivo.estado]?.label}</Text>
             </View>
           </View>
           <Text style={s.enCursoCliente}>{trabajoActivo.cliente_nombre} · {trabajoActivo.tipo}</Text>
           {trabajoActivo.estado === 'aceptado' && (
-            <TouchableOpacity style={s.enCursoBtn} onPress={() => setMostrarPrecio(true)}>
-              <Text style={s.enCursoBtnText}>Enviar precio al cliente →</Text>
-            </TouchableOpacity>
+            <Pressable style={s.enCursoBtn} haptic onPress={() => setMostrarPrecio(true)}>
+              <Text style={s.enCursoBtnText}>Enviar precio al cliente</Text>
+              <Ionicons name="arrow-forward" size={15} color="#fff" />
+            </Pressable>
           )}
           {trabajoActivo.estado === 'aceptado' && (
-            <TouchableOpacity style={s.enCursoChatBtn} onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
-              <Text style={s.enCursoChatText}>💬 Chat con cliente</Text>
-            </TouchableOpacity>
+            <Pressable style={s.enCursoChatBtn} haptic onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
+              <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
+              <Text style={s.enCursoChatText}>Chat con cliente</Text>
+            </Pressable>
           )}
         </View>
       )}
 
       <View style={s.tabs}>
-        <TouchableOpacity style={[s.tab, tab === 'pendientes' && s.tabActivo]} onPress={() => setTab('pendientes')}>
+        <Pressable style={[s.tab, tab === 'pendientes' && s.tabActivo]} haptic onPress={() => setTab('pendientes')}>
           <Text style={[s.tabText, tab === 'pendientes' && s.tabTextActivo]}>Pendientes</Text>
           {pendientes.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{pendientes.length}</Text></View>}
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.tab, tab === 'completados' && s.tabActivo]} onPress={() => setTab('completados')}>
+        </Pressable>
+        <Pressable style={[s.tab, tab === 'completados' && s.tabActivo]} haptic onPress={() => setTab('completados')}>
           <Text style={[s.tabText, tab === 'completados' && s.tabTextActivo]}>Completados</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
         {tab === 'pendientes' ? (
           cargando ? (
             <View style={s.vacio}>
-              <Text style={s.vacioEmoji}>⏳</Text>
               <Text style={s.vacioTitulo}>Cargando...</Text>
             </View>
           ) : pendientes.length === 0 ? (
             <View style={s.vacio}>
-              <Text style={s.vacioEmoji}>🎉</Text>
+              <View style={s.vacioIconWrap}>
+                <Ionicons name="checkmark-done" size={36} color={colors.green} />
+              </View>
               <Text style={s.vacioTitulo}>¡Al día!</Text>
               <Text style={s.vacioSub}>No tienes solicitudes pendientes</Text>
             </View>
           ) : (
-            pendientes.map(t => (
-              <View key={t.id} style={s.trabajoCard}>
-                <View style={s.trabajoHeader}>
-                  <View style={s.avatar}>
-                    <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
+            pendientes.map((t, i) => (
+              <FadeInUp key={t.id} index={i}>
+                <View style={s.trabajoCard}>
+                  <View style={s.trabajoHeader}>
+                    <View style={s.avatar}>
+                      <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
+                    </View>
+                    <View style={s.trabajoInfo}>
+                      <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
+                      <View style={s.trabajoZonaRow}>
+                        <Ionicons name="location" size={11} color={colors.textMuted} />
+                        <Text style={s.trabajoZona}>{t.zona || 'Bilbao'}</Text>
+                        {t.urgente && (
+                          <>
+                            <Text style={s.cardStatDot}>·</Text>
+                            <Text style={s.trabajoZona}>Ahora</Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                    {t.urgente && (
+                      <View style={s.urgenteBadge}>
+                        <Ionicons name="flash" size={11} color={colors.red} />
+                        <Text style={s.urgenteText}>URGENTE</Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={s.trabajoInfo}>
-                    <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
-                    <Text style={s.trabajoZona}>📍 {t.zona || 'Bilbao'} · 🕐 {t.urgente ? 'Ahora' : '—'}</Text>
+                  <View style={s.trabajoDetalle}>
+                    <View style={s.servicioRow}>
+                      <Ionicons name="construct-outline" size={14} color={colors.textMuted} />
+                      <Text style={s.trabajoServicio}>{t.tipo || t.servicio}</Text>
+                    </View>
+                    {t.descripcion ? <Text style={s.descripcion}>{t.descripcion}</Text> : null}
                   </View>
-                  {t.urgente && <View style={s.urgenteBadge}><Text style={s.urgenteText}>⚡ URGENTE</Text></View>}
-                </View>
-                <View style={s.trabajoDetalle}>
-                  <View style={s.servicioRow}>
-                    <Text style={s.servicioEmoji}>🔧</Text>
-                    <Text style={s.trabajoServicio}>{t.tipo || t.servicio}</Text>
+                  <View style={s.botonesRow}>
+                    <Pressable style={s.btnRechazar} haptic onPress={() => rechazar(t.id)}>
+                      <Ionicons name="close" size={16} color={colors.red} />
+                      <Text style={s.btnRechazarText}>Rechazar</Text>
+                    </Pressable>
+                    <Pressable style={s.btnAceptar} haptic onPress={() => aceptar(t)}>
+                      <Ionicons name="checkmark" size={16} color={colors.green} />
+                      <Text style={s.btnAceptarText}>Aceptar</Text>
+                    </Pressable>
                   </View>
-                  {t.descripcion ? <Text style={s.descripcion}>{t.descripcion}</Text> : null}
+                  <Pressable
+                    style={s.btnChat}
+                    haptic
+                    onPress={() => navigation.navigate('Chat', { servicioId: t.id, otroNombre: t.cliente_nombre || t.cliente || 'Cliente' })}
+                  >
+                    <Ionicons name="chatbubble-outline" size={14} color={colors.blue} />
+                    <Text style={s.btnChatText}>Chatear con el cliente</Text>
+                  </Pressable>
                 </View>
-                <View style={s.botonesRow}>
-                  <TouchableOpacity style={s.btnRechazar} onPress={() => rechazar(t.id)}>
-                    <Text style={s.btnRechazarText}>✕ Rechazar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.btnAceptar} onPress={() => aceptar(t)}>
-                    <Text style={s.btnAceptarText}>✓ Aceptar</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={s.btnChat}
-                  onPress={() => navigation.navigate('Chat', { servicioId: t.id, otroNombre: t.cliente_nombre || t.cliente || 'Cliente' })}
-                >
-                  <Text style={s.btnChatText}>💬 Chatear con el cliente</Text>
-                </TouchableOpacity>
-              </View>
+              </FadeInUp>
             ))
           )
         ) : (
           completados.length === 0 ? (
             <View style={s.vacio}>
-              <Text style={s.vacioEmoji}>📋</Text>
+              <View style={s.vacioIconWrap}>
+                <Ionicons name="receipt-outline" size={36} color={colors.textMuted} />
+              </View>
               <Text style={s.vacioTitulo}>Sin trabajos completados</Text>
               <Text style={s.vacioSub}>Aquí aparecerán tus trabajos finalizados</Text>
             </View>
           ) : (
-            completados.map(t => (
-              <View key={t.id} style={s.completadoCard}>
-                <View style={s.trabajoHeader}>
-                  <View style={s.avatarCompletado}>
-                    <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
+            completados.map((t, i) => (
+              <FadeInUp key={t.id} index={i}>
+                <View style={s.completadoCard}>
+                  <View style={s.trabajoHeader}>
+                    <View style={s.avatarCompletado}>
+                      <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
+                    </View>
+                    <View style={s.trabajoInfo}>
+                      <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
+                      <View style={s.trabajoZonaRow}>
+                        <Ionicons name="location" size={11} color={colors.textMuted} />
+                        <Text style={s.trabajoZona}>{t.zona || '—'}</Text>
+                        <Text style={s.cardStatDot}>·</Text>
+                        <Text style={s.trabajoZona}>{t.fecha}</Text>
+                      </View>
+                    </View>
+                    <Text style={s.completadoPrecio}>+{t.precio}€</Text>
                   </View>
-                  <View style={s.trabajoInfo}>
-                    <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
-                    <Text style={s.trabajoZona}>📍 {t.zona || '—'} · 📅 {t.fecha}</Text>
+                  <View style={s.valoracionRow}>
+                    <Text style={s.trabajoServicio}>{t.tipo || t.servicio}</Text>
+                    {t.pendientePago && (
+                      <View style={s.pendienteBadge}>
+                        <Ionicons name="hourglass-outline" size={10} color={colors.blue} />
+                        <Text style={s.pendienteText}>Pendiente pago</Text>
+                      </View>
+                    )}
+                    <View style={s.estrellasRow}>
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <Ionicons key={i} name={i <= (t.valoracion || 0) ? 'star' : 'star-outline'} size={12} color={colors.amber} />
+                      ))}
+                    </View>
                   </View>
-                  <Text style={s.completadoPrecio}>+{t.precio}€</Text>
                 </View>
-                <View style={s.valoracionRow}>
-                  <Text style={s.trabajoServicio}>{t.tipo || t.servicio}</Text>
-                  {t.pendientePago && <View style={s.pendienteBadge}><Text style={s.pendienteText}>⏳ Pendiente pago</Text></View>}
-                  <View style={s.estrellasRow}>
-                    {[1,2,3,4,5].map(i => <Text key={i} style={s.estrella}>{i <= (t.valoracion || 0) ? '⭐' : '☆'}</Text>)}
-                  </View>
-                </View>
-              </View>
+              </FadeInUp>
             ))
           )
         )}
@@ -387,92 +444,93 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  enCursoCard: { backgroundColor: colors.greenLight, borderRadius: 16, padding: 16, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.green },
-  enCursoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  enCursoCard: { backgroundColor: colors.greenLight, borderRadius: radius.lg, padding: spacing.lg, marginHorizontal: spacing.lg, marginBottom: spacing.md },
+  enCursoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  enCursoTituloRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   enCursoTitulo: { color: colors.green, fontWeight: 'bold', fontSize: 15 },
-  enCursoPill: { backgroundColor: colors.greenLight, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.green },
+  enCursoPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,196,140,0.12)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 4 },
   enCursoPillText: { color: colors.green, fontSize: 11, fontWeight: '600' },
-  enCursoCliente: { color: colors.textMuted, fontSize: 13, marginBottom: 12 },
-  enCursoBtn: { backgroundColor: colors.blue, borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 8 },
+  enCursoCliente: { color: colors.textMuted, fontSize: 13, marginBottom: spacing.md },
+  enCursoBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.blue, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm, ...shadow.glow(colors.blue) },
   enCursoBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  enCursoChatBtn: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  enCursoChatBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.bgCard2, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center' },
   enCursoChatText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
-  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
-  modal: { backgroundColor: colors.bgCard, borderRadius: 20, padding: 24, margin: 20, width: '90%', borderWidth: 1, borderColor: colors.border },
-  modalTitulo: { color: colors.text, fontSize: 20, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
-  modalSub: { color: colors.textMuted, fontSize: 13, textAlign: 'center', marginBottom: 8 },
-  modalCliente: { color: colors.blue, fontSize: 13, textAlign: 'center', marginBottom: 16, fontWeight: '600' },
-  modalSeccion: { color: colors.textMuted, fontSize: 13, marginBottom: 10 },
-  modalInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  modalInputText: { flex: 1, color: colors.text, paddingVertical: 14, fontSize: 24, fontWeight: 'bold' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+  modal: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, margin: spacing.xl, width: '90%', ...shadow.lg },
+  modalIconWrap: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: spacing.md },
+  modalTitulo: { color: colors.text, ...type.h2, marginBottom: spacing.sm, textAlign: 'center' },
+  modalSub: { color: colors.textMuted, fontSize: 13, textAlign: 'center', marginBottom: spacing.sm },
+  modalCliente: { color: colors.blue, fontSize: 13, textAlign: 'center', marginBottom: spacing.lg, fontWeight: '600' },
+  modalSeccion: { color: colors.textMuted, fontSize: 13, marginBottom: spacing.sm },
+  modalInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
+  modalInputText: { flex: 1, color: colors.text, paddingVertical: spacing.md, fontSize: 26, fontWeight: 'bold' },
   modalEuro: { color: colors.green, fontSize: 24, fontWeight: 'bold' },
-  modalBtn: { backgroundColor: colors.blue, borderRadius: 12, padding: 14, alignItems: 'center' },
+  modalBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.blue, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center', ...shadow.glow(colors.blue) },
   modalBtnDesactivado: { opacity: 0.4 },
   modalBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  modalCancelar: { marginTop: 12, alignItems: 'center' },
+  modalCancelar: { marginTop: spacing.md, alignItems: 'center' },
   modalCancelarText: { color: colors.textMuted, fontSize: 14 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-  iconBtnText: { fontSize: 16 },
+  header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingRight: spacing.xl },
+  iconBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', ...shadow.sm },
   saludo: { color: colors.textMuted, fontSize: 13, marginBottom: 2 },
-  nombre: { color: colors.text, fontSize: 24, fontWeight: 'bold' },
+  nombre: { color: colors.text, ...type.h1 },
   idText: { color: colors.blue, fontSize: 11, marginTop: 2 },
-  perfilBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  perfilBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', ...shadow.glow(colors.blue) },
   perfilLetra: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
-  logoutBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.redLight, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.red },
-  logoutBtnText: { fontSize: 16 },
-  disponibilidadCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, marginHorizontal: 20, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  disponibilidadLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoutBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.redLight, justifyContent: 'center', alignItems: 'center' },
+  disponibilidadCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
+  disponibilidadLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  disponibilidadIconWrap: { width: 30, height: 30, borderRadius: radius.full, backgroundColor: 'rgba(139,92,246,0.15)', justifyContent: 'center', alignItems: 'center' },
   indicador: { width: 10, height: 10, borderRadius: 5 },
   indicadorVerde: { backgroundColor: colors.green },
   indicadorRojo: { backgroundColor: colors.red },
   disponibilidadTitulo: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
   disponibilidadSub: { color: colors.textMuted, fontSize: 12 },
-  statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginVertical: 14 },
-  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-  statEmoji: { fontSize: 20, marginBottom: 6 },
-  statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 2 },
+  statsRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.xl, marginVertical: spacing.lg },
+  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
+  statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold' },
   statLabel: { color: colors.textMuted, fontSize: 11 },
-  tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 12, gap: 8 },
-  tab: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: colors.bgCard, gap: 6, borderWidth: 1, borderColor: colors.border },
-  tabActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  tabs: { flexDirection: 'row', paddingHorizontal: spacing.xl, marginBottom: spacing.md, gap: spacing.sm },
+  tab: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.bgCard, gap: 6 },
+  tabActivo: { backgroundColor: colors.blueLight },
   tabText: { color: colors.textMuted, fontWeight: '500', fontSize: 14 },
-  tabTextActivo: { color: colors.blue },
+  tabTextActivo: { color: colors.blue, fontWeight: '700' },
   badge: { backgroundColor: colors.red, borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  lista: { flex: 1, paddingHorizontal: 20 },
-  vacio: { alignItems: 'center', paddingTop: 60 },
-  vacioEmoji: { fontSize: 48, marginBottom: 12 },
-  vacioTitulo: { color: colors.text, fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
+  lista: { flex: 1, paddingHorizontal: spacing.xl },
+  vacio: { alignItems: 'center', paddingTop: 50 },
+  vacioIconWrap: { width: 80, height: 80, borderRadius: radius.full, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, ...shadow.sm },
+  vacioTitulo: { color: colors.text, fontSize: 20, fontWeight: 'bold', marginBottom: spacing.sm },
   vacioSub: { color: colors.textMuted, fontSize: 14 },
-  trabajoCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
-  trabajoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  avatarCompletado: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  trabajoCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadow.md },
+  trabajoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+  avatarCompletado: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   trabajoInfo: { flex: 1 },
   trabajoCliente: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 3 },
+  trabajoZonaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   trabajoZona: { color: colors.textMuted, fontSize: 12 },
-  urgenteBadge: { backgroundColor: colors.redLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: colors.red },
-  urgenteText: { color: colors.red, fontSize: 11, fontWeight: 'bold' },
-  trabajoDetalle: { paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.border, marginBottom: 12 },
+  cardStatDot: { color: colors.textFaint, fontSize: 12 },
+  urgenteBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.redLight, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 4 },
+  urgenteText: { color: colors.red, fontSize: 10, fontWeight: 'bold' },
+  trabajoDetalle: { paddingVertical: spacing.sm, marginBottom: spacing.md },
   servicioRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  servicioEmoji: { fontSize: 16 },
   trabajoServicio: { color: colors.textMuted, fontSize: 13 },
   descripcion: { color: colors.textFaint, fontSize: 12, marginTop: 6, fontStyle: 'italic' },
-  botonesRow: { flexDirection: 'row', gap: 10 },
-  btnChat: { marginTop: 8, backgroundColor: colors.blueLight, borderRadius: 12, padding: 11, alignItems: 'center', borderWidth: 1, borderColor: colors.blue },
+  botonesRow: { flexDirection: 'row', gap: spacing.md },
+  btnChat: { flexDirection: 'row', gap: 6, marginTop: spacing.sm, backgroundColor: colors.blueLight, borderRadius: radius.md, padding: 11, alignItems: 'center', justifyContent: 'center' },
   btnChatText: { color: colors.blue, fontWeight: '600', fontSize: 13 },
-  btnRechazar: { flex: 1, backgroundColor: colors.redLight, borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: colors.red },
+  btnRechazar: { flex: 1, flexDirection: 'row', gap: 6, backgroundColor: colors.redLight, borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center' },
   btnRechazarText: { color: colors.red, fontWeight: 'bold', fontSize: 14 },
-  btnAceptar: { flex: 1, backgroundColor: colors.greenLight, borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: colors.green },
+  btnAceptar: { flex: 1, flexDirection: 'row', gap: 6, backgroundColor: colors.greenLight, borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center' },
   btnAceptarText: { color: colors.green, fontWeight: 'bold', fontSize: 14 },
-  completadoCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  completadoCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadow.md },
   completadoPrecio: { color: colors.green, fontWeight: 'bold', fontSize: 15 },
-  valoracionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: colors.border },
-  pendienteBadge: { backgroundColor: colors.blueLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.blue },
+  valoracionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.border },
+  pendienteBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.blueLight, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 },
   pendienteText: { color: colors.blue, fontSize: 11, fontWeight: '600' },
-  estrellasRow: { flexDirection: 'row' },
-  estrella: { fontSize: 13 },
+  estrellasRow: { flexDirection: 'row', gap: 1 },
 });

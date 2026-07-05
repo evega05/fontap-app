@@ -14,11 +14,14 @@ import {
 } from 'react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as Location from 'expo-location';
-import { colors } from '../theme';
+import { colors, spacing, radius, type, shadow } from '../theme';
 import { useAuth } from '../AuthContext';
 import MapaFontaneros from './MapComponent';
+import Pressable from '../components/Pressable';
+import FadeInUp from '../components/FadeInUp';
 
 function distanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -35,15 +38,14 @@ function formatDistancia(km) {
 }
 
 const API = 'https://fontap-backend-production.up.railway.app';
-const DRAWER_WIDTH = 280;
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DRAWER_WIDTH = 288;
 
 const SERVICIOS_FILTRO = ['Todos', 'Desatasco', 'Fuga', 'Caldera', 'Grifo', 'Radiador'];
 
 const BADGES = {
-  top: { emoji: '⭐', label: 'Mejor valorado', color: '#F5A623' },
-  rapido: { emoji: '⚡', label: 'Más rápido', color: colors.blue },
-  popular: { emoji: '🔥', label: 'Popular', color: '#E74C3C' },
+  top: { icon: 'star', label: 'Mejor valorado', color: '#F5A623' },
+  rapido: { icon: 'flash', label: 'Más rápido', color: colors.blue },
+  popular: { icon: 'flame', label: 'Popular', color: '#E74C3C' },
 };
 
 // --- Animated pulsing dot component ---
@@ -77,13 +79,16 @@ function PulsingDot({ color = colors.green, size = 10 }) {
 }
 
 // --- Star rating row ---
-function StarRating({ value = 0, total = 5 }) {
+function StarRating({ value = 0, total = 5, size = 12 }) {
   const stars = [];
   for (let i = 1; i <= total; i++) {
     stars.push(
-      <Text key={i} style={{ fontSize: 11, color: i <= Math.round(value) ? '#F5A623' : colors.textFaint }}>
-        {i <= Math.round(value) ? '★' : '☆'}
-      </Text>
+      <Ionicons
+        key={i}
+        name={i <= Math.round(value) ? 'star' : 'star-outline'}
+        size={size}
+        color={i <= Math.round(value) ? colors.amber : colors.textFaint}
+      />
     );
   }
   return <View style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>{stars}</View>;
@@ -242,184 +247,192 @@ export default function MapaScreen({ navigation, route }) {
   };
 
   // --- Fontanero card ---
-  const renderTarjetaFontanero = (f) => {
+  const renderTarjetaFontanero = (f, index) => {
     const esVerificado = !!f.verificado;
     const isSelected = seleccionado?.id === f.id;
 
     return (
-      <TouchableOpacity
-        key={f.id}
-        style={[
-          s.card,
-          !f.disponible && s.cardInactivo,
-          isSelected && s.cardActiva,
-        ]}
-        activeOpacity={0.85}
-        onPress={() => {
-          if (!f.disponible) return;
-          setSeleccionado(isSelected ? null : f);
-        }}
-      >
-        {/* Card header */}
-        <View style={s.cardHeader}>
-          {/* Avatar */}
-          <View style={s.avatarWrap}>
-            {f.foto_url ? (
-              <Image source={{ uri: `${API}${f.foto_url}` }} style={[s.avatar, !f.disponible && s.avatarInactivo]} />
-            ) : (
-              <View style={[s.avatar, !f.disponible && s.avatarInactivo]}>
-                <Text style={s.avatarText}>{f.nombre?.[0] || '?'}</Text>
-              </View>
-            )}
-            {f.disponible && (
-              <View style={s.avatarDotWrap}>
-                <PulsingDot color={colors.green} size={8} />
-              </View>
-            )}
-          </View>
-
-          {/* Info */}
-          <View style={s.cardInfo}>
-            <View style={s.cardNombreRow}>
-              <Text style={s.cardNombre}>{f.nombre}</Text>
-              {esVerificado && (
-                <View style={s.verifiedBadge}>
-                  <Text style={s.verifiedBadgeText}>VERIFICADO ✓</Text>
+      <FadeInUp key={f.id} index={index}>
+        <Pressable
+          style={[
+            s.card,
+            !f.disponible && s.cardInactivo,
+            isSelected && s.cardActiva,
+          ]}
+          haptic
+          onPress={() => {
+            if (!f.disponible) return;
+            setSeleccionado(isSelected ? null : f);
+          }}
+        >
+          {/* Card header */}
+          <View style={s.cardHeader}>
+            {/* Avatar */}
+            <View style={s.avatarWrap}>
+              {f.foto_url ? (
+                <Image source={{ uri: `${API}${f.foto_url}` }} style={[s.avatar, !f.disponible && s.avatarInactivo]} />
+              ) : (
+                <View style={[s.avatar, !f.disponible && s.avatarInactivo]}>
+                  <Text style={s.avatarText}>{f.nombre?.[0] || '?'}</Text>
+                </View>
+              )}
+              {f.disponible && (
+                <View style={s.avatarDotWrap}>
+                  <PulsingDot color={colors.green} size={8} />
                 </View>
               )}
             </View>
 
-            {f.badge && BADGES[f.badge] && (
-              <View
-                style={[
-                  s.badgePill,
-                  {
-                    backgroundColor: BADGES[f.badge].color + '22',
-                    borderColor: BADGES[f.badge].color,
-                    alignSelf: 'flex-start',
-                    marginBottom: 4,
-                  },
-                ]}
-              >
-                <Text style={[s.badgePillText, { color: BADGES[f.badge].color }]}>
-                  {BADGES[f.badge].emoji} {BADGES[f.badge].label}
-                </Text>
+            {/* Info */}
+            <View style={s.cardInfo}>
+              <View style={s.cardNombreRow}>
+                <Text style={s.cardNombre}>{f.nombre}</Text>
+                {esVerificado && (
+                  <View style={s.verifiedBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color={colors.green} />
+                  </View>
+                )}
               </View>
-            )}
 
-            <Text style={s.cardZona}>
-              📍 {f.zona} · 🚶 {f.distancia}
-            </Text>
-
-            {/* Stars + valoracion */}
-            <View style={s.ratingRow}>
-              {f.valoracion ? (
-                <>
-                  <StarRating value={f.valoracion} />
-                  <Text style={s.ratingVal}>{f.valoracion}</Text>
-                </>
-              ) : (
-                <Text style={s.ratingVal}>🆕 Nuevo</Text>
+              {f.badge && BADGES[f.badge] && (
+                <View
+                  style={[
+                    s.badgePill,
+                    { backgroundColor: BADGES[f.badge].color + '1F' },
+                  ]}
+                >
+                  <Ionicons name={BADGES[f.badge].icon} size={10} color={BADGES[f.badge].color} />
+                  <Text style={[s.badgePillText, { color: BADGES[f.badge].color }]}>
+                    {BADGES[f.badge].label}
+                  </Text>
+                </View>
               )}
-              <Text style={s.cardStatDot}>·</Text>
-              <Text style={s.cardStat}>💰 {f.precio}</Text>
-            </View>
 
-            {/* Tiempo de respuesta */}
-            {f.llegada && (
-              <View style={s.llegadaRow}>
-                <Text style={s.llegadaIcon}>🕐</Text>
-                <Text style={s.llegadaText}>{f.llegada}</Text>
-                <Text style={s.llegadaLabel}> estimado</Text>
+              <View style={s.cardZonaRow}>
+                <Ionicons name="location" size={12} color={colors.textMuted} />
+                <Text style={s.cardZona}>{f.zona}</Text>
+                <Text style={s.cardStatDot}>·</Text>
+                <Ionicons name="walk" size={12} color={colors.textMuted} />
+                <Text style={s.cardZona}>{f.distancia}</Text>
               </View>
-            )}
-          </View>
 
-          {/* Right col */}
-          <View style={s.cardRight}>
-            <View
-              style={[s.estadoBadge, f.disponible ? s.estadoVerde : s.estadoGris]}
-            >
-              <Text
-                style={[
-                  s.estadoText,
-                  f.disponible ? s.estadoTextVerde : s.estadoTextGris,
-                ]}
-              >
-                {f.disponible ? 'Libre' : `Hasta ${f.ocupadoHasta || '—'}`}
-              </Text>
+              {/* Stars + valoracion */}
+              <View style={s.ratingRow}>
+                {f.valoracion ? (
+                  <>
+                    <StarRating value={f.valoracion} />
+                    <Text style={s.ratingVal}>{f.valoracion}</Text>
+                  </>
+                ) : (
+                  <View style={s.nuevoPill}>
+                    <Ionicons name="sparkles" size={10} color={colors.blue} />
+                    <Text style={s.nuevoPillText}>Nuevo</Text>
+                  </View>
+                )}
+              </View>
             </View>
-            {clienteId && (
-              <TouchableOpacity
-                style={s.favBtn}
-                onPress={() => toggleFavorito(f)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={s.favBtnText}>
-                  {favoritos.includes(f.id) ? '❤️' : '🤍'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
 
-        {/* Service tags */}
-        {f.servicios && (
-          <View style={s.serviciosRow}>
-            {f.servicios.map((sv) => (
+            {/* Right col */}
+            <View style={s.cardRight}>
               <View
-                key={sv}
-                style={[
-                  s.servicioTag,
-                  filtroServicio === sv && s.servicioTagActivo,
-                ]}
+                style={[s.estadoBadge, f.disponible ? s.estadoVerde : s.estadoGris]}
               >
                 <Text
                   style={[
-                    s.servicioTagText,
-                    filtroServicio === sv && s.servicioTagTextActivo,
+                    s.estadoText,
+                    f.disponible ? s.estadoTextVerde : s.estadoTextGris,
                   ]}
                 >
-                  {sv}
+                  {f.disponible ? 'Libre' : `Hasta ${f.ocupadoHasta || '—'}`}
                 </Text>
               </View>
-            ))}
-            {f.disponible24h && (
-              <View style={s.tag24h}>
-                <Text style={s.tag24hText}>🌙 24h</Text>
-              </View>
-            )}
+              {clienteId && (
+                <Pressable
+                  style={s.favBtn}
+                  haptic
+                  onPress={() => toggleFavorito(f)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={favoritos.includes(f.id) ? 'heart' : 'heart-outline'}
+                    size={20}
+                    color={favoritos.includes(f.id) ? colors.red : colors.textMuted}
+                  />
+                </Pressable>
+              )}
+            </View>
           </View>
-        )}
 
-        {/* Expand: contratar + ver perfil */}
-        {isSelected && f.disponible && (
-          <View style={s.accionesRow}>
-            <TouchableOpacity
-              style={s.btnVerPerfil}
-              onPress={() =>
-                navigation.navigate('PerfilFontaneroPublico', { fontanero: f })
-              }
-            >
-              <Text style={s.btnVerPerfilText}>Ver perfil</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.btnContratar}
-              onPress={() =>
-                navigation.navigate('Solicitud', { fontanero: f, clienteId })
-              }
-            >
-              <Text style={s.btnContratarText}>
-                Contratar a {f.nombre?.split(' ')[0]} →
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </TouchableOpacity>
+          {/* Service tags */}
+          {f.servicios && (
+            <View style={s.serviciosRow}>
+              {f.servicios.map((sv) => (
+                <View
+                  key={sv}
+                  style={[
+                    s.servicioTag,
+                    filtroServicio === sv && s.servicioTagActivo,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      s.servicioTagText,
+                      filtroServicio === sv && s.servicioTagTextActivo,
+                    ]}
+                  >
+                    {sv}
+                  </Text>
+                </View>
+              ))}
+              {f.disponible24h && (
+                <View style={s.tag24h}>
+                  <Ionicons name="moon" size={10} color="#7356BF" />
+                  <Text style={s.tag24hText}>24h</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Expand: contratar + ver perfil */}
+          {isSelected && f.disponible && (
+            <View style={s.accionesRow}>
+              <Pressable
+                style={s.btnVerPerfil}
+                haptic
+                onPress={() =>
+                  navigation.navigate('PerfilFontaneroPublico', { fontanero: f })
+                }
+              >
+                <Text style={s.btnVerPerfilText}>Ver perfil</Text>
+              </Pressable>
+              <Pressable
+                style={s.btnContratar}
+                haptic
+                onPress={() =>
+                  navigation.navigate('Solicitud', { fontanero: f, clienteId })
+                }
+              >
+                <Text style={s.btnContratarText}>
+                  Contratar a {f.nombre?.split(' ')[0]}
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color="#fff" />
+              </Pressable>
+            </View>
+          )}
+        </Pressable>
+      </FadeInUp>
     );
   };
 
   // --- Drawer ---
+  const DRAWER_ITEMS = [
+    { icon: 'compass-outline', label: 'Explorar', action: () => { cerrarDrawer(); } },
+    { icon: 'receipt-outline', label: 'Mis Servicios', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('MisServicios', { clienteId }), 250); } },
+    { icon: 'heart-outline', label: 'Favoritos', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Favoritos'), 250); } },
+    { icon: 'notifications-outline', label: 'Notificaciones', badge: notifNoLeidas, action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); } },
+    { icon: 'chatbubbles-outline', label: 'Chats recientes', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); } },
+  ];
+
   const renderDrawer = () => (
     <>
       {/* Overlay */}
@@ -432,7 +445,7 @@ export default function MapaScreen({ navigation, route }) {
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: '#000', opacity: overlayOpacity.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) },
+              { backgroundColor: '#000', opacity: overlayOpacity.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] }) },
             ]}
           />
         </TouchableOpacity>
@@ -460,41 +473,16 @@ export default function MapaScreen({ navigation, route }) {
         <View style={s.drawerSep} />
 
         {/* Nav options */}
-        {[
-          {
-            icon: '🗺️',
-            label: 'Explorar',
-            action: () => { cerrarDrawer(); },
-          },
-          {
-            icon: '📋',
-            label: 'Mis Servicios',
-            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('MisServicios', { clienteId }), 250); },
-          },
-          {
-            icon: '❤️',
-            label: 'Favoritos',
-            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Favoritos'), 250); },
-          },
-          {
-            icon: '🔔',
-            label: 'Notificaciones',
-            badge: notifNoLeidas,
-            action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); },
-          },
-          {
-            icon: '💬',
-            label: 'Chats recientes',
-            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); },
-          },
-        ].map((item, idx) => (
-          <TouchableOpacity
+        {DRAWER_ITEMS.map((item, idx) => (
+          <Pressable
             key={idx}
             style={s.drawerItem}
-            activeOpacity={0.7}
+            haptic
             onPress={item.action}
           >
-            <Text style={s.drawerItemIcon}>{item.icon}</Text>
+            <View style={s.drawerItemIconWrap}>
+              <Ionicons name={item.icon} size={20} color={colors.text} />
+            </View>
             <Text style={s.drawerItemLabel}>{item.label}</Text>
             {item.badge > 0 && (
               <View style={s.drawerBadge}>
@@ -503,16 +491,18 @@ export default function MapaScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Pressable>
         ))}
 
         <View style={s.drawerSep} />
 
         {/* Danger zone */}
-        <TouchableOpacity style={s.drawerItemDanger} activeOpacity={0.7} onPress={handleLogout}>
-          <Text style={s.drawerItemIcon}>🚪</Text>
+        <Pressable style={s.drawerItemDanger} haptic onPress={handleLogout}>
+          <View style={[s.drawerItemIconWrap, s.drawerItemIconWrapDanger]}>
+            <Ionicons name="log-out-outline" size={20} color={colors.red} />
+          </View>
           <Text style={s.drawerItemLabelDanger}>Cerrar sesión</Text>
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
     </>
   );
@@ -525,11 +515,9 @@ export default function MapaScreen({ navigation, route }) {
       {/* HEADER */}
       <View style={s.header}>
         {/* Menu button */}
-        <TouchableOpacity style={s.menuBtn} onPress={abrirDrawer} activeOpacity={0.7}>
-          <View style={s.menuLine} />
-          <View style={[s.menuLine, { width: 16 }]} />
-          <View style={s.menuLine} />
-        </TouchableOpacity>
+        <Pressable style={s.menuBtn} haptic onPress={abrirDrawer}>
+          <Ionicons name="menu" size={26} color={colors.text} />
+        </Pressable>
 
         {/* Title + online count */}
         <View style={s.headerCenter}>
@@ -543,14 +531,15 @@ export default function MapaScreen({ navigation, route }) {
         </View>
 
         {/* Notifications */}
-        <TouchableOpacity
+        <Pressable
           style={s.iconBtn}
+          haptic
           onPress={() => {
             setNotifNoLeidas(0);
             navigation.navigate('Notificaciones');
           }}
         >
-          <Text style={s.iconBtnText}>🔔</Text>
+          <Ionicons name="notifications-outline" size={20} color={colors.text} />
           {notifNoLeidas > 0 && (
             <View style={s.notifBadge}>
               <Text style={s.notifBadgeText}>
@@ -558,12 +547,12 @@ export default function MapaScreen({ navigation, route }) {
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* SEARCH */}
       <View style={s.searchWrap}>
-        <Text style={s.searchIcon}>🔍</Text>
+        <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
         <TextInput
           style={s.searchInput}
           placeholder="Buscar fontanero o zona..."
@@ -573,7 +562,7 @@ export default function MapaScreen({ navigation, route }) {
         />
         {busqueda ? (
           <TouchableOpacity onPress={() => setBusqueda('')}>
-            <Text style={s.searchClear}>✕</Text>
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -585,18 +574,21 @@ export default function MapaScreen({ navigation, route }) {
         style={s.filtrosScroll}
         contentContainerStyle={s.filtrosContent}
       >
-        <TouchableOpacity
+        <Pressable
           style={[s.filtro24h, mostrar24h && s.filtro24hActivo]}
+          haptic
           onPress={() => setMostrar24h(!mostrar24h)}
         >
+          <Ionicons name="moon" size={13} color={mostrar24h ? '#fff' : colors.textMuted} />
           <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>
-            🌙 24h
+            24h
           </Text>
-        </TouchableOpacity>
+        </Pressable>
         {SERVICIOS_FILTRO.map((sv) => (
-          <TouchableOpacity
+          <Pressable
             key={sv}
             style={[s.filtro, filtroServicio === sv && s.filtroActivo]}
+            haptic
             onPress={() => setFiltroServicio(sv)}
           >
             <Text
@@ -604,60 +596,68 @@ export default function MapaScreen({ navigation, route }) {
             >
               {sv}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </ScrollView>
 
       {/* URGENCY BUTTONS */}
       <View style={s.botonesUrgencia}>
-        <TouchableOpacity
+        <Pressable
           style={s.btnUrgente}
-          activeOpacity={0.85}
+          haptic
           onPress={() =>
             navigation.navigate('Solicitud', { urgente: true, clienteId })
           }
         >
           <View style={s.btnUrgenteLeft}>
-            <Text style={s.btnUrgenteIcon}>⚡</Text>
+            <View style={s.btnUrgenteIconWrap}>
+              <Ionicons name="flash" size={18} color="#fff" />
+            </View>
             <View>
               <Text style={s.btnUrgenteText}>Urgente ahora</Text>
               <Text style={s.btnUrgenteSub}>30-60 min</Text>
             </View>
           </View>
-          <Text style={s.btnArrow}>→</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
+        </Pressable>
+        <Pressable
           style={s.btnCita}
-          activeOpacity={0.85}
+          haptic
           onPress={() =>
             navigation.navigate('Solicitud', { urgente: false, clienteId })
           }
         >
           <View style={s.btnUrgenteLeft}>
-            <Text style={s.btnUrgenteIcon}>📅</Text>
+            <View style={s.btnCitaIconWrap}>
+              <Ionicons name="calendar-outline" size={18} color={colors.text} />
+            </View>
             <View>
               <Text style={s.btnCitaText}>Reservar cita</Text>
               <Text style={s.btnCitaSub}>Elige cuándo</Text>
             </View>
           </View>
-          <Text style={s.btnArrowGray}>→</Text>
-        </TouchableOpacity>
+          <Ionicons name="arrow-forward" size={16} color={colors.textMuted} />
+        </Pressable>
       </View>
 
       {/* LISTA / MAPA TOGGLE */}
       <View style={s.vistaToggleRow}>
-        <TouchableOpacity
+        <Pressable
           style={[s.vistaToggleBtn, vista === 'lista' && s.vistaToggleBtnActivo]}
+          haptic
           onPress={() => setVista('lista')}
         >
-          <Text style={[s.vistaToggleText, vista === 'lista' && s.vistaToggleTextActivo]}>📋 Lista</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+          <Ionicons name="list" size={15} color={vista === 'lista' ? '#fff' : colors.textMuted} />
+          <Text style={[s.vistaToggleText, vista === 'lista' && s.vistaToggleTextActivo]}>Lista</Text>
+        </Pressable>
+        <Pressable
           style={[s.vistaToggleBtn, vista === 'mapa' && s.vistaToggleBtnActivo]}
+          haptic
           onPress={() => setVista('mapa')}
         >
-          <Text style={[s.vistaToggleText, vista === 'mapa' && s.vistaToggleTextActivo]}>🗺️ Mapa</Text>
-        </TouchableOpacity>
+          <Ionicons name="map" size={15} color={vista === 'mapa' ? '#fff' : colors.textMuted} />
+          <Text style={[s.vistaToggleText, vista === 'mapa' && s.vistaToggleTextActivo]}>Mapa</Text>
+        </Pressable>
       </View>
       {ubicacionDenegada && (
         <Text style={s.avisoUbicacion}>
@@ -700,13 +700,16 @@ export default function MapaScreen({ navigation, route }) {
 
           {fontanerosFiltrados.length === 0 ? (
             <View style={s.vacio}>
-              <Text style={s.vacioIlustracion}>🔧</Text>
+              <View style={s.vacioIconWrap}>
+                <Ionicons name="water-outline" size={40} color={colors.textMuted} />
+              </View>
               <Text style={s.vacioTitulo}>Sin fontaneros disponibles</Text>
               <Text style={s.vacioSub}>
                 Prueba cambiando los filtros o desliza para actualizar. ¡Pronto habrá más cerca de ti!
               </Text>
-              <TouchableOpacity
+              <Pressable
                 style={s.vacioBtn}
+                haptic
                 onPress={() => {
                   setFiltroServicio('Todos');
                   setBusqueda('');
@@ -714,25 +717,25 @@ export default function MapaScreen({ navigation, route }) {
                 }}
               >
                 <Text style={s.vacioBtnText}>Limpiar filtros</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : (
-            fontanerosFiltrados.map((f) => renderTarjetaFontanero(f))
+            fontanerosFiltrados.map((f, i) => renderTarjetaFontanero(f, i))
           )}
         </ScrollView>
       )}
 
       {/* FAB - Urgente */}
-      <TouchableOpacity
+      <Pressable
         style={s.fab}
-        activeOpacity={0.85}
+        haptic
         onPress={() =>
           navigation.navigate('Solicitud', { urgente: true, clienteId })
         }
       >
-        <Text style={s.fabText}>⚡</Text>
+        <Ionicons name="flash" size={16} color="#fff" />
         <Text style={s.fabLabel}>Urgente</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       {/* DRAWER */}
       {renderDrawer()}
@@ -747,44 +750,34 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
     paddingTop: 52,
-    paddingBottom: 16,
-    gap: 12,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
-  menuBtn: { gap: 4, padding: 4 },
-  menuLine: {
-    width: 22,
-    height: 2.5,
-    borderRadius: 2,
-    backgroundColor: colors.text,
-  },
+  menuBtn: { padding: 4 },
   headerCenter: { flex: 1 },
   logo: {
-    fontSize: 22,
-    fontWeight: '800',
+    ...type.h1,
     color: colors.text,
-    letterSpacing: -0.5,
   },
   onlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    marginTop: 2,
+    gap: 4,
+    marginTop: 3,
   },
-  onlineText: { color: colors.green, fontSize: 11, fontWeight: '600' },
+  onlineText: { color: colors.green, ...type.tiny },
   iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: radius.full,
     backgroundColor: colors.bgCard,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
     position: 'relative',
+    ...shadow.sm,
   },
-  iconBtnText: { fontSize: 16 },
   notifBadge: {
     position: 'absolute',
     top: -4,
@@ -806,109 +799,97 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.bgCard,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border2,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    ...shadow.sm,
   },
-  searchIcon: { fontSize: 15, marginRight: 8 },
   searchInput: {
     flex: 1,
     color: colors.text,
-    paddingVertical: 12,
-    fontSize: 14,
+    paddingVertical: 13,
+    fontSize: 15,
   },
-  searchClear: { color: colors.textMuted, fontSize: 16, padding: 4 },
 
   // Filters
-  filtrosScroll: { maxHeight: 44, marginBottom: 12 },
+  filtrosScroll: { maxHeight: 44, marginBottom: spacing.md },
   filtrosContent: {
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
     alignItems: 'center',
   },
   filtro: {
     backgroundColor: colors.bgCard,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 8,
   },
-  filtroActivo: { backgroundColor: colors.blue, borderColor: colors.blue },
-  filtroText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  filtroActivo: { backgroundColor: colors.blue, ...shadow.glow(colors.blue) },
+  filtroText: { color: colors.textMuted, ...type.caption },
   filtroTextActivo: { color: '#fff', fontWeight: '700' },
   filtro24h: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: colors.bgCard,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 8,
   },
-  filtro24hActivo: { backgroundColor: '#1a1a35', borderColor: '#7356BF' },
-  filtro24hText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
-  filtro24hTextActivo: { color: '#7356BF', fontWeight: '700' },
+  filtro24hActivo: { backgroundColor: '#7356BF' },
+  filtro24hText: { color: colors.textMuted, ...type.caption },
+  filtro24hTextActivo: { color: '#fff', fontWeight: '700' },
 
   // Lista/Mapa toggle
   vistaToggleRow: {
     flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 10,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
     backgroundColor: colors.bgCard,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: 4,
     gap: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  vistaToggleBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
-  vistaToggleBtnActivo: { backgroundColor: colors.blue },
-  vistaToggleText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  vistaToggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: radius.sm },
+  vistaToggleBtnActivo: { backgroundColor: colors.blue, ...shadow.glow(colors.blue) },
+  vistaToggleText: { color: colors.textMuted, ...type.caption, fontWeight: '700' },
   vistaToggleTextActivo: { color: '#fff' },
-  avisoUbicacion: { color: colors.amber, fontSize: 11, textAlign: 'center', marginHorizontal: 20, marginBottom: 8 },
+  avisoUbicacion: { color: colors.amber, fontSize: 11, textAlign: 'center', marginHorizontal: spacing.xl, marginBottom: spacing.sm },
 
   // Urgency buttons
   botonesUrgencia: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 20,
-    marginBottom: 14,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
   },
   btnUrgente: {
     flex: 1,
     backgroundColor: colors.blue,
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: colors.blue,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    ...shadow.glow(colors.blue),
   },
-  btnUrgenteLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  btnUrgenteIcon: { fontSize: 20 },
-  btnUrgenteText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  btnUrgenteSub: { color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 1 },
-  btnArrow: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  btnArrowGray: { color: colors.textMuted, fontSize: 16 },
+  btnUrgenteLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  btnUrgenteIconWrap: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  btnUrgenteText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  btnUrgenteSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 1 },
   btnCita: {
     flex: 1,
     backgroundColor: colors.bgCard,
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.border2,
+    ...shadow.sm,
   },
-  btnCitaText: { color: colors.text, fontWeight: 'bold', fontSize: 13 },
+  btnCitaIconWrap: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
+  btnCitaText: { color: colors.text, fontWeight: '700', fontSize: 14 },
   btnCitaSub: { color: colors.textMuted, fontSize: 11, marginTop: 1 },
 
   // Loading
@@ -916,24 +897,26 @@ const s = StyleSheet.create({
   loadingText: { color: colors.textMuted, fontSize: 14 },
 
   // List
-  lista: { flex: 1, paddingHorizontal: 16 },
+  lista: { flex: 1, paddingHorizontal: spacing.lg },
   listaLabel: {
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    marginBottom: 12,
+    marginBottom: spacing.md,
     marginTop: 4,
   },
 
   // Empty state
-  vacio: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 20 },
-  vacioIlustracion: { fontSize: 64, marginBottom: 16 },
+  vacio: { alignItems: 'center', paddingTop: 40, paddingHorizontal: spacing.xl },
+  vacioIconWrap: {
+    width: 84, height: 84, borderRadius: radius.full, backgroundColor: colors.bgCard,
+    justifyContent: 'center', alignItems: 'center', marginBottom: spacing.lg, ...shadow.sm,
+  },
   vacioTitulo: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
+    ...type.h2,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   vacioSub: {
@@ -941,40 +924,32 @@ const s = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   vacioBtn: {
     backgroundColor: colors.bgCard2,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: colors.border2,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
   vacioBtnText: { color: colors.blue, fontWeight: '700', fontSize: 14 },
 
   // Cards
   card: {
     backgroundColor: colors.bgCard,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.md,
   },
-  cardActiva: { borderColor: colors.blue, backgroundColor: colors.blueLight },
+  cardActiva: { backgroundColor: colors.blueLight },
   cardInactivo: { opacity: 0.45 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  avatarWrap: { position: 'relative', marginRight: 12 },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm },
+  avatarWrap: { position: 'relative', marginRight: spacing.md },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.blue,
     justifyContent: 'center',
     alignItems: 'center',
@@ -988,98 +963,77 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
-    marginBottom: 3,
+    marginBottom: 4,
   },
-  cardNombre: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  cardNombre: { color: colors.text, ...type.h3 },
   verifiedBadge: {
     backgroundColor: colors.green + '22',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: colors.green,
+    borderRadius: radius.full,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  verifiedBadgeText: {
-    color: colors.green,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  badgePill: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  badgePill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 4 },
   badgePillText: { fontSize: 10, fontWeight: '700' },
-  cardZona: { color: colors.textMuted, fontSize: 12, marginBottom: 5 },
+  cardZonaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  cardZona: { color: colors.textMuted, fontSize: 12 },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginBottom: 4,
   },
   ratingVal: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  cardStat: { color: colors.textMuted, fontSize: 12 },
   cardStatDot: { color: colors.textFaint, fontSize: 12 },
-  llegadaRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  llegadaIcon: { fontSize: 11 },
-  llegadaText: { color: colors.blue, fontSize: 12, fontWeight: '700' },
-  llegadaLabel: { color: colors.textMuted, fontSize: 11 },
-  cardRight: { alignItems: 'flex-end', gap: 8, marginLeft: 8 },
-  estadoBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  estadoVerde: {
-    backgroundColor: colors.greenLight,
-    borderWidth: 1,
-    borderColor: colors.green,
-  },
+  nuevoPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.blueLight, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2 },
+  nuevoPillText: { color: colors.blue, fontSize: 11, fontWeight: '700' },
+  cardRight: { alignItems: 'flex-end', gap: spacing.sm, marginLeft: spacing.sm },
+  estadoBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.full },
+  estadoVerde: { backgroundColor: colors.greenLight },
   estadoGris: { backgroundColor: colors.bgCard3 },
   estadoText: { fontSize: 11, fontWeight: '700' },
   estadoTextVerde: { color: colors.green },
   estadoTextGris: { color: colors.textMuted },
   favBtn: { padding: 2 },
-  favBtnText: { fontSize: 18 },
   serviciosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   servicioTag: {
     backgroundColor: colors.bgCard3,
-    borderRadius: 20,
+    borderRadius: radius.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   servicioTagActivo: {
     backgroundColor: colors.blueLight,
-    borderColor: colors.blue,
   },
   servicioTagText: { color: colors.textMuted, fontSize: 11 },
   servicioTagTextActivo: { color: colors.blue, fontWeight: '600' },
   tag24h: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#1a1a35',
-    borderRadius: 20,
+    borderRadius: radius.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#7356BF',
   },
   tag24hText: { color: '#7356BF', fontSize: 11, fontWeight: '600' },
-  accionesRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  accionesRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   btnVerPerfil: {
     backgroundColor: colors.bgCard2,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border2,
   },
   btnVerPerfilText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
   btnContratar: {
     flex: 1,
+    flexDirection: 'row',
     backgroundColor: colors.blue,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: 13,
     alignItems: 'center',
-    shadowColor: colors.blue,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 5,
+    justifyContent: 'center',
+    gap: 6,
+    ...shadow.glow(colors.blue),
   },
   btnContratarText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
 
@@ -1087,21 +1041,16 @@ const s = StyleSheet.create({
   fab: {
     position: 'absolute',
     bottom: 24,
-    right: 20,
+    right: spacing.xl,
     backgroundColor: colors.blue,
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    shadowColor: colors.blue,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
+    gap: spacing.sm,
+    ...shadow.glow(colors.blue),
   },
-  fabText: { fontSize: 18 },
   fabLabel: { color: '#fff', fontWeight: '800', fontSize: 14 },
 
   // Drawer
@@ -1112,33 +1061,26 @@ const s = StyleSheet.create({
     bottom: 0,
     width: DRAWER_WIDTH,
     backgroundColor: colors.bgCard,
-    borderRightWidth: 1,
-    borderRightColor: colors.border2,
     paddingTop: 60,
     paddingBottom: 32,
     zIndex: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 20,
+    ...shadow.lg,
   },
   drawerUserBlock: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
   },
   drawerAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: colors.blue,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.blueBright,
+    ...shadow.glow(colors.blue),
   },
   drawerAvatarText: { color: '#fff', fontWeight: '800', fontSize: 22 },
   drawerNombre: { color: colors.text, fontWeight: '700', fontSize: 16 },
@@ -1146,17 +1088,18 @@ const s = StyleSheet.create({
   drawerSep: {
     height: 1,
     backgroundColor: colors.border,
-    marginHorizontal: 20,
-    marginVertical: 12,
+    marginHorizontal: spacing.xl,
+    marginVertical: spacing.md,
   },
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 14,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
-  drawerItemIcon: { fontSize: 20, width: 26, textAlign: 'center' },
+  drawerItemIconWrap: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
+  drawerItemIconWrapDanger: { backgroundColor: colors.redLight },
   drawerItemLabel: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '500' },
   drawerBadge: {
     backgroundColor: colors.red,
@@ -1171,9 +1114,9 @@ const s = StyleSheet.create({
   drawerItemDanger: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 14,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
     marginTop: 4,
   },
   drawerItemLabelDanger: {
