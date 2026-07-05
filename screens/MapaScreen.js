@@ -267,8 +267,14 @@ export default function MapaScreen({ navigation, route }) {
 
             {/* Stars + valoracion */}
             <View style={s.ratingRow}>
-              <StarRating value={f.valoracion} />
-              <Text style={s.ratingVal}>{f.valoracion}</Text>
+              {f.valoracion ? (
+                <>
+                  <StarRating value={f.valoracion} />
+                  <Text style={s.ratingVal}>{f.valoracion}</Text>
+                </>
+              ) : (
+                <Text style={s.ratingVal}>🆕 Nuevo</Text>
+              )}
               <Text style={s.cardStatDot}>·</Text>
               <Text style={s.cardStat}>💰 {f.precio}</Text>
             </View>
