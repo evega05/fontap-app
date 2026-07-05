@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image,
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
+import { agregarArchivo } from '../subirArchivo';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -40,7 +41,7 @@ export default function SolicitudScreen({ navigation, route }) {
     for (const uri of fotosProblema) {
       try {
         const form = new FormData();
-        form.append('archivo', { uri, name: 'foto.jpg', type: 'image/jpeg' });
+        await agregarArchivo(form, 'archivo', uri, 'foto.jpg', 'image/jpeg');
         await axios.post(`${API}/servicios/${servicioId}/imagenes`, form, {
           headers: { 'Content-Type': 'multipart/form-data', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });

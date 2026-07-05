@@ -35,15 +35,18 @@ export default function ReseñaScreen({ navigation, route }) {
     setEnviando(true);
     try {
       const sid = servicioId || route.params?.servicioId;
-      if (sid) {
-        await axios.post(`${API}/servicios/${sid}/resena`, {
-          puntualidad: categorias.puntualidad,
-          calidad: categorias.calidad,
-          precio_justo: categorias.precio_justo,
-          trato: categorias.limpieza,
-          comentario,
-        }, { headers });
+      if (!sid) {
+        Alert.alert('Error', 'No se pudo identificar el servicio a valorar');
+        setEnviando(false);
+        return;
       }
+      await axios.post(`${API}/servicios/${sid}/resena`, {
+        puntualidad: categorias.puntualidad,
+        calidad: categorias.calidad,
+        precio_justo: categorias.precio_justo,
+        trato: categorias.limpieza,
+        comentario,
+      }, { headers });
       setEnviado(true);
       setTimeout(() => navigation.navigate('Mapa'), 2000);
     } catch (e) {
@@ -92,7 +95,10 @@ export default function ReseñaScreen({ navigation, route }) {
       <Text style={s.seccionTitulo}>Valoración general</Text>
       <View style={s.estrellas}>
         {[1, 2, 3, 4, 5].map(i => (
-          <TouchableOpacity key={i} onPress={() => setValoracion(i)}>
+          <TouchableOpacity key={i} onPress={() => {
+            setValoracion(i);
+            setCategorias({ puntualidad: i, calidad: i, precio_justo: i, limpieza: i });
+          }}>
             <Text style={[s.estrella, i <= valoracion && s.estrellaActiva]}>
               {i <= valoracion ? '⭐' : '☆'}
             </Text>

@@ -10,6 +10,7 @@ import {
   RefreshControl,
   StatusBar,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -196,7 +197,7 @@ export default function MapaScreen({ navigation, route }) {
 
   // --- Fontanero card ---
   const renderTarjetaFontanero = (f) => {
-    const esVerificado = (f.trabajos_completados || 0) >= 50;
+    const esVerificado = !!f.verificado;
     const isSelected = seleccionado?.id === f.id;
 
     return (
@@ -217,9 +218,13 @@ export default function MapaScreen({ navigation, route }) {
         <View style={s.cardHeader}>
           {/* Avatar */}
           <View style={s.avatarWrap}>
-            <View style={[s.avatar, !f.disponible && s.avatarInactivo]}>
-              <Text style={s.avatarText}>{f.nombre?.[0] || '?'}</Text>
-            </View>
+            {f.foto_url ? (
+              <Image source={{ uri: `${API}${f.foto_url}` }} style={[s.avatar, !f.disponible && s.avatarInactivo]} />
+            ) : (
+              <View style={[s.avatar, !f.disponible && s.avatarInactivo]}>
+                <Text style={s.avatarText}>{f.nombre?.[0] || '?'}</Text>
+              </View>
+            )}
             {f.disponible && (
               <View style={s.avatarDotWrap}>
                 <PulsingDot color={colors.green} size={8} />
@@ -335,9 +340,17 @@ export default function MapaScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Expand: contratar */}
+        {/* Expand: contratar + ver perfil */}
         {isSelected && f.disponible && (
           <View style={s.accionesRow}>
+            <TouchableOpacity
+              style={s.btnVerPerfil}
+              onPress={() =>
+                navigation.navigate('PerfilFontaneroPublico', { fontanero: f })
+              }
+            >
+              <Text style={s.btnVerPerfilText}>Ver perfil</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={s.btnContratar}
               onPress={() =>
@@ -944,6 +957,16 @@ const s = StyleSheet.create({
   },
   tag24hText: { color: '#7356BF', fontSize: 11, fontWeight: '600' },
   accionesRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  btnVerPerfil: {
+    backgroundColor: colors.bgCard2,
+    borderRadius: 12,
+    padding: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border2,
+  },
+  btnVerPerfilText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
   btnContratar: {
     flex: 1,
     backgroundColor: colors.blue,

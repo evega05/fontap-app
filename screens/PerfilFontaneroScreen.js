@@ -1,22 +1,15 @@
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../AuthContext';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme';
 import axios from 'axios';
+import { agregarArchivo } from '../subirArchivo';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const HORAS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
-
-const SERVICIOS_INICIALES = [
-  { id: 1, nombre: 'Desatasco', precio: 60, duracion: 60, activo: true },
-  { id: 2, nombre: 'Fuga de agua', precio: 80, duracion: 90, activo: true },
-  { id: 3, nombre: 'Caldera', precio: 90, duracion: 120, activo: true },
-  { id: 4, nombre: 'Grifo / ducha', precio: 50, duracion: 60, activo: true },
-];
 
 const HORARIO_INICIAL = [
   { dia: 0, activo: true, inicio: '08:00', fin: '18:00' },
@@ -32,19 +25,22 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const nombre = route.params?.nombre || usuario?.nombre || 'Fontanero';
   const userId = route.params?.userId || usuario?.id || 1;
-  const PERFIL_KEY = `perfil_${userId}`;
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const [tab, setTab] = useState('perfil');
   const [subiendoFoto, setSubiendoFoto] = useState(false);
-  const [servicios, setServicios] = useState(SERVICIOS_INICIALES);
+  const [subiendoFotoPerfil, setSubiendoFotoPerfil] = useState(false);
+  const [servicios, setServicios] = useState([]);
+  const [resenas, setResenas] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [verificado, setVerificado] = useState(false);
   const [horario, setHorario] = useState(HORARIO_INICIAL);
   const [nuevoServicio, setNuevoServicio] = useState('');
   const [nuevoPrecio, setNuevoPrecio] = useState('');
   const [nuevaDuracion, setNuevaDuracion] = useState('60');
   const [guardado, setGuardado] = useState(false);
   const [editandoHora, setEditandoHora] = useState(null);
-  const [zona, setZona] = useState('Bilbao Centro');
-  const [descripcion, setDescripcion] = useState('Fontanero profesional con más de 10 años de experiencia en Bilbao.');
+  const [zona, setZona] = useState('');
+  const [descripcion, setDescripcion] = useState('');
   const [suscripcionActiva, setSuscripcionActiva] = useState(true);
   const [fotosTrabajos, setFotosTrabajos] = useState([]);
   const [fotoPerfil, setFotoPerfil] = useState(null);
@@ -55,23 +51,35 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   const cargarDatos = async () => {
     try {
-      const foto = await AsyncStorage.getItem(`${PERFIL_KEY}_fotoPerfil`);
-      const desc = await AsyncStorage.getItem(`${PERFIL_KEY}_descripcion`);
-      const zon = await AsyncStorage.getItem(`${PERFIL_KEY}_zona`);
-      if (foto) setFotoPerfil(foto);
-      if (desc) setDescripcion(desc);
-      if (zon) setZona(zon);
+      const res = await axios.get(`${API}/fontaneros/${userId}/perfil`);
+      const p = res.data;
+      setZona(p.zona || '');
+      setDescripcion(p.descripcion || '');
+      setVerificado(!!p.verificado);
+      if (p.foto_url) setFotoPerfil(`${API}${p.foto_url}`);
     } catch (e) {}
 
     try {
-      const res = await axios.get(`${API}/fontaneros/${userId}/galeria`, { headers });
+      const res = await axios.get(`${API}/fontaneros/${userId}/estadisticas`, { headers });
+      setStats(res.data);
+    } catch (e) {}
+
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/resenas`);
+      setResenas(res.data || []);
+    } catch (e) {}
+
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/servicios`);
+      setServicios(res.data || []);
+    } catch (e) {}
+
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/galeria`);
       if (res.data && Array.isArray(res.data)) {
-        setFotosTrabajos(res.data.map(f => ({ id: f.id, uri: f.url, desc: f.descripcion || 'Trabajo realizado' })));
+        setFotosTrabajos(res.data.map(f => ({ id: f.id, uri: `${API}${f.url}`, desc: f.descripcion || 'Trabajo realizado' })));
       }
-    } catch (e) {
-      const fotos = await AsyncStorage.getItem(`${PERFIL_KEY}_fotosTrabajos`).catch(() => null);
-      if (fotos) setFotosTrabajos(JSON.parse(fotos));
-    }
+    } catch (e) {}
   };
 
   const subirFotoPerfil = async () => {
@@ -83,10 +91,20 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!resultado.canceled) {
-      const uri = resultado.assets[0].uri;
-      setFotoPerfil(uri);
-      await AsyncStorage.setItem(`${PERFIL_KEY}_fotoPerfil`, uri);
+    if (resultado.canceled) return;
+    const uri = resultado.assets[0].uri;
+    setSubiendoFotoPerfil(true);
+    try {
+      const form = new FormData();
+      await agregarArchivo(form, 'archivo', uri, 'perfil.jpg', 'image/jpeg');
+      const res = await axios.post(`${API}/fontaneros/${userId}/foto`, form, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+      });
+      setFotoPerfil(`${API}${res.data.foto_url}`);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo subir la foto de perfil');
+    } finally {
+      setSubiendoFotoPerfil(false);
     }
   };
 
@@ -102,28 +120,22 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     if (resultado.canceled) return;
 
     const uri = resultado.assets[0].uri;
-    const localFoto = { id: Date.now(), uri, desc: 'Trabajo realizado' };
-    setFotosTrabajos(prev => [...prev, localFoto]);
     setSubiendoFoto(true);
-
     try {
       const form = new FormData();
-      form.append('archivo', { uri, name: 'foto.jpg', type: 'image/jpeg' });
+      await agregarArchivo(form, 'archivo', uri, 'foto.jpg', 'image/jpeg');
       const res = await axios.post(`${API}/fontaneros/${userId}/galeria`, form, {
         params: { descripcion: 'Trabajo realizado' },
         headers: { ...headers, 'Content-Type': 'multipart/form-data' },
       });
       const fotoBackend = res.data;
-      setFotosTrabajos(prev =>
-        prev.map(f => f.id === localFoto.id
-          ? { id: fotoBackend.id, uri: fotoBackend.url || uri, desc: fotoBackend.descripcion || 'Trabajo realizado' }
-          : f
-        )
-      );
+      setFotosTrabajos(prev => [...prev, {
+        id: fotoBackend.id,
+        uri: `${API}${fotoBackend.url}`,
+        desc: fotoBackend.descripcion || 'Trabajo realizado',
+      }]);
     } catch (e) {
-      await AsyncStorage.setItem(`${PERFIL_KEY}_fotosTrabajos`, JSON.stringify(
-        fotosTrabajos.concat(localFoto)
-      )).catch(() => {});
+      Alert.alert('Error', 'No se pudo subir la foto');
     } finally {
       setSubiendoFoto(false);
     }
@@ -149,39 +161,38 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     setEditandoHora(null);
   };
 
-  const toggleServicio = (id) => {
-    setServicios(prev => prev.map(s => s.id === id ? { ...s, activo: !s.activo } : s));
-  };
-
-  const añadirServicio = () => {
+  const añadirServicio = async () => {
     if (!nuevoServicio || !nuevoPrecio) return;
-    setServicios(prev => [...prev, {
-      id: Date.now(),
-      nombre: nuevoServicio,
-      precio: parseInt(nuevoPrecio),
-      duracion: parseInt(nuevaDuracion) || 60,
-      activo: true
-    }]);
-    setNuevoServicio('');
-    setNuevoPrecio('');
-    setNuevaDuracion('60');
+    try {
+      const res = await axios.post(`${API}/fontaneros/${userId}/servicios`, {
+        nombre: nuevoServicio,
+        precio: parseInt(nuevoPrecio),
+        duracion_minutos: parseInt(nuevaDuracion) || 60,
+      }, { headers });
+      setServicios(prev => [...prev, res.data]);
+      setNuevoServicio('');
+      setNuevoPrecio('');
+      setNuevaDuracion('60');
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo añadir el servicio');
+    }
   };
 
-  const eliminarServicio = (id) => {
+  const eliminarServicio = async (id) => {
     setServicios(prev => prev.filter(s => s.id !== id));
+    try {
+      await axios.delete(`${API}/fontaneros/${userId}/servicios/${id}`, { headers });
+    } catch (e) {}
   };
 
   const guardar = async () => {
     try {
-      await AsyncStorage.setItem(`${PERFIL_KEY}_fotoPerfil`, fotoPerfil || '');
-      await AsyncStorage.setItem(`${PERFIL_KEY}_descripcion`, descripcion);
-      await AsyncStorage.setItem(`${PERFIL_KEY}_zona`, zona);
-    } catch (e) {}
-    try {
       await axios.put(`${API}/fontaneros/${userId}/perfil`, { descripcion, zona }, { headers });
-    } catch (e) {}
-    setGuardado(true);
-    setTimeout(() => setGuardado(false), 2000);
+      setGuardado(true);
+      setTimeout(() => setGuardado(false), 2000);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo guardar el perfil');
+    }
   };
 
   const TABS = [
@@ -189,6 +200,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     { key: 'horario', label: 'Horario', emoji: '🗓' },
     { key: 'servicios', label: 'Servicios', emoji: '🔧' },
     { key: 'trabajos', label: 'Trabajos', emoji: '📸' },
+    { key: 'resenas', label: 'Reseñas', emoji: '⭐' },
   ];
 
   return (
@@ -219,8 +231,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
         {tab === 'perfil' && (
           <>
             <View style={s.avatarWrap}>
-              <TouchableOpacity onPress={subirFotoPerfil}>
-                {fotoPerfil ? (
+              <TouchableOpacity onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
+                {subiendoFotoPerfil ? (
+                  <View style={s.avatarGrande}><ActivityIndicator color="#fff" /></View>
+                ) : fotoPerfil ? (
                   <Image source={{ uri: fotoPerfil }} style={s.avatarGrandeImagen} />
                 ) : (
                   <View style={s.avatarGrande}>
@@ -228,26 +242,28 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                   </View>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={s.fotoBtn} onPress={subirFotoPerfil}>
+              <TouchableOpacity style={s.fotoBtn} onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
                 <Text style={s.fotoBtnText}>📷 Cambiar foto</Text>
               </TouchableOpacity>
             </View>
 
             <Text style={s.nombreGrande}>{nombre}</Text>
-            <Text style={s.verificado}>✅ Identidad verificada</Text>
+            <Text style={verificado ? s.verificado : s.noVerificado}>
+              {verificado ? '✅ Identidad verificada' : '⏳ Verificación pendiente'}
+            </Text>
 
             <View style={s.statsRow}>
               <View style={s.statCard}>
-                <Text style={s.statNum}>4.8</Text>
+                <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
                 <Text style={s.statLabel}>⭐ Valoración</Text>
               </View>
               <View style={s.statCard}>
-                <Text style={s.statNum}>87</Text>
+                <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
                 <Text style={s.statLabel}>✅ Trabajos</Text>
               </View>
               <View style={s.statCard}>
-                <Text style={s.statNum}>340€</Text>
-                <Text style={s.statLabel}>💰 Este mes</Text>
+                <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
+                <Text style={s.statLabel}>💰 Total ganado</Text>
               </View>
             </View>
 
@@ -355,14 +371,14 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             <Text style={s.seccionTitulo}>Mis servicios y precios base</Text>
             <Text style={s.seccionSub}>El cliente verá estos precios antes de contratarte</Text>
 
+            {servicios.length === 0 && (
+              <Text style={s.seccionSub}>Aún no has añadido servicios propios.</Text>
+            )}
             {servicios.map(sv => (
-              <View key={sv.id} style={[s.servicioCard, !sv.activo && s.servicioInactivo]}>
-                <Switch value={sv.activo} onValueChange={() => toggleServicio(sv.id)}
-                  trackColor={{ false: colors.bgCard3, true: colors.blueLight }}
-                  thumbColor={sv.activo ? colors.blue : colors.textFaint} />
+              <View key={sv.id} style={s.servicioCard}>
                 <View style={s.servicioInfo}>
-                  <Text style={[s.servicioNombre, !sv.activo && s.diaInactivo]}>{sv.nombre}</Text>
-                  <Text style={s.servicioDuracion}>⏱ {sv.duracion} min</Text>
+                  <Text style={s.servicioNombre}>{sv.nombre}</Text>
+                  <Text style={s.servicioDuracion}>⏱ {sv.duracion_minutos} min</Text>
                 </View>
                 <Text style={s.servicioPrecio}>desde {sv.precio}€</Text>
                 <TouchableOpacity onPress={() => eliminarServicio(sv.id)} style={s.eliminarBtn}>
@@ -439,6 +455,44 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             )}
           </>
         )}
+
+        {tab === 'resenas' && (
+          <>
+            <Text style={s.seccionTitulo}>Reseñas de tus clientes</Text>
+            <Text style={s.seccionSub}>Solo se muestran reseñas reales de servicios ya pagados</Text>
+
+            {resenas.length === 0 ? (
+              <View style={s.fotosVacio}>
+                <Text style={s.fotosVacioEmoji}>⭐</Text>
+                <Text style={s.fotosVacioText}>Aún no tienes reseñas</Text>
+                <Text style={s.fotosVacioSub}>Aparecerán aquí cuando un cliente reseñe un servicio</Text>
+              </View>
+            ) : (
+              resenas.map(r => {
+                const media = (r.puntualidad + r.calidad + r.precio_justo + r.trato) / 4;
+                return (
+                  <View key={r.id} style={s.resenaCard}>
+                    <View style={s.resenaTop}>
+                      <View style={s.estrellasRow}>
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <Text key={i} style={s.estrella}>{i <= Math.round(media) ? '⭐' : '☆'}</Text>
+                        ))}
+                      </View>
+                      <Text style={s.resenaFecha}>{new Date(r.creado_en).toLocaleDateString('es-ES')}</Text>
+                    </View>
+                    {r.comentario ? <Text style={s.resenaComentario}>"{r.comentario}"</Text> : null}
+                    <View style={s.resenaDetalle}>
+                      <Text style={s.resenaDetalleItem}>🕐 Puntualidad {r.puntualidad}</Text>
+                      <Text style={s.resenaDetalleItem}>⭐ Calidad {r.calidad}</Text>
+                      <Text style={s.resenaDetalleItem}>💰 Precio {r.precio_justo}</Text>
+                      <Text style={s.resenaDetalleItem}>🤝 Trato {r.trato}</Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -468,6 +522,7 @@ const s = StyleSheet.create({
   fotoBtnText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
   nombreGrande: { color: colors.text, fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
   verificado: { color: colors.green, fontSize: 13, textAlign: 'center', marginBottom: 20 },
+  noVerificado: { color: colors.amber, fontSize: 13, textAlign: 'center', marginBottom: 20 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
@@ -509,7 +564,6 @@ const s = StyleSheet.create({
   cerrarSelector: { alignItems: 'center', paddingTop: 8 },
   cerrarSelectorText: { color: colors.textMuted, fontSize: 13 },
   servicioCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, padding: 14, marginBottom: 8, gap: 10, borderWidth: 1, borderColor: colors.border },
-  servicioInactivo: { opacity: 0.5 },
   servicioInfo: { flex: 1 },
   servicioNombre: { color: colors.text, fontWeight: '500', fontSize: 14 },
   servicioDuracion: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
@@ -536,4 +590,10 @@ const s = StyleSheet.create({
   fotoEliminar: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
   fotoEliminarText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   avatarGrandeImagen: { width: 92, height: 92, borderRadius: 46, marginBottom: 12 },
+  resenaCard: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  resenaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  resenaFecha: { color: colors.textFaint, fontSize: 11 },
+  resenaComentario: { color: colors.text, fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
+  resenaDetalle: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  resenaDetalleItem: { color: colors.textMuted, fontSize: 12 },
 });

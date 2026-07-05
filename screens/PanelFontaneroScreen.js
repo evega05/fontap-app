@@ -1,11 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
-import { LineChart } from 'react-native-chart-kit';
-
-const ANCHO = Dimensions.get('window').width;
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -30,9 +27,23 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [precioFinal, setPrecioFinal] = useState('');
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [stats, setStats] = useState(null);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const cargarEstadisticas = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/estadisticas`, { headers });
+      setStats(res.data);
+    } catch (e) {}
+  }, [userId, token]);
+
+  useEffect(() => {
+    cargarEstadisticas();
+    const intervalo = setInterval(cargarEstadisticas, 15000);
+    return () => clearInterval(intervalo);
+  }, [cargarEstadisticas]);
 
   const cargarSolicitudes = useCallback(async () => {
     try {
@@ -50,7 +61,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           );
         });
         const activo = nuevas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
-        if (activo) setTrabajoActivo(activo);
+        setTrabajoActivo(activo || null);
         setCompletados(prev => {
           const ids = new Set(prev.map(s => s.id));
           const nuevosComp = nuevas.filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !ids.has(s.id));
@@ -122,17 +133,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     } catch (e) {
       Alert.alert('Error', 'No se pudo enviar el precio');
     }
-  };
-
-  const gananciasTotal = completados.reduce((sum, t) => sum + (t.precio || 0), 0);
-
-  const datosGrafico = {
-    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-    datasets: [{
-      data: [45, 80, 60, 120, 90, 150, gananciasTotal > 0 ? gananciasTotal : 75],
-      color: (opacity = 1) => `rgba(39, 110, 241, ${opacity})`,
-      strokeWidth: 2,
-    }],
   };
 
   return (
@@ -228,46 +228,21 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       <View style={s.statsRow}>
         <View style={s.statCard}>
           <Text style={s.statEmoji}>⭐</Text>
-          <Text style={s.statNum}>4.8</Text>
+          <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
           <Text style={s.statLabel}>Valoración</Text>
         </View>
         <View style={s.statCard}>
           <Text style={s.statEmoji}>✅</Text>
-          <Text style={s.statNum}>{completados.length}</Text>
+          <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
           <Text style={s.statLabel}>Trabajos</Text>
         </View>
         <View style={s.statCard}>
           <Text style={s.statEmoji}>💰</Text>
-          <Text style={s.statNum}>{gananciasTotal}€</Text>
+          <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
           <Text style={s.statLabel}>Total ganado</Text>
         </View>
       </View>
 
-      <View style={s.graficoWrap}>
-        <View style={s.graficoHeader}>
-          <Text style={s.graficoTitulo}>💰 Ingresos esta semana</Text>
-          <Text style={s.graficoTotal}>{gananciasTotal}€</Text>
-        </View>
-        <LineChart
-          data={datosGrafico}
-          width={ANCHO - 40}
-          height={140}
-          chartConfig={{
-            backgroundColor: '#0D1424',
-            backgroundGradientFrom: '#0D1424',
-            backgroundGradientTo: '#0D1424',
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(61, 126, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(122, 139, 168, ${opacity})`,
-            propsForDots: { r: '4', strokeWidth: '2', stroke: '#3D7EFF' },
-            propsForBackgroundLines: { stroke: '#1E2D4A' },
-          }}
-          bezier
-          style={{ borderRadius: 14, marginTop: 8 }}
-          withInnerLines={true}
-          withOuterLines={false}
-        />
-      </View>
 
       {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
         <View style={s.enCursoCard}>
@@ -479,8 +454,4 @@ const s = StyleSheet.create({
   pendienteText: { color: colors.blue, fontSize: 11, fontWeight: '600' },
   estrellasRow: { flexDirection: 'row' },
   estrella: { fontSize: 13 },
-  graficoWrap: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
-  graficoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  graficoTitulo: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  graficoTotal: { color: colors.green, fontSize: 18, fontWeight: 'bold' },
 });

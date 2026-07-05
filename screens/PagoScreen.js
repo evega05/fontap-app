@@ -71,7 +71,7 @@ export default function PagoScreen({ navigation, route }) {
       setTimeout(() => {
         setCargando(false);
         setPagado(true);
-        setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio }), 2000);
+        setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
       }, 1500);
     } catch (e) {
       setCargando(false);
