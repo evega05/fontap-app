@@ -15,8 +15,24 @@ import {
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
+import * as Location from 'expo-location';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
+import MapaFontaneros from './MapComponent';
+
+function distanciaKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistancia(km) {
+  if (km == null) return null;
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const DRAWER_WIDTH = 280;
@@ -88,6 +104,23 @@ export default function MapaScreen({ navigation, route }) {
   const [cargando, setCargando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [drawerAbierto, setDrawerAbierto] = useState(false);
+  const [vista, setVista] = useState('lista');
+  const [miUbicacion, setMiUbicacion] = useState(null);
+  const [ubicacionDenegada, setUbicacionDenegada] = useState(false);
+
+  // --- Client's real GPS location (for map centering + real distances) ---
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') { setUbicacionDenegada(true); return; }
+        const pos = await Location.getCurrentPositionAsync({});
+        setMiUbicacion({ latitud: pos.coords.latitude, longitud: pos.coords.longitude });
+      } catch (e) {
+        setUbicacionDenegada(true);
+      }
+    })();
+  }, []);
 
   // --- Drawer animation ---
   const drawerX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -148,19 +181,32 @@ export default function MapaScreen({ navigation, route }) {
     cargarNotifs();
   }, [cargarNotifs]));
 
-  // --- Filter ---
-  const fontanerosFiltrados = fontaneros.filter((f) => {
-    if (
-      busqueda &&
-      !f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) &&
-      !f.zona?.toLowerCase().includes(busqueda.toLowerCase())
-    )
-      return false;
-    if (filtroServicio !== 'Todos' && f.servicios && !f.servicios.includes(filtroServicio))
-      return false;
-    if (mostrar24h && !f.disponible24h) return false;
-    return true;
-  });
+  // --- Filter + real distance ---
+  const fontanerosFiltrados = fontaneros
+    .filter((f) => {
+      if (
+        busqueda &&
+        !f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) &&
+        !f.zona?.toLowerCase().includes(busqueda.toLowerCase())
+      )
+        return false;
+      if (filtroServicio !== 'Todos' && f.servicios && !f.servicios.includes(filtroServicio))
+        return false;
+      if (mostrar24h && !f.disponible24h) return false;
+      return true;
+    })
+    .map((f) => {
+      const km = (miUbicacion && f.latitud != null && f.longitud != null)
+        ? distanciaKm(miUbicacion.latitud, miUbicacion.longitud, f.latitud, f.longitud)
+        : null;
+      return { ...f, distanciaKm: km, distancia: formatDistancia(km) || '—' };
+    })
+    .sort((a, b) => {
+      if (a.distanciaKm == null && b.distanciaKm == null) return 0;
+      if (a.distanciaKm == null) return 1;
+      if (b.distanciaKm == null) return -1;
+      return a.distanciaKm - b.distanciaKm;
+    });
 
   const disponiblesCount = fontanerosFiltrados.filter((f) => f.disponible).length;
 
@@ -598,11 +644,43 @@ export default function MapaScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      {/* LIST */}
+      {/* LISTA / MAPA TOGGLE */}
+      <View style={s.vistaToggleRow}>
+        <TouchableOpacity
+          style={[s.vistaToggleBtn, vista === 'lista' && s.vistaToggleBtnActivo]}
+          onPress={() => setVista('lista')}
+        >
+          <Text style={[s.vistaToggleText, vista === 'lista' && s.vistaToggleTextActivo]}>📋 Lista</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.vistaToggleBtn, vista === 'mapa' && s.vistaToggleBtnActivo]}
+          onPress={() => setVista('mapa')}
+        >
+          <Text style={[s.vistaToggleText, vista === 'mapa' && s.vistaToggleTextActivo]}>🗺️ Mapa</Text>
+        </TouchableOpacity>
+      </View>
+      {ubicacionDenegada && (
+        <Text style={s.avisoUbicacion}>
+          Activa el permiso de ubicación para ver la distancia real y tu posición en el mapa.
+        </Text>
+      )}
+
+      {/* LIST / MAP */}
       {cargando ? (
         <View style={s.loadingWrap}>
           <ActivityIndicator size="large" color={colors.blue} />
           <Text style={s.loadingText}>Buscando fontaneros...</Text>
+        </View>
+      ) : vista === 'mapa' ? (
+        <View style={{ flex: 1 }}>
+          <MapaFontaneros
+            fontaneros={fontanerosFiltrados}
+            miUbicacion={miUbicacion}
+            seleccionado={seleccionado}
+            onSelect={setSeleccionado}
+            onContratar={(f) => navigation.navigate('Solicitud', { fontanero: f, clienteId })}
+            onVerPerfil={(f) => navigation.navigate('PerfilFontaneroPublico', { fontanero: f })}
+          />
         </View>
       ) : (
         <ScrollView
@@ -773,6 +851,24 @@ const s = StyleSheet.create({
   filtro24hActivo: { backgroundColor: '#1a1a35', borderColor: '#7356BF' },
   filtro24hText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
   filtro24hTextActivo: { color: '#7356BF', fontWeight: '700' },
+
+  // Lista/Mapa toggle
+  vistaToggleRow: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    backgroundColor: colors.bgCard,
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  vistaToggleBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
+  vistaToggleBtnActivo: { backgroundColor: colors.blue },
+  vistaToggleText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  vistaToggleTextActivo: { color: '#fff' },
+  avisoUbicacion: { color: colors.amber, fontSize: 11, textAlign: 'center', marginHorizontal: 20, marginBottom: 8 },
 
   // Urgency buttons
   botonesUrgencia: {

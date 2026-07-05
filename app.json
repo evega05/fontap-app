@@ -41,7 +41,13 @@
           "enableGooglePay": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FonTap usa tu ubicación para mostrarte los fontaneros más cercanos y para que los clientes puedan encontrarte a ti."
+        }
+      ]
     ]
   }
 }

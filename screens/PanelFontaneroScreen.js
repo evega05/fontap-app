@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import axios from 'axios';
+import * as Location from 'expo-location';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 
@@ -77,6 +78,26 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     pollingRef.current = setInterval(cargarSolicitudes, 5000);
     return () => clearInterval(pollingRef.current);
   }, [cargarSolicitudes]);
+
+  const compartirUbicacion = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const pos = await Location.getCurrentPositionAsync({});
+      await axios.put(`${API}/fontaneros/${userId}/ubicacion`, {
+        latitud: pos.coords.latitude,
+        longitud: pos.coords.longitude,
+      }, { headers });
+    } catch (e) {}
+  }, [userId, token]);
+
+  const ubicacionRef = useRef(null);
+  useEffect(() => {
+    if (!disponible) { clearInterval(ubicacionRef.current); return; }
+    compartirUbicacion();
+    ubicacionRef.current = setInterval(compartirUbicacion, 60000);
+    return () => clearInterval(ubicacionRef.current);
+  }, [disponible, compartirUbicacion]);
 
   const toggleDisponible = async (valor) => {
     setDisponible(valor);
