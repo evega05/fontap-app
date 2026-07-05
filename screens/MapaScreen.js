@@ -335,7 +335,7 @@ export default function MapaScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Expand: contratar + chat */}
+        {/* Expand: contratar */}
         {isSelected && f.disponible && (
           <View style={s.accionesRow}>
             <TouchableOpacity
@@ -347,14 +347,6 @@ export default function MapaScreen({ navigation, route }) {
               <Text style={s.btnContratarText}>
                 Contratar a {f.nombre?.split(' ')[0]} →
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.btnChat}
-              onPress={() =>
-                navigation.navigate('Chat', { fontanero: f, clienteId })
-              }
-            >
-              <Text style={s.btnChatText}>💬</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -424,11 +416,6 @@ export default function MapaScreen({ navigation, route }) {
             label: 'Notificaciones',
             badge: notifNoLeidas,
             action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); },
-          },
-          {
-            icon: '💬',
-            label: 'Chats recientes',
-            action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('MisServicios', { clienteId }), 250); },
           },
         ].map((item, idx) => (
           <TouchableOpacity
@@ -965,17 +952,6 @@ const s = StyleSheet.create({
     elevation: 5,
   },
   btnContratarText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  btnChat: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: colors.bgCard2,
-    borderWidth: 1,
-    borderColor: colors.border2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnChatText: { fontSize: 20 },
 
   // FAB
   fab: {
