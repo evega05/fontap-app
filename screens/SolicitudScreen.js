@@ -21,6 +21,7 @@ export default function SolicitudScreen({ navigation, route }) {
   const fontanero = route.params?.fontanero;
   const [tipo, setTipo] = useState(null);
   const [descripcion, setDescripcion] = useState('');
+  const [mensaje, setMensaje] = useState('');
   const [urgente, setUrgente] = useState(route.params?.urgente || false);
   const [paso, setPaso] = useState(1);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
@@ -50,6 +51,17 @@ export default function SolicitudScreen({ navigation, route }) {
     setSubiendoFoto(false);
   };
 
+  const enviarMensajeInicial = async (servicioId) => {
+    if (!mensaje.trim() || !servicioId || !token) return;
+    try {
+      await axios.post(
+        `${API}/servicios/${servicioId}/mensajes`,
+        { contenido: mensaje.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (e) {}
+  };
+
   const continuar = async () => {
     if (paso === 1 && !tipo) return;
     if (paso < 3) setPaso(paso + 1);
@@ -71,6 +83,7 @@ export default function SolicitudScreen({ navigation, route }) {
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;
   await subirFotosServicio(servicioId);
+  await enviarMensajeInicial(servicioId);
 
   navigation.navigate('Confirmacion', {
     fontanero, tipo, descripcion, urgente,
@@ -218,6 +231,17 @@ export default function SolicitudScreen({ navigation, route }) {
               </View>
             )}
 
+            <Text style={s.subtitulo}>💬 Mensaje para el fontanero (opcional)</Text>
+            <TextInput
+              style={s.mensajeInput}
+              placeholder="Ej: Estoy en el 3ºB, hay que llamar al portero automático..."
+              placeholderTextColor="#555"
+              value={mensaje}
+              onChangeText={setMensaje}
+              multiline
+              numberOfLines={3}
+            />
+
             <View style={s.resumen}>
               <Text style={s.resumenTitulo}>Resumen</Text>
               <View style={s.resumenFila}>
@@ -279,6 +303,7 @@ const s = StyleSheet.create({
   servicioNombreActivo: { color: '#3b82f6' },
   servicioPrecio: { color: '#aaa', fontSize: 11 },
   textArea: { backgroundColor: '#1e1e2e', color: '#fff', borderRadius: 12, padding: 16, fontSize: 14, minHeight: 120, textAlignVertical: 'top', marginBottom: 20 },
+  mensajeInput: { backgroundColor: '#1e1e2e', color: '#fff', borderRadius: 12, padding: 16, fontSize: 14, minHeight: 80, textAlignVertical: 'top', marginBottom: 16, borderWidth: 1, borderColor: '#2a2a3e' },
   fontaneroCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e2e', borderRadius: 12, padding: 14, gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
