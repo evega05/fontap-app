@@ -1,21 +1,21 @@
-// Dirección visual "Cristal": vidrio esmerilado sobre un degradado profundo,
-// acentos periwinkle + menta. Ver /components/Glass.js para las superficies.
+// Dirección visual "Cristal": vidrio esmerilado sobre un degradado casi negro,
+// acento en azul. Ver /components/Glass.js para las superficies.
 
 export const colors = {
-  // Fondo — degradado profundo (usar bgGradient con expo-linear-gradient)
-  bg: '#0A1A2A',
-  bgGradient: ['#2C3E6B', '#123044', '#0A1A2A'],
+  // Fondo — degradado oscuro, casi negro (usar bgGradient con expo-linear-gradient)
+  bg: '#07080E',
+  bgGradient: ['#1D2A4E', '#0F1526', '#07080E'],
 
   // Vidrio — superficies translúcidas
-  glass: 'rgba(255,255,255,0.08)',
-  glassStrong: 'rgba(255,255,255,0.14)',
-  glassSoft: 'rgba(255,255,255,0.05)',
-  glassBorder: 'rgba(255,255,255,0.16)',
-  glassBorderStrong: 'rgba(255,255,255,0.28)',
+  glass: 'rgba(255,255,255,0.09)',
+  glassStrong: 'rgba(28,31,42,0.82)',
+  glassSoft: 'rgba(255,255,255,0.04)',
+  glassBorder: 'rgba(255,255,255,0.17)',
+  glassBorderStrong: 'rgba(255,255,255,0.22)',
 
-  // Acentos — periwinkle + menta (degradado en botones/CTAs)
-  accent: '#7C9CFF',
-  accent2: '#4CE0D2',
+  // Acentos — azul como color principal (degradado en botones/CTAs)
+  accent: '#4C7CFF',
+  accent2: '#2F5CE8',
 
   // Semánticos — distintos del acento, para estado
   green: '#3DDC97',
@@ -28,19 +28,19 @@ export const colors = {
   purpleGlass: 'rgba(180,156,255,0.16)',
 
   // Tipografía
-  text: '#F5F7FF',
-  textMuted: 'rgba(245,247,255,0.6)',
-  textFaint: 'rgba(245,247,255,0.35)',
+  text: '#FFFFFF',
+  textMuted: 'rgba(255,255,255,0.55)',
+  textFaint: 'rgba(255,255,255,0.35)',
 
   // Alias heredados — para pantallas aún no migradas al vidrio, mantiene coherencia visual
-  bgCard: 'rgba(255,255,255,0.08)',
+  bgCard: 'rgba(255,255,255,0.09)',
   bgCard2: 'rgba(255,255,255,0.06)',
-  bgCard3: 'rgba(255,255,255,0.1)',
-  border: 'rgba(255,255,255,0.16)',
-  border2: 'rgba(255,255,255,0.2)',
-  blue: '#7C9CFF',
-  blueLight: 'rgba(124,156,255,0.16)',
-  blueBright: '#9DB4FF',
+  bgCard3: 'rgba(255,255,255,0.11)',
+  border: 'rgba(255,255,255,0.17)',
+  border2: 'rgba(255,255,255,0.22)',
+  blue: '#4C7CFF',
+  blueLight: 'rgba(76,124,255,0.18)',
+  blueBright: '#6E96FF',
   greenLight: 'rgba(61,220,151,0.14)',
   redLight: 'rgba(255,107,129,0.14)',
 };

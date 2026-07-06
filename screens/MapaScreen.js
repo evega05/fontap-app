@@ -270,7 +270,7 @@ export default function MapaScreen({ navigation, route }) {
                 <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { fontanero: f, clienteId })}>
                   <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnContratar}>
                     <Text style={s.btnContratarText}>Contratar a {f.nombre?.split(' ')[0]}</Text>
-                    <Ionicons name="arrow-forward" size={15} color="#0A1A2A" />
+                    <Ionicons name="arrow-forward" size={15} color={colors.text} />
                   </LinearGradient>
                 </Pressable>
               </View>
@@ -416,7 +416,7 @@ export default function MapaScreen({ navigation, route }) {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
           <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
-            <Ionicons name="moon" size={12} color={mostrar24h ? '#0A1A2A' : colors.textMuted} />
+            <Ionicons name="moon" size={12} color={mostrar24h ? colors.text : colors.textMuted} />
             <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>24h</Text>
           </Pressable>
           {SERVICIOS_FILTRO.map((sv) => (
@@ -429,7 +429,7 @@ export default function MapaScreen({ navigation, route }) {
         <View style={s.ctaRow}>
           <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { urgente: true, clienteId })}>
             <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaUrgente}>
-              <Ionicons name="flash" size={16} color="#0A1A2A" />
+              <Ionicons name="flash" size={16} color={colors.text} />
               <View>
                 <Text style={s.ctaUrgenteText}>Urgente ahora</Text>
                 <Text style={s.ctaUrgenteSub}>30-60 min</Text>
@@ -485,7 +485,7 @@ export default function MapaScreen({ navigation, route }) {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
-  mapArea: { height: '42%', position: 'relative' },
+  mapArea: { height: '55%', position: 'relative' },
   floatRow: {
     position: 'absolute', top: 52, left: spacing.lg, right: spacing.lg,
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -530,15 +530,15 @@ const s = StyleSheet.create({
   filtro: { backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
   filtroActivo: { backgroundColor: colors.accent2, borderColor: colors.accent2 },
   filtroText: { color: colors.textMuted, ...type.caption },
-  filtroTextActivo: { color: '#0A1A2A', fontWeight: '700' },
+  filtroTextActivo: { color: colors.text, fontWeight: '700' },
   filtro24h: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
   filtro24hActivo: { backgroundColor: colors.purple, borderColor: colors.purple },
   filtro24hText: { color: colors.textMuted, ...type.caption },
-  filtro24hTextActivo: { color: '#0A1A2A', fontWeight: '700' },
+  filtro24hTextActivo: { color: colors.text, fontWeight: '700' },
 
   ctaRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   ctaUrgente: { borderRadius: radius.md, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, ...shadow.glow(colors.accent2) },
-  ctaUrgenteText: { color: '#0A1A2A', fontWeight: '800', fontSize: 13 },
+  ctaUrgenteText: { color: colors.text, fontWeight: '800', fontSize: 13 },
   ctaUrgenteSub: { color: 'rgba(10,26,42,0.7)', fontSize: 10, fontWeight: '600' },
   ctaCita: { flex: 1, backgroundColor: colors.glass, borderRadius: radius.md, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.glassBorder },
   ctaCitaText: { color: colors.text, fontWeight: '700', fontSize: 13 },
@@ -564,7 +564,7 @@ const s = StyleSheet.create({
   avatarWrap: { position: 'relative', marginRight: spacing.md },
   avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
   avatarInactivo: { backgroundColor: colors.glassStrong },
-  avatarText: { color: '#0A1A2A', fontWeight: 'bold', fontSize: 19 },
+  avatarText: { color: colors.text, fontWeight: 'bold', fontSize: 19 },
   avatarDot: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.green, borderWidth: 2, borderColor: colors.bg },
   cardInfo: { flex: 1 },
   cardNombreRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
@@ -588,13 +588,13 @@ const s = StyleSheet.create({
   btnVerPerfil: { backgroundColor: colors.glass, borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
   btnVerPerfilText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
   btnContratar: { flexDirection: 'row', borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  btnContratarText: { color: '#0A1A2A', fontWeight: 'bold', fontSize: 14 },
+  btnContratarText: { color: colors.text, fontWeight: 'bold', fontSize: 14 },
 
   drawerWrap: { position: 'absolute', top: 0, left: 0, bottom: 0, width: DRAWER_WIDTH, zIndex: 100 },
   drawer: { flex: 1, borderRadius: 0, borderTopRightRadius: radius.xl, borderBottomRightRadius: radius.xl, borderWidth: 0, borderRightWidth: 1, borderColor: colors.glassBorder, paddingTop: 60, paddingBottom: 32, ...shadow.lg },
   drawerUserBlock: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
   drawerAvatar: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', ...shadow.glow(colors.accent2) },
-  drawerAvatarText: { color: '#0A1A2A', fontWeight: '800', fontSize: 22 },
+  drawerAvatarText: { color: colors.text, fontWeight: '800', fontSize: 22 },
   drawerNombre: { color: colors.text, fontWeight: '700', fontSize: 16 },
   drawerTipo: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   drawerSep: { height: 1, backgroundColor: colors.glassBorder, marginHorizontal: spacing.xl, marginVertical: spacing.md },

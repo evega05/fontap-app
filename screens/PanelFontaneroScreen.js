@@ -197,7 +197,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Pressable haptic disabled={!precioFinal} onPress={enviarPrecio} style={!precioFinal && s.modalBtnDesactivado}>
               <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalBtn}>
                 <Text style={s.modalBtnText}>Enviar precio al cliente</Text>
-                <Ionicons name="arrow-forward" size={16} color="#0A1A2A" />
+                <Ionicons name="arrow-forward" size={16} color={colors.text} />
               </LinearGradient>
             </Pressable>
             <TouchableOpacity onPress={() => setMostrarPrecio(false)} style={s.modalCancelar}>
@@ -306,7 +306,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Pressable haptic onPress={() => setMostrarPrecio(true)}>
               <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
                 <Text style={s.enCursoBtnText}>Enviar precio al cliente</Text>
-                <Ionicons name="arrow-forward" size={15} color="#0A1A2A" />
+                <Ionicons name="arrow-forward" size={15} color={colors.text} />
               </LinearGradient>
             </Pressable>
           )}
