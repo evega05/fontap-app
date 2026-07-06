@@ -5,12 +5,17 @@ import { colors } from '../theme';
 const BILBAO = { latitude: 43.2630, longitude: -2.9350 };
 
 const mapStyle = [
-  { elementType: 'geometry', stylers: [{ color: '#16233d' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8ea0c2' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0d1830' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#233252' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a1a2a' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1c2b47' }] },
+  { elementType: 'geometry', stylers: [{ color: '#EDEFF3' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#69707F' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#EDEFF3' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#DBDFE6' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#E4E7ED' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#BEDCEB' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#D6E8D2' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#E4E7ED' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#E4E7ED' }] },
 ];
 
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
@@ -47,10 +52,11 @@ const s = StyleSheet.create({
   mapa: { flex: 1 },
   marcador: {
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: 'rgba(76,224,210,0.28)',
+    backgroundColor: colors.accent,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 2, borderColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 4,
   },
-  marcadorActivo: { backgroundColor: colors.accent, borderColor: '#fff' },
+  marcadorActivo: { backgroundColor: colors.accent2, borderColor: '#fff' },
   marcadorPunto: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
 });

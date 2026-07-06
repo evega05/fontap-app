@@ -539,7 +539,7 @@ const s = StyleSheet.create({
   ctaRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   ctaUrgente: { borderRadius: radius.md, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, ...shadow.glow(colors.accent2) },
   ctaUrgenteText: { color: colors.text, fontWeight: '800', fontSize: 13 },
-  ctaUrgenteSub: { color: 'rgba(10,26,42,0.7)', fontSize: 10, fontWeight: '600' },
+  ctaUrgenteSub: { color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: '600' },
   ctaCita: { flex: 1, backgroundColor: colors.glass, borderRadius: radius.md, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.glassBorder },
   ctaCitaText: { color: colors.text, fontWeight: '700', fontSize: 13 },
   ctaCitaSub: { color: colors.textMuted, fontSize: 10 },
