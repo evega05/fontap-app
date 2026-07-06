@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, type, shadow } from '../theme';
 import axios from 'axios';
 import { agregarArchivo } from '../subirArchivo';
 import Pressable from '../components/Pressable';
 import FadeInUp from '../components/FadeInUp';
+import GradientBg from '../components/GradientBg';
+import Glass from '../components/Glass';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -208,9 +211,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   return (
     <View style={s.container}>
+      <GradientBg />
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={20} color={colors.blue} />
+          <Ionicons name="chevron-back" size={20} color={colors.accent2} />
           <Text style={s.backText}>Volver</Text>
         </TouchableOpacity>
         <Text style={s.titulo}>Mi perfil</Text>
@@ -223,9 +227,11 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabsScroll} contentContainerStyle={s.tabs}>
         {TABS.map(t => (
-          <Pressable key={t.key} style={[s.tab, tab === t.key && s.tabActivo]} haptic onPress={() => setTab(t.key)}>
-            <Ionicons name={t.icon} size={14} color={tab === t.key ? colors.blue : colors.textMuted} />
-            <Text style={[s.tabText, tab === t.key && s.tabTextActivo]}>{t.label}</Text>
+          <Pressable key={t.key} haptic onPress={() => setTab(t.key)}>
+            <Glass style={[s.tab, tab === t.key && s.tabActivo]}>
+              <Ionicons name={t.icon} size={14} color={tab === t.key ? colors.accent2 : colors.textMuted} />
+              <Text style={[s.tabText, tab === t.key && s.tabTextActivo]}>{t.label}</Text>
+            </Glass>
           </Pressable>
         ))}
       </ScrollView>
@@ -241,14 +247,16 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 ) : fotoPerfil ? (
                   <Image source={{ uri: fotoPerfil }} style={s.avatarGrandeImagen} />
                 ) : (
-                  <View style={s.avatarGrande}>
+                  <LinearGradient colors={[colors.accent, colors.accent2]} style={s.avatarGrande}>
                     <Text style={s.avatarGrandeText}>{nombre[0]}</Text>
-                  </View>
+                  </LinearGradient>
                 )}
               </TouchableOpacity>
-              <Pressable style={s.fotoBtn} haptic onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
-                <Ionicons name="camera-outline" size={14} color={colors.blue} />
-                <Text style={s.fotoBtnText}>Cambiar foto</Text>
+              <Pressable haptic onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
+                <Glass style={s.fotoBtn}>
+                  <Ionicons name="camera-outline" size={14} color={colors.accent2} />
+                  <Text style={s.fotoBtnText}>Cambiar foto</Text>
+                </Glass>
               </Pressable>
             </View>
 
@@ -261,21 +269,21 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             </View>
 
             <View style={s.statsRow}>
-              <View style={s.statCard}>
+              <Glass style={s.statCard}>
                 <Ionicons name="star" size={16} color={colors.amber} />
                 <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
                 <Text style={s.statLabel}>Valoración</Text>
-              </View>
-              <View style={s.statCard}>
+              </Glass>
+              <Glass style={s.statCard}>
                 <Ionicons name="checkmark-circle" size={16} color={colors.green} />
                 <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
                 <Text style={s.statLabel}>Trabajos</Text>
-              </View>
-              <View style={s.statCard}>
-                <Ionicons name="cash" size={16} color={colors.blue} />
+              </Glass>
+              <Glass style={s.statCard}>
+                <Ionicons name="cash" size={16} color={colors.accent2} />
                 <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
                 <Text style={s.statLabel}>Total ganado</Text>
-              </View>
+              </Glass>
             </View>
 
             <Text style={s.seccionTitulo}>Zona de trabajo</Text>
@@ -306,10 +314,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.textFaint} keyboardType="email-address" autoCapitalize="none" />
             </View>
 
-            <View style={[s.suscripcionCard, !suscripcionActiva && s.suscripcionInactiva]}>
+            <Glass style={s.suscripcionCard} colorTint={suscripcionActiva ? colors.glass : colors.redGlass}>
               <View style={s.suscripcionHeader}>
                 <View style={s.suscripcionTituloRow}>
-                  <Ionicons name={suscripcionActiva ? 'diamond' : 'warning'} size={15} color={suscripcionActiva ? colors.blue : colors.red} />
+                  <Ionicons name={suscripcionActiva ? 'diamond' : 'warning'} size={15} color={suscripcionActiva ? colors.accent2 : colors.red} />
                   <Text style={s.suscripcionTitulo}>{suscripcionActiva ? 'Suscripción activa' : 'Suscripción inactiva'}</Text>
                 </View>
                 <View style={[s.suscripcionBadge, !suscripcionActiva && s.suscripcionBadgeInactiva]}>
@@ -329,7 +337,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                   </Pressable>
                 )}
               </View>
-            </View>
+            </Glass>
           </>
         )}
 
@@ -389,7 +397,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <Text style={s.seccionSub}>Aún no has añadido servicios propios.</Text>
             )}
             {servicios.map(sv => (
-              <View key={sv.id} style={s.servicioCard}>
+              <Glass key={sv.id} style={s.servicioCard}>
                 <View style={s.servicioInfo}>
                   <Text style={s.servicioNombre}>{sv.nombre}</Text>
                   <View style={s.servicioDuracionRow}>
@@ -401,10 +409,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 <Pressable onPress={() => eliminarServicio(sv.id)} haptic style={s.eliminarBtn}>
                   <Ionicons name="close" size={14} color={colors.red} />
                 </Pressable>
-              </View>
+              </Glass>
             ))}
 
-            <View style={s.añadirCard}>
+            <Glass style={s.añadirCard}>
               <Text style={s.añadirTitulo}>Añadir servicio</Text>
               <View style={s.inputWrap}>
                 <Ionicons name="construct-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
@@ -423,10 +431,12 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                     value={nuevaDuracion} onChangeText={setNuevaDuracion} keyboardType="numeric" />
                 </View>
               </View>
-              <Pressable style={s.btnAñadir} haptic onPress={añadirServicio}>
-                <Text style={s.btnAñadirText}>Añadir servicio</Text>
+              <Pressable haptic onPress={añadirServicio}>
+                <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnAñadir}>
+                  <Text style={s.btnAñadirText}>Añadir servicio</Text>
+                </LinearGradient>
               </Pressable>
-            </View>
+            </Glass>
           </>
         )}
 
@@ -435,16 +445,18 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             <Text style={s.seccionTitulo}>Mis trabajos realizados</Text>
             <Text style={s.seccionSub}>Sube fotos para que los clientes vean la calidad de tu trabajo</Text>
 
-            <Pressable style={s.subirFotoBtn} haptic onPress={subirFoto} disabled={subiendoFoto}>
-              {subiendoFoto ? (
-                <ActivityIndicator color={colors.blue} style={{ marginBottom: spacing.sm }} />
-              ) : (
-                <View style={s.subirFotoIconWrap}>
-                  <Ionicons name="camera" size={22} color={colors.blue} />
-                </View>
-              )}
-              <Text style={s.subirFotoText}>{subiendoFoto ? 'Subiendo...' : 'Subir foto de trabajo'}</Text>
-              <Text style={s.subirFotoSub}>Toca para seleccionar de tu galería</Text>
+            <Pressable haptic onPress={subirFoto} disabled={subiendoFoto}>
+              <Glass style={s.subirFotoBtn}>
+                {subiendoFoto ? (
+                  <ActivityIndicator color={colors.accent2} style={{ marginBottom: spacing.sm }} />
+                ) : (
+                  <View style={s.subirFotoIconWrap}>
+                    <Ionicons name="camera" size={22} color={colors.accent2} />
+                  </View>
+                )}
+                <Text style={s.subirFotoText}>{subiendoFoto ? 'Subiendo...' : 'Subir foto de trabajo'}</Text>
+                <Text style={s.subirFotoSub}>Toca para seleccionar de tu galería</Text>
+              </Glass>
             </Pressable>
 
             {fotosTrabajos.length === 0 ? (
@@ -458,7 +470,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             ) : (
               <View style={s.fotosGrid}>
                 {fotosTrabajos.map(f => (
-                  <View key={f.id} style={s.fotoCard}>
+                  <Glass key={f.id} style={s.fotoCard}>
                     <Image source={{ uri: f.uri }} style={s.fotoImagen} />
                     <TextInput
                       style={s.fotoDescInput}
@@ -470,7 +482,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                     <Pressable style={s.fotoEliminar} haptic onPress={() => eliminarFoto(f.id)}>
                       <Ionicons name="close" size={12} color="#fff" />
                     </Pressable>
-                  </View>
+                  </Glass>
                 ))}
               </View>
             )}
@@ -495,7 +507,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 const media = (r.puntualidad + r.calidad + r.precio_justo + r.trato) / 4;
                 return (
                   <FadeInUp key={r.id} index={i}>
-                    <View style={s.resenaCard}>
+                    <Glass style={s.resenaCard}>
                       <View style={s.resenaTop}>
                         <View style={s.estrellasRow}>
                           {[1, 2, 3, 4, 5].map(i => (
@@ -511,7 +523,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                         <Text style={s.resenaDetalleItem}>Precio {r.precio_justo}</Text>
                         <Text style={s.resenaDetalleItem}>Trato {r.trato}</Text>
                       </View>
-                    </View>
+                    </Glass>
                   </FadeInUp>
                 );
               })

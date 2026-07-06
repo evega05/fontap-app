@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { useAuth } from '../AuthContext';
 import { colors, spacing, radius, type, shadow } from '../theme';
 import Pressable from '../components/Pressable';
 import FadeInUp from '../components/FadeInUp';
+import GradientBg from '../components/GradientBg';
+import Glass from '../components/Glass';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -167,11 +170,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   return (
     <View style={s.container}>
+      <GradientBg />
       {mostrarPrecio && trabajoActivo && (
         <View style={s.modalOverlay}>
-          <View style={s.modal}>
+          <Glass strong style={s.modal}>
             <View style={s.modalIconWrap}>
-              <Ionicons name="construct" size={22} color={colors.blue} />
+              <Ionicons name="construct" size={22} color={colors.accent2} />
             </View>
             <Text style={s.modalTitulo}>Trabajo en curso</Text>
             <Text style={s.modalSub}>Cuando termines, indica el precio final al cliente</Text>
@@ -190,14 +194,16 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               />
               <Text style={s.modalEuro}>€</Text>
             </View>
-            <Pressable style={[s.modalBtn, !precioFinal && s.modalBtnDesactivado]} haptic disabled={!precioFinal} onPress={enviarPrecio}>
-              <Text style={s.modalBtnText}>Enviar precio al cliente</Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            <Pressable haptic disabled={!precioFinal} onPress={enviarPrecio} style={!precioFinal && s.modalBtnDesactivado}>
+              <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalBtn}>
+                <Text style={s.modalBtnText}>Enviar precio al cliente</Text>
+                <Ionicons name="arrow-forward" size={16} color="#0A1A2A" />
+              </LinearGradient>
             </Pressable>
             <TouchableOpacity onPress={() => setMostrarPrecio(false)} style={s.modalCancelar}>
               <Text style={s.modalCancelarText}>Seguir trabajando</Text>
             </TouchableOpacity>
-          </View>
+          </Glass>
         </View>
       )}
 
@@ -208,36 +214,38 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Text style={s.nombre} numberOfLines={1}>{nombre}</Text>
             <Text style={s.idText}>ID: {userId}</Text>
           </View>
-          <Pressable style={s.perfilBtn} haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
-            <Text style={s.perfilLetra}>{nombre[0]}</Text>
+          <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
+            <LinearGradient colors={[colors.accent, colors.accent2]} style={s.perfilBtn}>
+              <Text style={s.perfilLetra}>{nombre[0]}</Text>
+            </LinearGradient>
           </Pressable>
-          <Pressable style={s.logoutBtn} haptic onPress={() => Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
+          <Pressable haptic onPress={() => Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Salir', style: 'destructive', onPress: () => { logout(); navigation.replace('Login'); } },
           ])}>
-            <Ionicons name="log-out-outline" size={18} color={colors.red} />
+            <Glass style={s.logoutBtn} colorTint={colors.redGlass}><Ionicons name="log-out-outline" size={18} color={colors.red} /></Glass>
           </Pressable>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.headerActions}>
-          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Notificaciones')}>
-            <Ionicons name="notifications-outline" size={18} color={colors.text} />
+          <Pressable haptic onPress={() => navigation.navigate('Notificaciones')}>
+            <Glass style={s.iconBtn}><Ionicons name="notifications-outline" size={18} color={colors.text} /></Glass>
           </Pressable>
-          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Calendario', { userId })}>
-            <Ionicons name="calendar-outline" size={18} color={colors.text} />
+          <Pressable haptic onPress={() => navigation.navigate('Calendario', { userId })}>
+            <Glass style={s.iconBtn}><Ionicons name="calendar-outline" size={18} color={colors.text} /></Glass>
           </Pressable>
-          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Ofertas')}>
-            <Ionicons name="briefcase-outline" size={18} color={colors.text} />
+          <Pressable haptic onPress={() => navigation.navigate('Ofertas')}>
+            <Glass style={s.iconBtn}><Ionicons name="briefcase-outline" size={18} color={colors.text} /></Glass>
           </Pressable>
-          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('ChatsRecientes')}>
-            <Ionicons name="chatbubbles-outline" size={18} color={colors.text} />
+          <Pressable haptic onPress={() => navigation.navigate('ChatsRecientes')}>
+            <Glass style={s.iconBtn}><Ionicons name="chatbubbles-outline" size={18} color={colors.text} /></Glass>
           </Pressable>
-          <Pressable style={s.iconBtn} haptic onPress={() => navigation.navigate('Estadisticas', { userId })}>
-            <Ionicons name="stats-chart-outline" size={18} color={colors.text} />
+          <Pressable haptic onPress={() => navigation.navigate('Estadisticas', { userId })}>
+            <Glass style={s.iconBtn}><Ionicons name="stats-chart-outline" size={18} color={colors.text} /></Glass>
           </Pressable>
         </ScrollView>
       </View>
 
-      <View style={s.disponibilidadCard}>
+      <Glass style={s.disponibilidadCard}>
         <View style={s.disponibilidadLeft}>
           <View style={[s.indicador, disponible ? s.indicadorVerde : s.indicadorRojo]} />
           <View>
@@ -246,10 +254,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           </View>
         </View>
         <Switch value={disponible} onValueChange={toggleDisponible}
-          trackColor={{ false: colors.bgCard3, true: colors.blueLight }} thumbColor={disponible ? colors.blue : colors.textFaint} />
-      </View>
+          trackColor={{ false: colors.glassStrong, true: colors.accent }} thumbColor={disponible ? colors.accent2 : colors.textFaint} />
+      </Glass>
 
-      <View style={[s.disponibilidadCard, { marginTop: -4 }]}>
+      <Glass style={[s.disponibilidadCard, { marginTop: -4 }]}>
         <View style={s.disponibilidadLeft}>
           <View style={s.disponibilidadIconWrap}>
             <Ionicons name="flash" size={16} color={colors.purple} />
@@ -260,29 +268,29 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           </View>
         </View>
         <Switch value={disponible24h} onValueChange={toggle24h}
-          trackColor={{ false: colors.bgCard3, true: '#2d1a3e' }} thumbColor={disponible24h ? colors.purple : colors.textFaint} />
-      </View>
+          trackColor={{ false: colors.glassStrong, true: colors.purple }} thumbColor={disponible24h ? '#fff' : colors.textFaint} />
+      </Glass>
 
       <View style={s.statsRow}>
-        <View style={s.statCard}>
+        <Glass style={s.statCard}>
           <Ionicons name="star" size={18} color={colors.amber} />
           <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
           <Text style={s.statLabel}>Valoración</Text>
-        </View>
-        <View style={s.statCard}>
+        </Glass>
+        <Glass style={s.statCard}>
           <Ionicons name="checkmark-circle" size={18} color={colors.green} />
           <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
           <Text style={s.statLabel}>Trabajos</Text>
-        </View>
-        <View style={s.statCard}>
-          <Ionicons name="cash" size={18} color={colors.blue} />
+        </Glass>
+        <Glass style={s.statCard}>
+          <Ionicons name="cash" size={18} color={colors.accent2} />
           <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
           <Text style={s.statLabel}>Total ganado</Text>
-        </View>
+        </Glass>
       </View>
 
       {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
-        <View style={s.enCursoCard}>
+        <Glass style={s.enCursoCard}>
           <View style={s.enCursoHeader}>
             <View style={s.enCursoTituloRow}>
               <Ionicons name="construct" size={15} color={colors.green} />
@@ -295,9 +303,11 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           </View>
           <Text style={s.enCursoCliente}>{trabajoActivo.cliente_nombre} · {trabajoActivo.tipo}</Text>
           {trabajoActivo.estado === 'aceptado' && (
-            <Pressable style={s.enCursoBtn} haptic onPress={() => setMostrarPrecio(true)}>
-              <Text style={s.enCursoBtnText}>Enviar precio al cliente</Text>
-              <Ionicons name="arrow-forward" size={15} color="#fff" />
+            <Pressable haptic onPress={() => setMostrarPrecio(true)}>
+              <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
+                <Text style={s.enCursoBtnText}>Enviar precio al cliente</Text>
+                <Ionicons name="arrow-forward" size={15} color="#0A1A2A" />
+              </LinearGradient>
             </Pressable>
           )}
           {trabajoActivo.estado === 'aceptado' && (
@@ -306,16 +316,20 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               <Text style={s.enCursoChatText}>Chat con cliente</Text>
             </Pressable>
           )}
-        </View>
+        </Glass>
       )}
 
       <View style={s.tabs}>
-        <Pressable style={[s.tab, tab === 'pendientes' && s.tabActivo]} haptic onPress={() => setTab('pendientes')}>
-          <Text style={[s.tabText, tab === 'pendientes' && s.tabTextActivo]}>Pendientes</Text>
-          {pendientes.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{pendientes.length}</Text></View>}
+        <Pressable haptic onPress={() => setTab('pendientes')} style={{ flex: 1 }}>
+          <Glass style={[s.tab, tab === 'pendientes' && s.tabActivo]}>
+            <Text style={[s.tabText, tab === 'pendientes' && s.tabTextActivo]}>Pendientes</Text>
+            {pendientes.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{pendientes.length}</Text></View>}
+          </Glass>
         </Pressable>
-        <Pressable style={[s.tab, tab === 'completados' && s.tabActivo]} haptic onPress={() => setTab('completados')}>
-          <Text style={[s.tabText, tab === 'completados' && s.tabTextActivo]}>Completados</Text>
+        <Pressable haptic onPress={() => setTab('completados')} style={{ flex: 1 }}>
+          <Glass style={[s.tab, tab === 'completados' && s.tabActivo]}>
+            <Text style={[s.tabText, tab === 'completados' && s.tabTextActivo]}>Completados</Text>
+          </Glass>
         </Pressable>
       </View>
 
@@ -336,11 +350,11 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           ) : (
             pendientes.map((t, i) => (
               <FadeInUp key={t.id} index={i}>
-                <View style={s.trabajoCard}>
+                <Glass style={s.trabajoCard}>
                   <View style={s.trabajoHeader}>
-                    <View style={s.avatar}>
+                    <LinearGradient colors={[colors.accent, colors.accent2]} style={s.avatar}>
                       <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
-                    </View>
+                    </LinearGradient>
                     <View style={s.trabajoInfo}>
                       <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
                       <View style={s.trabajoZonaRow}>
@@ -386,7 +400,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                     <Ionicons name="chatbubble-outline" size={14} color={colors.blue} />
                     <Text style={s.btnChatText}>Chatear con el cliente</Text>
                   </Pressable>
-                </View>
+                </Glass>
               </FadeInUp>
             ))
           )
@@ -402,7 +416,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           ) : (
             completados.map((t, i) => (
               <FadeInUp key={t.id} index={i}>
-                <View style={s.completadoCard}>
+                <Glass style={s.completadoCard}>
                   <View style={s.trabajoHeader}>
                     <View style={s.avatarCompletado}>
                       <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
@@ -432,7 +446,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                       ))}
                     </View>
                   </View>
-                </View>
+                </Glass>
               </FadeInUp>
             ))
           )

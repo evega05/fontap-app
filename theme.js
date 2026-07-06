@@ -1,31 +1,48 @@
+// Dirección visual "Cristal": vidrio esmerilado sobre un degradado profundo,
+// acentos periwinkle + menta. Ver /components/Glass.js para las superficies.
+
 export const colors = {
-  // Fondos — azul noche profundo estilo fintech
-  bg: '#070B14',
-  bgCard: '#0D1424',
-  bgCard2: '#111A2E',
-  bgCard3: '#172038',
+  // Fondo — degradado profundo (usar bgGradient con expo-linear-gradient)
+  bg: '#0A1A2A',
+  bgGradient: ['#2C3E6B', '#123044', '#0A1A2A'],
 
-  // Bordes sutiles
-  border: '#1E2D4A',
-  border2: '#253350',
+  // Vidrio — superficies translúcidas
+  glass: 'rgba(255,255,255,0.08)',
+  glassStrong: 'rgba(255,255,255,0.14)',
+  glassSoft: 'rgba(255,255,255,0.05)',
+  glassBorder: 'rgba(255,255,255,0.16)',
+  glassBorderStrong: 'rgba(255,255,255,0.28)',
 
-  // Azul eléctrico — acento principal
-  blue: '#3D7EFF',
-  blueLight: '#0A1836',
-  blueBright: '#5B96FF',
+  // Acentos — periwinkle + menta (degradado en botones/CTAs)
+  accent: '#7C9CFF',
+  accent2: '#4CE0D2',
 
-  // Semánticos
-  green: '#00C48C',
-  greenLight: '#001F16',
-  red: '#FF4D4D',
-  redLight: '#1F0909',
-  amber: '#FFB830',
-  purple: '#8B5CF6',
+  // Semánticos — distintos del acento, para estado
+  green: '#3DDC97',
+  greenGlass: 'rgba(61,220,151,0.16)',
+  red: '#FF6B81',
+  redGlass: 'rgba(255,107,129,0.16)',
+  amber: '#FFC85C',
+  amberGlass: 'rgba(255,200,92,0.16)',
+  purple: '#B49CFF',
+  purpleGlass: 'rgba(180,156,255,0.16)',
 
   // Tipografía
-  text: '#E8EDF5',
-  textMuted: '#7A8BA8',
-  textFaint: '#2A3A56',
+  text: '#F5F7FF',
+  textMuted: 'rgba(245,247,255,0.6)',
+  textFaint: 'rgba(245,247,255,0.35)',
+
+  // Alias heredados — para pantallas aún no migradas al vidrio, mantiene coherencia visual
+  bgCard: 'rgba(255,255,255,0.08)',
+  bgCard2: 'rgba(255,255,255,0.06)',
+  bgCard3: 'rgba(255,255,255,0.1)',
+  border: 'rgba(255,255,255,0.16)',
+  border2: 'rgba(255,255,255,0.2)',
+  blue: '#7C9CFF',
+  blueLight: 'rgba(124,156,255,0.16)',
+  blueBright: '#9DB4FF',
+  greenLight: 'rgba(61,220,151,0.14)',
+  redLight: 'rgba(255,107,129,0.14)',
 };
 
 // Escala de espaciado — ritmo consistente en toda la app
@@ -39,16 +56,16 @@ export const spacing = {
   xxxl: 40,
 };
 
-// Radios de borde — todo redondeado de forma consistente
+// Radios de borde — vidrio = todo bien redondeado
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 26,
   full: 999,
 };
 
-// Escala tipográfica — jerarquía clara, tipo Apple/Uber (bold + grande arriba, calmo abajo)
+// Escala tipográfica
 export const type = {
   display: { fontSize: 34, fontWeight: '800', letterSpacing: -0.8 },
   h1: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
@@ -61,34 +78,34 @@ export const type = {
   tiny: { fontSize: 11, fontWeight: '600' },
 };
 
-// Sombras suaves en vez de bordes duros — dan profundidad sin recargar
+// Sombras — más difusas y frías, propias del vidrio flotando sobre el degradado
 export const shadow = {
   sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#04101C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
   md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowColor: '#04101C',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 9,
   },
   lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.3,
-    shadowRadius: 32,
-    elevation: 16,
+    shadowColor: '#04101C',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.35,
+    shadowRadius: 40,
+    elevation: 18,
   },
   glow: (color) => ({
     shadowColor: color,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+    elevation: 8,
   }),
 };
