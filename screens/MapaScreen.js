@@ -42,6 +42,8 @@ function formatDistancia(km) {
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const DRAWER_WIDTH = 288;
+const SELECTED_FLOAT_WIDTH = 250;
+const SELECTED_FLOAT_HEIGHT = 176;
 
 const SERVICIOS_FILTRO = ['Todos', 'Desatasco', 'Fuga', 'Caldera', 'Grifo', 'Radiador'];
 
@@ -51,6 +53,8 @@ export default function MapaScreen({ navigation, route }) {
 
   // --- State ---
   const [seleccionado, setSeleccionado] = useState(null);
+  const [pinPos, setPinPos] = useState(null);
+  const [mapAreaSize, setMapAreaSize] = useState({ width: 0, height: 0 });
   const [fontaneros, setFontaneros] = useState([]);
   const [filtroServicio, setFiltroServicio] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
@@ -192,6 +196,26 @@ export default function MapaScreen({ navigation, route }) {
     }
   };
 
+  // --- Iniciar chat con un fontanero (crea un servicio "Consulta" para poder mandar mensajes) ---
+  const [iniciandoChat, setIniciandoChat] = useState(false);
+  const iniciarChat = async (f) => {
+    if (iniciandoChat) return;
+    setIniciandoChat(true);
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.post(
+        `${API}/servicios`,
+        { tipo: 'Consulta', urgente: false, fontanero_id: f.id },
+        { params: { cliente_id: clienteId }, headers }
+      );
+      navigation.navigate('Chat', { servicioId: res.data.id, otroNombre: f.nombre });
+    } catch (e) {
+      console.log('[Mapa] Error al iniciar chat:', e.message);
+    } finally {
+      setIniciandoChat(false);
+    }
+  };
+
   // --- Logout ---
   const handleLogout = () => {
     cerrarDrawer();
@@ -273,6 +297,9 @@ export default function MapaScreen({ navigation, route }) {
                 <Pressable style={s.btnVerPerfil} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: f })}>
                   <Text style={s.btnVerPerfilText}>Ver perfil</Text>
                 </Pressable>
+                <Pressable style={s.btnMensaje} haptic onPress={() => iniciarChat(f)}>
+                  <Ionicons name="chatbubble-outline" size={17} color={colors.text} />
+                </Pressable>
                 <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { fontanero: f, clienteId })}>
                   <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnContratar}>
                     <Text style={s.btnContratarText}>Contratar a {f.nombre?.split(' ')[0]}</Text>
@@ -349,12 +376,13 @@ export default function MapaScreen({ navigation, route }) {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* MAPA — siempre visible arriba */}
-      <View style={s.mapArea}>
+      <View style={s.mapArea} onLayout={(e) => setMapAreaSize(e.nativeEvent.layout)}>
         <MapaFontaneros
           fontaneros={fontanerosFiltrados}
           miUbicacion={miUbicacion}
           seleccionado={seleccionado}
           onSelect={setSeleccionado}
+          onPinPosition={setPinPos}
         />
 
         {/* Fila flotante de vidrio sobre el mapa */}
@@ -407,30 +435,68 @@ export default function MapaScreen({ navigation, route }) {
         </View>
 
         {seleccionado && (
-          <View style={s.selectedFloatWrap}>
+          <View
+            style={[
+              s.selectedFloatWrap,
+              pinPos && mapAreaSize.width > 0
+                ? {
+                    left: Math.min(
+                      Math.max(pinPos.x - SELECTED_FLOAT_WIDTH / 2, 8),
+                      mapAreaSize.width - SELECTED_FLOAT_WIDTH - 8
+                    ),
+                    top: Math.max(pinPos.y - SELECTED_FLOAT_HEIGHT - 26, 8),
+                    right: undefined,
+                    bottom: undefined,
+                    width: SELECTED_FLOAT_WIDTH,
+                  }
+                : null,
+            ]}
+            pointerEvents="box-none"
+          >
             <Glass strong style={s.selectedFloat}>
-              {seleccionado.foto_url ? (
-                <Image source={{ uri: `${API}${seleccionado.foto_url}` }} style={s.selectedFloatAvatar} />
-              ) : (
-                <View style={[s.selectedFloatAvatar, s.selectedFloatAvatarPlaceholder]}>
-                  <Text style={s.selectedFloatAvatarText}>{seleccionado.nombre?.[0] || '?'}</Text>
+              <View style={s.selectedFloatTop}>
+                {seleccionado.foto_url ? (
+                  <Image source={{ uri: `${API}${seleccionado.foto_url}` }} style={s.selectedFloatAvatar} />
+                ) : (
+                  <View style={[s.selectedFloatAvatar, s.selectedFloatAvatarPlaceholder]}>
+                    <Text style={s.selectedFloatAvatarText}>{seleccionado.nombre?.[0] || '?'}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.selectedFloatNombre} numberOfLines={1}>{seleccionado.nombre}</Text>
+                  <Text style={s.selectedFloatMeta} numberOfLines={1}>
+                    {seleccionado.valoracion ? `⭐ ${seleccionado.valoracion} · ` : ''}{seleccionado.zona}
+                  </Text>
                 </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={s.selectedFloatNombre} numberOfLines={1}>{seleccionado.nombre}</Text>
-                <Text style={s.selectedFloatMeta}>
-                  {seleccionado.valoracion ? `⭐ ${seleccionado.valoracion} · ` : ''}{seleccionado.zona}
-                </Text>
+                <Pressable haptic onPress={() => setSeleccionado(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                </Pressable>
               </View>
-              {seleccionado.telefono && (
-                <Pressable style={s.selectedFloatCallBtn} haptic onPress={() => Linking.openURL(`tel:${seleccionado.telefono}`)}>
-                  <Ionicons name="call" size={17} color={colors.text} />
+
+              <View style={s.selectedFloatRow}>
+                <Pressable style={s.selectedFloatIconBtn} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: seleccionado })}>
+                  <Ionicons name="person-outline" size={16} color={colors.text} />
+                </Pressable>
+                <Pressable style={s.selectedFloatIconBtn} haptic onPress={() => iniciarChat(seleccionado)}>
+                  <Ionicons name="chatbubble-outline" size={16} color={colors.text} />
+                </Pressable>
+                {seleccionado.telefono && (
+                  <Pressable style={s.selectedFloatIconBtn} haptic onPress={() => Linking.openURL(`tel:${seleccionado.telefono}`)}>
+                    <Ionicons name="call" size={16} color={colors.text} />
+                  </Pressable>
+                )}
+              </View>
+
+              {seleccionado.disponible && (
+                <Pressable haptic onPress={() => navigation.navigate('Solicitud', { fontanero: seleccionado, clienteId })}>
+                  <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.selectedFloatContratar}>
+                    <Text style={s.selectedFloatContratarText}>Contratar</Text>
+                    <Ionicons name="arrow-forward" size={14} color={colors.text} />
+                  </LinearGradient>
                 </Pressable>
               )}
-              <Pressable style={s.selectedFloatCloseBtn} haptic onPress={() => setSeleccionado(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close" size={16} color={colors.textMuted} />
-              </Pressable>
             </Glass>
+            <View style={s.selectedFloatArrow} />
           </View>
         )}
 
@@ -552,20 +618,28 @@ const s = StyleSheet.create({
   avisoUbicacion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 8 },
   avisoUbicacionText: { color: colors.text, fontSize: 10.5, flex: 1 },
 
-  selectedFloatWrap: { position: 'absolute', bottom: 14, left: spacing.lg, right: spacing.lg },
-  selectedFloat: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, ...shadow.md },
-  selectedFloatAvatar: { width: 40, height: 40, borderRadius: 20 },
+  selectedFloatWrap: { position: 'absolute', bottom: 14, left: spacing.lg, right: spacing.lg, alignItems: 'center' },
+  selectedFloat: { width: '100%', padding: spacing.sm, gap: spacing.sm, ...shadow.md },
+  selectedFloatTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  selectedFloatAvatar: { width: 36, height: 36, borderRadius: 18 },
   selectedFloatAvatarPlaceholder: { backgroundColor: colors.glass, justifyContent: 'center', alignItems: 'center' },
-  selectedFloatAvatarText: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  selectedFloatAvatarText: { color: colors.text, fontWeight: '700', fontSize: 14 },
   selectedFloatNombre: { color: colors.text, fontWeight: '700', fontSize: 13 },
   selectedFloatMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
-  selectedFloatCallBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.green,
-    justifyContent: 'center', alignItems: 'center',
+  selectedFloatRow: { flexDirection: 'row', gap: spacing.sm },
+  selectedFloatIconBtn: {
+    flex: 1, height: 34, borderRadius: radius.sm, backgroundColor: colors.glass,
+    borderWidth: 1, borderColor: colors.glassBorder, justifyContent: 'center', alignItems: 'center',
   },
-  selectedFloatCloseBtn: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.glass,
-    justifyContent: 'center', alignItems: 'center',
+  selectedFloatContratar: {
+    flexDirection: 'row', borderRadius: radius.sm, paddingVertical: 10,
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  selectedFloatContratarText: { color: colors.text, fontWeight: '700', fontSize: 13 },
+  selectedFloatArrow: {
+    width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 9,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: 'rgba(28,31,42,0.9)',
+    marginTop: -1,
   },
 
   sheet: {
@@ -637,6 +711,7 @@ const s = StyleSheet.create({
   accionesRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   btnVerPerfil: { backgroundColor: colors.glass, borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
   btnVerPerfilText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
+  btnMensaje: { backgroundColor: colors.glass, borderRadius: radius.md, width: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
   btnContratar: { flexDirection: 'row', borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center', gap: 6 },
   btnContratarText: { color: colors.text, fontWeight: 'bold', fontSize: 14 },
 

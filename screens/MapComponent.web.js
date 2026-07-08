@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { colors } from '../theme';
 import { LEAFLET_CSS } from './leafletCss';
@@ -34,19 +34,48 @@ function crearIconoYo() {
   });
 }
 
+function EventosMapa({ onMove }) {
+  useMapEvents({ move: onMove, zoom: onMove });
+  return null;
+}
+
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
-export default function MapComponentWeb({ fontaneros, miUbicacion, seleccionado, onSelect }) {
+export default function MapComponentWeb({ fontaneros, miUbicacion, seleccionado, onSelect, onPinPosition }) {
+  const mapRef = useRef(null);
   useEffect(() => { asegurarCssLeaflet(); }, []);
 
   const centro = miUbicacion ? [miUbicacion.latitud, miUbicacion.longitud] : BILBAO;
   const conUbicacion = fontaneros.filter(f => f.disponible && f.latitud != null && f.longitud != null);
 
+  const actualizarPosicionPin = () => {
+    if (!onPinPosition) return;
+    const map = mapRef.current;
+    if (!seleccionado || !map || seleccionado.latitud == null || seleccionado.longitud == null) {
+      onPinPosition(null);
+      return;
+    }
+    try {
+      const point = map.latLngToContainerPoint([seleccionado.latitud, seleccionado.longitud]);
+      onPinPosition({ x: point.x, y: point.y });
+    } catch (e) {}
+  };
+
+  useEffect(() => { actualizarPosicionPin(); }, [seleccionado?.id]);
+
   return (
-    <MapContainer center={centro} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+    <MapContainer
+      center={centro}
+      zoom={13}
+      style={{ height: '100%', width: '100%' }}
+      zoomControl={false}
+      ref={mapRef}
+      whenReady={actualizarPosicionPin}
+    >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <EventosMapa onMove={actualizarPosicionPin} />
       {miUbicacion && <Marker position={centro} icon={crearIconoYo()} />}
       {conUbicacion.map(f => (
         <Marker

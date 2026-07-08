@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors } from '../theme';
@@ -19,19 +20,36 @@ const mapStyle = [
 ];
 
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
-export default function MapComponentNative({ fontaneros, miUbicacion, seleccionado, onSelect }) {
+export default function MapComponentNative({ fontaneros, miUbicacion, seleccionado, onSelect, onPinPosition }) {
+  const mapRef = useRef(null);
   const centro = miUbicacion
     ? { latitude: miUbicacion.latitud, longitude: miUbicacion.longitud }
     : BILBAO;
   const conUbicacion = fontaneros.filter(f => f.disponible && f.latitud != null && f.longitud != null);
 
+  const actualizarPosicionPin = () => {
+    if (!onPinPosition) return;
+    if (!seleccionado || !mapRef.current || seleccionado.latitud == null || seleccionado.longitud == null) {
+      onPinPosition(null);
+      return;
+    }
+    mapRef.current
+      .pointForCoordinate({ latitude: seleccionado.latitud, longitude: seleccionado.longitud })
+      .then(onPinPosition)
+      .catch(() => {});
+  };
+
+  useEffect(() => { actualizarPosicionPin(); }, [seleccionado?.id]);
+
   return (
     <MapView
+      ref={mapRef}
       provider={PROVIDER_GOOGLE}
       style={s.mapa}
       initialRegion={{ ...centro, latitudeDelta: 0.06, longitudeDelta: 0.06 }}
       customMapStyle={mapStyle}
       showsUserLocation={!!miUbicacion}
+      onRegionChangeComplete={actualizarPosicionPin}
     >
       {conUbicacion.map(f => (
         <Marker
