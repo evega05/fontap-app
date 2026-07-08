@@ -146,7 +146,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
         {estado === 'pagado' && (
           <>
             <TouchableOpacity style={s.btnResena}
-              onPress={() => navigation.navigate('Resena', { fontanero, tipo })}>
+              onPress={() => navigation.navigate('Resena', { fontanero, tipo, servicioId })}>
               <Text style={s.btnResenaText}>⭐ Dejar reseña</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.btnPrimario} onPress={() => navigation.navigate('Mapa')}>

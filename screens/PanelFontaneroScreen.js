@@ -168,6 +168,25 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
+  const confirmarEfectivo = async () => {
+    if (!trabajoActivo) return;
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/confirmar_efectivo`, null, { headers });
+      setCompletados(prev => [{
+        id: trabajoActivo.id,
+        cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
+        servicio: trabajoActivo.tipo || trabajoActivo.servicio,
+        zona: trabajoActivo.zona || '—',
+        precio: trabajoActivo.precio,
+        valoracion: 0,
+        fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+      }, ...prev]);
+      setTrabajoActivo(null);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo confirmar el cobro');
+    }
+  };
+
   return (
     <View style={s.container}>
       <GradientBg />
@@ -307,6 +326,14 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
                 <Text style={s.enCursoBtnText}>Enviar precio al cliente</Text>
                 <Ionicons name="arrow-forward" size={15} color={colors.text} />
+              </LinearGradient>
+            </Pressable>
+          )}
+          {trabajoActivo.estado === 'pago_pendiente' && (
+            <Pressable haptic onPress={confirmarEfectivo}>
+              <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
+                <Text style={s.enCursoBtnText}>Confirmar cobro en efectivo</Text>
+                <Ionicons name="cash" size={15} color={colors.text} />
               </LinearGradient>
             </Pressable>
           )}

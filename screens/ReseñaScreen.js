@@ -50,7 +50,8 @@ export default function ReseñaScreen({ navigation, route }) {
       setEnviado(true);
       setTimeout(() => navigation.navigate('Mapa'), 2000);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo enviar la reseña');
+      console.log('[Resena] Error al enviar:', e.response?.status, e.response?.data);
+      Alert.alert('Error', e.response?.data?.detail || 'No se pudo enviar la reseña');
     } finally {
       setEnviando(false);
     }

@@ -23,6 +23,7 @@ export default function PagoScreen({ navigation, route }) {
   const [nombre, setNombre] = useState('');
 
   const pollingRef = useRef(null);
+  const redireccionRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   // ✅ FIX: Polling para detectar cuando el fontanero envía el precio
@@ -71,7 +72,7 @@ export default function PagoScreen({ navigation, route }) {
       setTimeout(() => {
         setCargando(false);
         setPagado(true);
-        setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
+        redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
       }, 1500);
     } catch (e) {
       setCargando(false);
@@ -88,6 +89,14 @@ export default function PagoScreen({ navigation, route }) {
   if (pagado) {
     return (
       <View style={s.container}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => {
+            clearTimeout(redireccionRef.current);
+            navigation.navigate('Mapa');
+          }}>
+            <Text style={s.back}>← Volver</Text>
+          </TouchableOpacity>
+        </View>
         <View style={s.centro}>
           <Text style={s.emoji}>{metodoPago === 'efectivo' ? '💵' : '💳'}✅</Text>
           <Text style={s.titulo}>¡Pago completado!</Text>
