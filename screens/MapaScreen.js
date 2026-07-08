@@ -10,6 +10,7 @@ import {
   RefreshControl,
   StatusBar,
   Image,
+  Linking,
 } from 'react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -161,6 +162,11 @@ export default function MapaScreen({ navigation, route }) {
       if (b.distanciaKm == null) return -1;
       return a.distanciaKm - b.distanciaKm;
     });
+
+  if (seleccionado) {
+    const idx = fontanerosFiltrados.findIndex((f) => f.id === seleccionado.id);
+    if (idx > 0) fontanerosFiltrados.unshift(fontanerosFiltrados.splice(idx, 1)[0]);
+  }
 
   const disponiblesCount = fontanerosFiltrados.filter((f) => f.disponible).length;
 
@@ -400,7 +406,35 @@ export default function MapaScreen({ navigation, route }) {
           </Pressable>
         </View>
 
-        {ubicacionDenegada && (
+        {seleccionado && (
+          <View style={s.selectedFloatWrap}>
+            <Glass strong style={s.selectedFloat}>
+              {seleccionado.foto_url ? (
+                <Image source={{ uri: `${API}${seleccionado.foto_url}` }} style={s.selectedFloatAvatar} />
+              ) : (
+                <View style={[s.selectedFloatAvatar, s.selectedFloatAvatarPlaceholder]}>
+                  <Text style={s.selectedFloatAvatarText}>{seleccionado.nombre?.[0] || '?'}</Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={s.selectedFloatNombre} numberOfLines={1}>{seleccionado.nombre}</Text>
+                <Text style={s.selectedFloatMeta}>
+                  {seleccionado.valoracion ? `⭐ ${seleccionado.valoracion} · ` : ''}{seleccionado.zona}
+                </Text>
+              </View>
+              {seleccionado.telefono && (
+                <Pressable style={s.selectedFloatCallBtn} haptic onPress={() => Linking.openURL(`tel:${seleccionado.telefono}`)}>
+                  <Ionicons name="call" size={17} color={colors.text} />
+                </Pressable>
+              )}
+              <Pressable style={s.selectedFloatCloseBtn} haptic onPress={() => setSeleccionado(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={16} color={colors.textMuted} />
+              </Pressable>
+            </Glass>
+          </View>
+        )}
+
+        {ubicacionDenegada && !seleccionado && (
           <View style={s.avisoUbicacionWrap}>
             <Glass style={s.avisoUbicacion} intensity={40}>
               <Ionicons name="information-circle-outline" size={14} color={colors.amber} />
@@ -517,6 +551,22 @@ const s = StyleSheet.create({
   avisoUbicacionWrap: { position: 'absolute', bottom: 14, left: spacing.lg, right: spacing.lg },
   avisoUbicacion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 8 },
   avisoUbicacionText: { color: colors.text, fontSize: 10.5, flex: 1 },
+
+  selectedFloatWrap: { position: 'absolute', bottom: 14, left: spacing.lg, right: spacing.lg },
+  selectedFloat: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, ...shadow.md },
+  selectedFloatAvatar: { width: 40, height: 40, borderRadius: 20 },
+  selectedFloatAvatarPlaceholder: { backgroundColor: colors.glass, justifyContent: 'center', alignItems: 'center' },
+  selectedFloatAvatarText: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  selectedFloatNombre: { color: colors.text, fontWeight: '700', fontSize: 13 },
+  selectedFloatMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  selectedFloatCallBtn: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.green,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  selectedFloatCloseBtn: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.glass,
+    justifyContent: 'center', alignItems: 'center',
+  },
 
   sheet: {
     flex: 1, borderRadius: 0, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
