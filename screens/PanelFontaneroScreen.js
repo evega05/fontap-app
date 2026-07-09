@@ -187,6 +187,23 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
+  const cancelarTrabajo = () => {
+    if (!trabajoActivo) return;
+    Alert.alert('Cancelar trabajo', '¿Seguro que quieres cancelar este trabajo?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Sí, cancelar', style: 'destructive', onPress: async () => {
+          try {
+            await axios.put(`${API}/servicios/${trabajoActivo.id}/cancelar`, null, { headers });
+            setTrabajoActivo(null);
+          } catch (e) {
+            Alert.alert('Error', e.response?.data?.detail || 'No se pudo cancelar el trabajo');
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={s.container}>
       <GradientBg />
@@ -343,6 +360,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               <Text style={s.enCursoChatText}>Chat con cliente</Text>
             </Pressable>
           )}
+          <Pressable style={s.enCursoCancelarBtn} haptic onPress={cancelarTrabajo}>
+            <Text style={s.enCursoCancelarText}>Cancelar trabajo</Text>
+          </Pressable>
         </Glass>
       )}
 
@@ -473,6 +493,16 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                       ))}
                     </View>
                   </View>
+                  {!t.pendientePago && (
+                    <Pressable
+                      style={s.btnResenarCliente}
+                      haptic
+                      onPress={() => navigation.navigate('ResenaCliente', { cliente: { nombre: t.cliente_nombre || t.cliente }, servicioId: t.id })}
+                    >
+                      <Ionicons name="star-outline" size={13} color={colors.accent2} />
+                      <Text style={s.btnResenarClienteText}>Reseñar cliente</Text>
+                    </Pressable>
+                  )}
                 </Glass>
               </FadeInUp>
             ))
@@ -496,6 +526,8 @@ const s = StyleSheet.create({
   enCursoBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   enCursoChatBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.bgCard2, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center' },
   enCursoChatText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
+  enCursoCancelarBtn: { marginTop: spacing.sm, alignItems: 'center', paddingVertical: 6 },
+  enCursoCancelarText: { color: colors.red, fontSize: 12.5, fontWeight: '600' },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
   modal: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, margin: spacing.xl, width: '90%', ...shadow.lg },
   modalIconWrap: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: spacing.md },
@@ -569,6 +601,8 @@ const s = StyleSheet.create({
   btnAceptar: { flex: 1, flexDirection: 'row', gap: 6, backgroundColor: colors.greenLight, borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center' },
   btnAceptarText: { color: colors.green, fontWeight: 'bold', fontSize: 14 },
   completadoCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadow.md },
+  btnResenarCliente: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: spacing.sm },
+  btnResenarClienteText: { color: colors.accent2, fontSize: 12, fontWeight: '600' },
   completadoPrecio: { color: colors.green, fontWeight: 'bold', fontSize: 15 },
   valoracionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.border },
   pendienteBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.blueLight, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 },

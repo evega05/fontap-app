@@ -338,6 +338,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 )}
               </View>
             </Glass>
+
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('Terminos')}>
+              <Text style={s.linkTerminosText}>Términos y condiciones</Text>
+            </Pressable>
           </>
         )}
 
@@ -584,6 +588,8 @@ const s = StyleSheet.create({
   btnGestionarText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
   btnFacturas: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
   btnFacturasText: { color: colors.textMuted, fontSize: 13 },
+  linkTerminos: { alignItems: 'center', paddingVertical: spacing.lg },
+  linkTerminosText: { color: colors.textFaint, fontSize: 12.5, textDecorationLine: 'underline' },
   diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
   diaCardInactivo: { opacity: 0.5 },
   diaNombre: { color: colors.text, fontWeight: '500', fontSize: 14, flex: 1 },

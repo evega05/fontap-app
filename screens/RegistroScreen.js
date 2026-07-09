@@ -16,6 +16,7 @@ export default function RegistroScreen({ navigation }) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [mostrarPass, setMostrarPass] = useState(false);
+  const [terminosAceptados, setTerminosAceptados] = useState(false);
   const [serviciosRegistro, setServiciosRegistro] = useState([
     { nombre: 'Desatasco', emoji: '🚽', precio: '' },
     { nombre: 'Fuga de agua', emoji: '💧', precio: '' },
@@ -28,9 +29,10 @@ export default function RegistroScreen({ navigation }) {
     setError('');
     if (!nombre || !email || !telefono || !password) { setError('Rellena todos los campos'); return; }
     if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (!terminosAceptados) { setError('Debes aceptar los términos y condiciones'); return; }
     setCargando(true);
     try {
-      const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo });
+      const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados });
       await guardarSesion(res.data);
       if (tipo === 'fontanero') {
         navigation.replace('PanelFontanero', { nombre: res.data.nombre || nombre, userId: res.data.id });
@@ -136,6 +138,18 @@ export default function RegistroScreen({ navigation }) {
         </>
       )}
 
+      <TouchableOpacity style={s.terminosRow} onPress={() => { setTerminosAceptados(!terminosAceptados); setError(''); }}>
+        <View style={[s.checkbox, terminosAceptados && s.checkboxActivo]}>
+          {terminosAceptados && <Text style={s.checkboxCheck}>✓</Text>}
+        </View>
+        <Text style={s.terminosTexto}>
+          Acepto los{' '}
+          <Text style={s.terminosLink} onPress={() => navigation.navigate('Terminos')}>
+            términos y condiciones
+          </Text>
+        </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={[s.btnPrimario, cargando && s.btnDesactivado]} onPress={registrar} disabled={cargando}>
         <Text style={s.btnPrimarioText}>{cargando ? 'Creando cuenta...' : 'Crear cuenta gratis'}</Text>
       </TouchableOpacity>
@@ -170,6 +184,12 @@ const s = StyleSheet.create({
   infoBox: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.green },
   infoTitulo: { color: colors.green, fontWeight: '700', fontSize: 14, marginBottom: 4 },
   infoSub: { color: colors.textMuted, fontSize: 13 },
+  terminosRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: colors.border2, justifyContent: 'center', alignItems: 'center' },
+  checkboxActivo: { backgroundColor: colors.blue, borderColor: colors.blue },
+  checkboxCheck: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  terminosTexto: { flex: 1, color: colors.textMuted, fontSize: 13 },
+  terminosLink: { color: colors.blue, fontWeight: '600' },
   btnPrimario: { backgroundColor: colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', marginTop: 4, marginBottom: 20 },
   btnDesactivado: { opacity: 0.5 },
   btnPrimarioText: { color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.3 },

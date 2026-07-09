@@ -12,6 +12,7 @@ import ConfirmacionScreen from './screens/ConfirmacionScreen';
 import PanelFontaneroScreen from './screens/PanelFontaneroScreen';
 import PerfilFontaneroScreen from './screens/PerfilFontaneroScreen';
 import ReseñaScreen from './screens/ReseñaScreen';
+import ReseñaClienteScreen from './screens/ReseñaClienteScreen';
 import PagoScreen from './screens/PagoScreen';
 import ChatScreen from './screens/ChatScreen';
 import FavoritosScreen from './screens/FavoritosScreen';
@@ -23,6 +24,7 @@ import EstadisticasScreen from './screens/EstadisticasScreen';
 import OfertasClienteScreen from './screens/OfertasClienteScreen';
 import ChatsRecientesScreen from './screens/ChatsRecientesScreen';
 import PerfilFontaneroPublicoScreen from './screens/PerfilFontaneroPublicoScreen';
+import TerminosScreen from './screens/TerminosScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -66,6 +68,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="PanelFontanero" component={PanelFontaneroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PerfilFontanero" component={PerfilFontaneroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Resena" component={ReseñaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ResenaCliente" component={ReseñaClienteScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Pago" component={PagoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Favoritos" component={FavoritosScreen} options={{ headerShown: false }} />
@@ -77,6 +80,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="OfertasCliente" component={OfertasClienteScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChatsRecientes" component={ChatsRecientesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PerfilFontaneroPublico" component={PerfilFontaneroPublicoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Terminos" component={TerminosScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

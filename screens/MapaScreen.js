@@ -320,6 +320,7 @@ export default function MapaScreen({ navigation, route }) {
     { icon: 'heart-outline', label: 'Favoritos', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Favoritos'), 250); } },
     { icon: 'notifications-outline', label: 'Notificaciones', badge: notifNoLeidas, action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); } },
     { icon: 'chatbubbles-outline', label: 'Chats recientes', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); } },
+    { icon: 'document-text-outline', label: 'Términos y condiciones', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Terminos'), 250); } },
   ];
 
   const renderDrawer = () => (

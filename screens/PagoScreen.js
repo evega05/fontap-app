@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import axios from 'axios';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../AuthContext';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -17,14 +18,62 @@ export default function PagoScreen({ navigation, route }) {
   const [pagado, setPagado] = useState(false);
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState('tarjeta');
-  const [tarjeta, setTarjeta] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [nombre, setNombre] = useState('');
+  const [bizumInfo, setBizumInfo] = useState(null);
+  const [cargandoBizum, setCargandoBizum] = useState(false);
 
   const pollingRef = useRef(null);
   const redireccionRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const marcarPagado = () => {
+    setCargando(false);
+    setPagado(true);
+    redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
+  };
+
+  const pagarConTarjeta = async () => {
+    setCargando(true);
+    setError('');
+    try {
+      const res = await axios.post(`${API}/servicios/${servicioId}/stripe/crear-checkout`, {}, { headers });
+      await WebBrowser.openBrowserAsync(res.data.checkout_url);
+      // Al volver del navegador, comprobamos directamente con Stripe si se pagó de verdad
+      const verif = await axios.post(`${API}/servicios/${servicioId}/stripe/verificar`, {}, { headers });
+      if (verif.data.pagado) {
+        marcarPagado();
+      } else {
+        setCargando(false);
+        setError('El pago no se completó. Puedes intentarlo de nuevo.');
+      }
+    } catch (e) {
+      setCargando(false);
+      setError(e.response?.data?.detail || 'Error al procesar el pago. Inténtalo de nuevo.');
+    }
+  };
+
+  const cargarBizum = async () => {
+    setCargandoBizum(true);
+    try {
+      const res = await axios.get(`${API}/servicios/${servicioId}/bizum/instrucciones`, { headers });
+      setBizumInfo(res.data);
+    } catch (e) {
+      setError('No se pudieron cargar las instrucciones de Bizum');
+    } finally {
+      setCargandoBizum(false);
+    }
+  };
+
+  const confirmarBizum = async () => {
+    setCargando(true);
+    setError('');
+    try {
+      await axios.put(`${API}/servicios/${servicioId}/pagar`, { metodo: 'bizum' }, { headers });
+      marcarPagado();
+    } catch (e) {
+      setCargando(false);
+      setError('Error al confirmar el pago. Inténtalo de nuevo.');
+    }
+  };
 
   // ✅ FIX: Polling para detectar cuando el fontanero envía el precio
   useEffect(() => {
@@ -46,44 +95,23 @@ export default function PagoScreen({ navigation, route }) {
     return () => clearInterval(pollingRef.current);
   }, [servicioId]);
 
-  const pagar = async () => {
-    // ✅ FIX: Nunca permitir pagar sin precio
-    if (!precio) return;
-
-    if (metodoPago === 'tarjeta') {
-      if (!tarjeta || !expiry || !cvv || !nombre) {
-        setError('Rellena todos los campos de la tarjeta');
-        return;
-      }
-      if (tarjeta.replace(/\s/g, '').length < 16) {
-        setError('Número de tarjeta inválido');
-        return;
-      }
-    }
+  const pagarEfectivo = async () => {
     setCargando(true);
     setError('');
     try {
-      if (servicioId) {
-        await axios.put(`${API}/servicios/${servicioId}/pagar`,
-          { metodo: metodoPago },
-          { headers }
-        );
-      }
-      setTimeout(() => {
-        setCargando(false);
-        setPagado(true);
-        redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
-      }, 1500);
+      await axios.put(`${API}/servicios/${servicioId}/pagar`, { metodo: 'efectivo' }, { headers });
+      marcarPagado();
     } catch (e) {
       setCargando(false);
       setError('Error al procesar el pago. Inténtalo de nuevo.');
     }
   };
 
-  const formatTarjeta = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    const groups = cleaned.match(/.{1,4}/g);
-    return groups ? groups.join(' ') : cleaned;
+  const pagar = () => {
+    if (!precio || !servicioId) return;
+    if (metodoPago === 'tarjeta') return pagarConTarjeta();
+    if (metodoPago === 'efectivo') return pagarEfectivo();
+    if (metodoPago === 'bizum') return confirmarBizum();
   };
 
   if (pagado) {
@@ -159,7 +187,7 @@ export default function PagoScreen({ navigation, route }) {
                 <TouchableOpacity
                   key={m.id}
                   style={[s.metodoBtn, metodoPago === m.id && s.metodoBtnActivo]}
-                  onPress={() => setMetodoPago(m.id)}>
+                  onPress={() => { setMetodoPago(m.id); setBizumInfo(null); setError(''); }}>
                   <Text style={s.metodoEmoji}>{m.emoji}</Text>
                   <Text style={[s.metodoText, metodoPago === m.id && s.metodoTextActivo]}>{m.label}</Text>
                 </TouchableOpacity>
@@ -167,32 +195,13 @@ export default function PagoScreen({ navigation, route }) {
             </View>
 
             {metodoPago === 'tarjeta' && (
-              <>
-                <View style={s.inputWrap}>
-                  <Text style={s.inputIcon}>👤</Text>
-                  <TextInput style={s.input} placeholder="Nombre en la tarjeta"
-                    placeholderTextColor="#555" value={nombre} onChangeText={setNombre} />
-                </View>
-                <View style={s.inputWrap}>
-                  <Text style={s.inputIcon}>💳</Text>
-                  <TextInput style={s.input} placeholder="1234 5678 9012 3456"
-                    placeholderTextColor="#555" value={tarjeta}
-                    onChangeText={t => setTarjeta(formatTarjeta(t))}
-                    keyboardType="numeric" maxLength={19} />
-                </View>
-                <View style={s.dobleInput}>
-                  <View style={[s.inputWrap, { flex: 1 }]}>
-                    <TextInput style={s.input} placeholder="MM/AA"
-                      placeholderTextColor="#555" value={expiry}
-                      onChangeText={setExpiry} keyboardType="numeric" maxLength={5} />
-                  </View>
-                  <View style={[s.inputWrap, { flex: 1 }]}>
-                    <TextInput style={s.input} placeholder="CVV"
-                      placeholderTextColor="#555" value={cvv}
-                      onChangeText={setCvv} keyboardType="numeric" maxLength={3} secureTextEntry />
-                  </View>
-                </View>
-              </>
+              <View style={s.infoBox}>
+                <Text style={s.infoText}>💳 Pago seguro con tarjeta</Text>
+                <Text style={s.infoSub}>
+                  Se abrirá la página segura de Stripe para introducir los datos de tu tarjeta.
+                  FonTap nunca ve ni guarda tu número de tarjeta.
+                </Text>
+              </View>
             )}
 
             {metodoPago === 'efectivo' && (
@@ -202,11 +211,23 @@ export default function PagoScreen({ navigation, route }) {
               </View>
             )}
 
-            {metodoPago === 'bizum' && (
-              <View style={s.inputWrap}>
-                <Text style={s.inputIcon}>📱</Text>
-                <TextInput style={s.input} placeholder="Número de teléfono Bizum"
-                  placeholderTextColor="#555" keyboardType="phone-pad" maxLength={9} />
+            {metodoPago === 'bizum' && !bizumInfo && (
+              <TouchableOpacity style={s.btnSecundario} onPress={cargarBizum} disabled={cargandoBizum}>
+                {cargandoBizum
+                  ? <ActivityIndicator color="#3b82f6" />
+                  : <Text style={s.btnSecundarioText}>📱 Ver instrucciones de Bizum</Text>}
+              </TouchableOpacity>
+            )}
+
+            {metodoPago === 'bizum' && bizumInfo && (
+              <View style={s.infoBox}>
+                <Text style={s.infoText}>📱 Paga por Bizum</Text>
+                {bizumInfo.instrucciones.map((linea, i) => (
+                  <Text key={i} style={s.infoSub}>{linea}</Text>
+                ))}
+                <Text style={[s.infoSub, { marginTop: 8, fontWeight: '600' }]}>
+                  Teléfono: {bizumInfo.telefono_destino} · Importe: {bizumInfo.importe}€
+                </Text>
               </View>
             )}
 
@@ -216,19 +237,23 @@ export default function PagoScreen({ navigation, route }) {
               </View>
             ) : null}
 
-            <TouchableOpacity
-              style={[s.btnPagar, cargando && s.btnDesactivado]}
-              onPress={pagar}
-              disabled={cargando}
-            >
-              {cargando ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={s.btnPagarText}>
-                  {metodoPago === 'efectivo' ? 'Confirmar pago en efectivo' : `Pagar ${precio}€ →`}
-                </Text>
-              )}
-            </TouchableOpacity>
+            {(metodoPago !== 'bizum' || bizumInfo) && (
+              <TouchableOpacity
+                style={[s.btnPagar, cargando && s.btnDesactivado]}
+                onPress={pagar}
+                disabled={cargando}
+              >
+                {cargando ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={s.btnPagarText}>
+                    {metodoPago === 'efectivo' && 'Confirmar pago en efectivo'}
+                    {metodoPago === 'bizum' && 'Ya he pagado por Bizum'}
+                    {metodoPago === 'tarjeta' && `Pagar ${precio}€ →`}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
 
             <Text style={s.seguro}>🔒 Transacción segura</Text>
           </>
@@ -262,10 +287,8 @@ const s = StyleSheet.create({
   metodoEmoji: { fontSize: 24, marginBottom: 6 },
   metodoText: { color: '#aaa', fontSize: 12, fontWeight: '500' },
   metodoTextActivo: { color: '#3b82f6' },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e2e', borderRadius: 12, paddingHorizontal: 14, marginBottom: 10, borderWidth: 1, borderColor: '#2a2a3e' },
-  inputIcon: { fontSize: 16, marginRight: 8 },
-  input: { flex: 1, color: '#fff', paddingVertical: 13, fontSize: 14 },
-  dobleInput: { flexDirection: 'row', gap: 10 },
+  btnSecundario: { backgroundColor: '#1e1e2e', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#3b82f6' },
+  btnSecundarioText: { color: '#3b82f6', fontWeight: 'bold', fontSize: 15 },
   infoBox: { backgroundColor: '#1a2e1a', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#22c55e' },
   infoText: { color: '#4ade80', fontWeight: '600', fontSize: 14, marginBottom: 6 },
   infoSub: { color: '#aaa', fontSize: 13 },
