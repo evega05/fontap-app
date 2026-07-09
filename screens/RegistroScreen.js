@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Alert } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -17,6 +18,35 @@ export default function RegistroScreen({ navigation }) {
   const [error, setError] = useState('');
   const [mostrarPass, setMostrarPass] = useState(false);
   const [terminosAceptados, setTerminosAceptados] = useState(false);
+  const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync } = useGoogleAuth();
+
+  const entrarConGoogle = (data) => {
+    guardarSesion(data);
+    if (data.tipo_usuario === 'fontanero') {
+      navigation.replace('PanelFontanero', { nombre: data.nombre, userId: data.id });
+    } else {
+      navigation.replace('Mapa', { clienteId: data.id });
+    }
+  };
+
+  const handleGoogle = () => {
+    if (!googleConfigurado()) {
+      Alert.alert('Google no configurado', 'Falta el Client ID de Google en googleAuth.js');
+      return;
+    }
+    googlePromptAsync();
+  };
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success' && googleResponse.params?.id_token) {
+      setError('');
+      setCargando(true);
+      axios.post(`${API}/auth/google`, { id_token: googleResponse.params.id_token, tipo })
+        .then((res) => entrarConGoogle(res.data))
+        .catch(() => setError('No se pudo continuar con Google'))
+        .finally(() => setCargando(false));
+    }
+  }, [googleResponse]);
   const [serviciosRegistro, setServiciosRegistro] = useState([
     { nombre: 'Desatasco', emoji: '🚽', precio: '' },
     { nombre: 'Fuga de agua', emoji: '💧', precio: '' },
@@ -34,11 +64,11 @@ export default function RegistroScreen({ navigation }) {
     try {
       const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados });
       await guardarSesion(res.data);
-      if (tipo === 'fontanero') {
-        navigation.replace('PanelFontanero', { nombre: res.data.nombre || nombre, userId: res.data.id });
-      } else {
-        navigation.replace('Mapa', { clienteId: res.data.id });
-      }
+      const destino = tipo === 'fontanero' ? 'PanelFontanero' : 'Mapa';
+      const destinoParams = tipo === 'fontanero'
+        ? { nombre: res.data.nombre || nombre, userId: res.data.id }
+        : { clienteId: res.data.id };
+      navigation.replace('VerificarEmail', { email: res.data.email, destino, destinoParams });
     } catch (e) {
       setError('Este email ya está registrado');
     } finally {
@@ -154,6 +184,17 @@ export default function RegistroScreen({ navigation }) {
         <Text style={s.btnPrimarioText}>{cargando ? 'Creando cuenta...' : 'Crear cuenta gratis'}</Text>
       </TouchableOpacity>
 
+      <View style={s.divider}>
+        <View style={s.dividerLine} />
+        <Text style={s.dividerText}>o</Text>
+        <View style={s.dividerLine} />
+      </View>
+
+      <TouchableOpacity style={s.btnGoogle} onPress={handleGoogle} disabled={!googleRequest || cargando}>
+        <Text style={s.btnGoogleIcon}>G</Text>
+        <Text style={s.btnGoogleText}>Continuar con Google como {tipo === 'fontanero' ? 'fontanero' : 'cliente'}</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => navigation.navigate('Login')} style={s.loginLink}>
         <Text style={s.loginLinkText}>¿Ya tienes cuenta? <Text style={s.loginLinkBlue}>Inicia sesión</Text></Text>
       </TouchableOpacity>
@@ -184,6 +225,12 @@ const s = StyleSheet.create({
   infoBox: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.green },
   infoTitulo: { color: colors.green, fontWeight: '700', fontSize: 14, marginBottom: 4 },
   infoSub: { color: colors.textMuted, fontSize: 13 },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.border2 },
+  dividerText: { color: colors.textFaint, marginHorizontal: 12, fontSize: 13 },
+  btnGoogle: { flexDirection: 'row', gap: 10, borderWidth: 1.5, borderColor: colors.border2, borderRadius: 14, padding: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 20, backgroundColor: '#fff' },
+  btnGoogleIcon: { fontSize: 16, fontWeight: 'bold', color: '#4285F4' },
+  btnGoogleText: { color: '#1F1F1F', fontWeight: '600', fontSize: 14 },
   terminosRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: colors.border2, justifyContent: 'center', alignItems: 'center' },
   checkboxActivo: { backgroundColor: colors.blue, borderColor: colors.blue },

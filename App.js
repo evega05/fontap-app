@@ -27,6 +27,7 @@ import PerfilFontaneroPublicoScreen from './screens/PerfilFontaneroPublicoScreen
 import TerminosScreen from './screens/TerminosScreen';
 import OlvidePasswordScreen from './screens/OlvidePasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
+import VerificarEmailScreen from './screens/VerificarEmailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -85,6 +86,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="Terminos" component={TerminosScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OlvidePassword" component={OlvidePasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="VerificarEmail" component={VerificarEmailScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

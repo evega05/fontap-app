@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { registrarNotificaciones } from './notifications';
+import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -14,6 +15,17 @@ export default function LoginScreen({ navigation }) {
   const [cargando, setCargando] = useState(false);
   const [mostrarPass, setMostrarPass] = useState(false);
   const [error, setError] = useState('');
+  const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync } = useGoogleAuth();
+
+  const entrarConToken = async (data, esGoogle) => {
+    await guardarSesion(data);
+    if (!esGoogle) registrarNotificaciones(data.id, data.access_token);
+    if (data.tipo_usuario === 'fontanero') {
+      navigation.replace('PanelFontanero', { nombre: data.nombre, userId: data.id });
+    } else {
+      navigation.replace('Mapa');
+    }
+  };
 
   const handleLogin = async () => {
     setError('');
@@ -21,20 +33,32 @@ export default function LoginScreen({ navigation }) {
     setCargando(true);
     try {
       const res = await axios.post(`${API}/login`, { email, password });
-      console.log('RESPUESTA LOGIN:', JSON.stringify(res.data));
-      await guardarSesion(res.data);
-      registrarNotificaciones(res.data.id, res.data.access_token);
-      if (res.data.tipo_usuario === 'fontanero') {
-        navigation.replace('PanelFontanero', { nombre: res.data.nombre || email.split('@')[0], userId: res.data.id });
-      } else {
-        navigation.replace('Mapa');
-      }
+      await entrarConToken(res.data, false);
     } catch (e) {
       setError('Email o contraseña incorrectos');
     } finally {
       setCargando(false);
     }
   };
+
+  const handleGoogle = () => {
+    if (!googleConfigurado()) {
+      Alert.alert('Google no configurado', 'Falta el Client ID de Google en googleAuth.js');
+      return;
+    }
+    googlePromptAsync();
+  };
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success' && googleResponse.params?.id_token) {
+      setError('');
+      setCargando(true);
+      axios.post(`${API}/auth/google`, { id_token: googleResponse.params.id_token })
+        .then((res) => entrarConToken(res.data, true))
+        .catch(() => setError('No se pudo iniciar sesión con Google'))
+        .finally(() => setCargando(false));
+    }
+  }, [googleResponse]);
 
   return (
     <View style={s.container}>
@@ -87,6 +111,11 @@ export default function LoginScreen({ navigation }) {
           <View style={s.dividerLine} />
         </View>
 
+        <TouchableOpacity style={s.btnGoogle} onPress={handleGoogle} disabled={!googleRequest || cargando}>
+          <Text style={s.btnGoogleIcon}>G</Text>
+          <Text style={s.btnGoogleText}>Continuar con Google</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={s.btnSecundario} onPress={() => navigation.navigate('Registro')}>
           <Text style={s.btnSecundarioText}>Crear cuenta nueva</Text>
         </TouchableOpacity>
@@ -125,6 +154,9 @@ const s = StyleSheet.create({
   dividerText: { color: colors.textFaint, marginHorizontal: 12, fontSize: 13 },
   btnSecundario: { borderWidth: 1.5, borderColor: colors.border2, borderRadius: 14, padding: 17, alignItems: 'center' },
   btnSecundarioText: { color: colors.text, fontWeight: '600', fontSize: 16 },
+  btnGoogle: { flexDirection: 'row', gap: 10, borderWidth: 1.5, borderColor: colors.border2, borderRadius: 14, padding: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 12, backgroundColor: '#fff' },
+  btnGoogleIcon: { fontSize: 16, fontWeight: 'bold', color: '#4285F4' },
+  btnGoogleText: { color: '#1F1F1F', fontWeight: '600', fontSize: 15 },
   fontaneroLink: { marginTop: 20, alignItems: 'center' },
   fontaneroLinkText: { color: colors.textMuted, fontSize: 14 },
   fontaneroLinkBlue: { color: colors.blue, fontWeight: '600' },
