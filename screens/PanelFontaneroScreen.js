@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import * as Location from 'expo-location';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../AuthContext';
 import { colors, spacing, radius, type, shadow } from '../theme';
 import Pressable from '../components/Pressable';
@@ -41,6 +42,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [stats, setStats] = useState(null);
+  const [stripeEstado, setStripeEstado] = useState(null);
+  const [comisionPendiente, setComisionPendiente] = useState(0);
+  const [conectandoStripe, setConectandoStripe] = useState(false);
+  const [pagandoComision, setPagandoComision] = useState(false);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -52,11 +57,53 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     } catch (e) {}
   }, [userId, token]);
 
+  const cargarCobros = useCallback(async () => {
+    try {
+      const [resEstado, resComision] = await Promise.all([
+        axios.get(`${API}/fontaneros/${userId}/stripe/estado`, { headers }),
+        axios.get(`${API}/fontaneros/${userId}/comision-pendiente`, { headers }),
+      ]);
+      setStripeEstado(resEstado.data);
+      setComisionPendiente(resComision.data.total || 0);
+    } catch (e) {}
+  }, [userId, token]);
+
   useEffect(() => {
     cargarEstadisticas();
+    cargarCobros();
     const intervalo = setInterval(cargarEstadisticas, 15000);
     return () => clearInterval(intervalo);
-  }, [cargarEstadisticas]);
+  }, [cargarEstadisticas, cargarCobros]);
+
+  const conectarStripe = async () => {
+    setConectandoStripe(true);
+    try {
+      const res = await axios.post(`${API}/fontaneros/${userId}/stripe/conectar`, {}, { headers });
+      await WebBrowser.openBrowserAsync(res.data.onboarding_url);
+      cargarCobros();
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.detail || 'No se pudo conectar con Stripe');
+    } finally {
+      setConectandoStripe(false);
+    }
+  };
+
+  const pagarComisionPendiente = async () => {
+    setPagandoComision(true);
+    try {
+      const res = await axios.post(`${API}/fontaneros/${userId}/comision-pendiente/pagar`, {}, { headers });
+      await WebBrowser.openBrowserAsync(res.data.checkout_url);
+      const verif = await axios.post(`${API}/fontaneros/${userId}/comision-pendiente/verificar`, {}, { headers });
+      if (verif.data.liquidada) {
+        setComisionPendiente(0);
+        Alert.alert('Listo', 'Comisión pendiente liquidada');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.detail || 'No se pudo procesar el pago');
+    } finally {
+      setPagandoComision(false);
+    }
+  };
 
   const cargarSolicitudes = useCallback(async () => {
     try {
@@ -325,6 +372,32 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </Glass>
       </View>
 
+      {stripeEstado && !stripeEstado.cobros_activos && (
+        <Glass style={s.cobrosCard}>
+          <Ionicons name="card-outline" size={18} color={colors.accent2} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.cobrosTitulo}>Cobra directo a tu cuenta</Text>
+            <Text style={s.cobrosSub}>Conecta tu cuenta bancaria para recibir los pagos con tarjeta automáticamente</Text>
+          </View>
+          <Pressable style={s.cobrosBtn} haptic onPress={conectarStripe} disabled={conectandoStripe}>
+            <Text style={s.cobrosBtnText}>{conectandoStripe ? '...' : 'Conectar'}</Text>
+          </Pressable>
+        </Glass>
+      )}
+
+      {comisionPendiente > 0 && (
+        <Glass style={s.cobrosCard} colorTint={colors.amberGlass}>
+          <Ionicons name="alert-circle-outline" size={18} color={colors.amber} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.cobrosTitulo}>Comisión pendiente: {comisionPendiente}€</Text>
+            <Text style={s.cobrosSub}>De trabajos cobrados en efectivo/Bizum, fuera de la app</Text>
+          </View>
+          <Pressable style={s.cobrosBtn} haptic onPress={pagarComisionPendiente} disabled={pagandoComision}>
+            <Text style={s.cobrosBtnText}>{pagandoComision ? '...' : 'Pagar'}</Text>
+          </Pressable>
+        </Glass>
+      )}
+
       {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
         <Glass style={s.enCursoCard}>
           <View style={s.enCursoHeader}>
@@ -563,6 +636,11 @@ const s = StyleSheet.create({
   disponibilidadSub: { color: colors.textMuted, fontSize: 12 },
   statsRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.xl, marginVertical: spacing.lg },
   statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
+  cobrosCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md, marginHorizontal: spacing.xl },
+  cobrosTitulo: { color: colors.text, fontWeight: '700', fontSize: 13 },
+  cobrosSub: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  cobrosBtn: { backgroundColor: colors.glass, borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  cobrosBtnText: { color: colors.accent2, fontWeight: '700', fontSize: 12 },
   statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold' },
   statLabel: { color: colors.textMuted, fontSize: 11 },
   tabs: { flexDirection: 'row', paddingHorizontal: spacing.xl, marginBottom: spacing.md, gap: spacing.sm },
