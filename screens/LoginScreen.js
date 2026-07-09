@@ -77,6 +77,10 @@ export default function LoginScreen({ navigation }) {
           <Text style={s.btnPrimarioText}>{cargando ? 'Entrando...' : 'Iniciar sesión'}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity onPress={() => navigation.navigate('OlvidePassword')} style={s.olvideLink}>
+          <Text style={s.olvideLinkText}>¿Olvidaste tu contraseña?</Text>
+        </TouchableOpacity>
+
         <View style={s.divider}>
           <View style={s.dividerLine} />
           <Text style={s.dividerText}>o</Text>
@@ -114,6 +118,8 @@ const s = StyleSheet.create({
   btnPrimario: { backgroundColor: colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', marginTop: 4 },
   btnDesactivado: { opacity: 0.5 },
   btnPrimarioText: { color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.3 },
+  olvideLink: { alignItems: 'center', marginTop: 16 },
+  olvideLinkText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.border2 },
   dividerText: { color: colors.textFaint, marginHorizontal: 12, fontSize: 13 },

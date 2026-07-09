@@ -25,6 +25,8 @@ import OfertasClienteScreen from './screens/OfertasClienteScreen';
 import ChatsRecientesScreen from './screens/ChatsRecientesScreen';
 import PerfilFontaneroPublicoScreen from './screens/PerfilFontaneroPublicoScreen';
 import TerminosScreen from './screens/TerminosScreen';
+import OlvidePasswordScreen from './screens/OlvidePasswordScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -81,6 +83,8 @@ function NavegadorPrincipal() {
         <Stack.Screen name="ChatsRecientes" component={ChatsRecientesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PerfilFontaneroPublico" component={PerfilFontaneroPublicoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Terminos" component={TerminosScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="OlvidePassword" component={OlvidePasswordScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
