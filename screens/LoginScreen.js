@@ -15,7 +15,7 @@ export default function LoginScreen({ navigation }) {
   const [cargando, setCargando] = useState(false);
   const [mostrarPass, setMostrarPass] = useState(false);
   const [error, setError] = useState('');
-  const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync } = useGoogleAuth();
+  const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync, redirectUri: googleRedirectUri } = useGoogleAuth();
 
   const entrarConToken = async (data, esGoogle) => {
     await guardarSesion(data);
@@ -43,7 +43,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleGoogle = () => {
     if (!googleConfigurado()) {
-      Alert.alert('Google no configurado', 'Falta el Client ID de Google en googleAuth.js');
+      Alert.alert('Google no configurado', `Falta el Client ID de Google en googleAuth.js.\n\nRedirect URI a registrar en Google Cloud Console:\n${googleRedirectUri}`);
       return;
     }
     googlePromptAsync();

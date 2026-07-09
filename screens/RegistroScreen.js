@@ -18,7 +18,7 @@ export default function RegistroScreen({ navigation }) {
   const [error, setError] = useState('');
   const [mostrarPass, setMostrarPass] = useState(false);
   const [terminosAceptados, setTerminosAceptados] = useState(false);
-  const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync } = useGoogleAuth();
+  const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync, redirectUri: googleRedirectUri } = useGoogleAuth();
 
   const entrarConGoogle = (data) => {
     guardarSesion(data);
@@ -31,7 +31,7 @@ export default function RegistroScreen({ navigation }) {
 
   const handleGoogle = () => {
     if (!googleConfigurado()) {
-      Alert.alert('Google no configurado', 'Falta el Client ID de Google en googleAuth.js');
+      Alert.alert('Google no configurado', `Falta el Client ID de Google en googleAuth.js.\n\nRedirect URI a registrar en Google Cloud Console:\n${googleRedirectUri}`);
       return;
     }
     googlePromptAsync();
