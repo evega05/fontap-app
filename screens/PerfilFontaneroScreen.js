@@ -339,6 +339,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               </View>
             </Glass>
 
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
+              <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
+            </Pressable>
+
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('Terminos')}>
               <Text style={s.linkTerminosText}>Términos y condiciones</Text>
             </Pressable>

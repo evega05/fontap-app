@@ -8,13 +8,17 @@ import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const { login: guardarSesion } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
   const [mostrarPass, setMostrarPass] = useState(false);
   const [error, setError] = useState('');
+  const [aviso, setAviso] = useState(
+    route?.params?.sesionCaducada ? 'Tu sesión ha caducado, inicia sesión de nuevo'
+    : route?.params?.cuentaEliminada ? 'Tu cuenta ha sido eliminada' : ''
+  );
   const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync, redirectUri: googleRedirectUri } = useGoogleAuth();
 
   const entrarConToken = async (data, esGoogle) => {
@@ -28,14 +32,18 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
-    setError('');
+    setError(''); setAviso('');
     if (!email || !password) { setError('Rellena todos los campos'); return; }
     setCargando(true);
     try {
       const res = await axios.post(`${API}/login`, { email, password });
       await entrarConToken(res.data, false);
     } catch (e) {
-      setError('Email o contraseña incorrectos');
+      if (e.response?.status === 429) {
+        setError(e.response?.data?.detail || 'Demasiados intentos, espera unos minutos');
+      } else {
+        setError('Email o contraseña incorrectos');
+      }
     } finally {
       setCargando(false);
     }
@@ -77,6 +85,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={s.sheetSub}>Inicia sesión para continuar</Text>
 
         {error ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {error}</Text></View> : null}
+        {aviso ? <View style={s.avisoBox}><Text style={s.avisoText}>ℹ️ {aviso}</Text></View> : null}
 
         <Text style={s.inputLabel}>Email</Text>
         <View style={s.inputWrap}>
@@ -139,6 +148,8 @@ const s = StyleSheet.create({
   sheetTitulo: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 4 },
   sheetSub: { fontSize: 14, color: colors.textMuted, marginBottom: 28 },
   errorBox: { backgroundColor: colors.redLight, borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.red },
+  avisoBox: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.border2 },
+  avisoText: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
   errorText: { color: '#FF6B6B', fontSize: 13 },
   inputLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, borderWidth: 1, borderColor: colors.border2 },

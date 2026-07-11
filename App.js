@@ -1,6 +1,7 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AuthProvider } from './AuthContext';
+import axios from 'axios';
+import { AuthProvider, useAuth } from './AuthContext';
 import StripeWrapper from './StripeWrapper';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
@@ -28,8 +29,10 @@ import TerminosScreen from './screens/TerminosScreen';
 import OlvidePasswordScreen from './screens/OlvidePasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import VerificarEmailScreen from './screens/VerificarEmailScreen';
+import AjustesCuentaScreen from './screens/AjustesCuentaScreen';
 
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 function SplashScreen({ onFinish }) {
   const escala = new Animated.Value(0.3);
@@ -60,8 +63,30 @@ function SplashScreen({ onFinish }) {
 }
 
 function NavegadorPrincipal() {
+  const { logout } = useAuth();
+
+  // Sesión caducada: si una llamada autenticada devuelve 401, el token JWT expiró.
+  // Se limpia la sesión y se vuelve al Login con un aviso. El login normal (contraseña
+  // incorrecta) también devuelve 401 pero sin header Authorization, así que no le afecta.
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (res) => res,
+      (error) => {
+        const conToken = !!error?.config?.headers?.Authorization;
+        if (error?.response?.status === 401 && conToken) {
+          logout();
+          if (navigationRef.isReady()) {
+            navigationRef.reset({ index: 0, routes: [{ name: 'Login', params: { sesionCaducada: true } }] });
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName="Login" screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#070B14' } }}>
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Registro" component={RegistroScreen} options={{ headerShown: false }} />
@@ -87,6 +112,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="OlvidePassword" component={OlvidePasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="VerificarEmail" component={VerificarEmailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

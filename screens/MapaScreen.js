@@ -321,6 +321,7 @@ export default function MapaScreen({ navigation, route }) {
     { icon: 'notifications-outline', label: 'Notificaciones', badge: notifNoLeidas, action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); } },
     { icon: 'chatbubbles-outline', label: 'Chats recientes', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); } },
     { icon: 'document-text-outline', label: 'Términos y condiciones', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Terminos'), 250); } },
+    { icon: 'settings-outline', label: 'Mi cuenta', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('AjustesCuenta'), 250); } },
   ];
 
   const renderDrawer = () => (
