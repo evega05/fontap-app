@@ -215,6 +215,16 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
+  const marcarEnCamino = async () => {
+    if (!trabajoActivo) return;
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/en-camino`, null, { headers });
+      setTrabajoActivo({ ...trabajoActivo, estado: 'en_camino' });
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.detail || 'No se pudo actualizar el estado');
+    }
+  };
+
   const confirmarEfectivo = async () => {
     if (!trabajoActivo) return;
     try {
@@ -398,7 +408,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </Glass>
       )}
 
-      {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
+      {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'en_camino' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
         <Glass style={s.enCursoCard}>
           <View style={s.enCursoHeader}>
             <View style={s.enCursoTituloRow}>
@@ -418,6 +428,18 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                 <Ionicons name="arrow-forward" size={15} color={colors.text} />
               </LinearGradient>
             </Pressable>
+          )}
+          {(trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado') && (
+            <Pressable style={s.enCaminoBtn} haptic onPress={marcarEnCamino}>
+              <Ionicons name="car-sport" size={16} color={colors.blue} />
+              <Text style={s.enCaminoBtnText}>Voy en camino</Text>
+            </Pressable>
+          )}
+          {trabajoActivo.estado === 'en_camino' && (
+            <View style={s.enCaminoActivo}>
+              <Ionicons name="navigate" size={15} color={colors.green} />
+              <Text style={s.enCaminoActivoText}>Marcado en camino · el cliente puede seguirte</Text>
+            </View>
           )}
           {trabajoActivo.estado === 'pago_pendiente' && (
             <Pressable haptic onPress={confirmarEfectivo}>
@@ -601,6 +623,10 @@ const s = StyleSheet.create({
   enCursoChatText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
   enCursoCancelarBtn: { marginTop: spacing.sm, alignItems: 'center', paddingVertical: 6 },
   enCursoCancelarText: { color: colors.red, fontSize: 12.5, fontWeight: '600' },
+  enCaminoBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.blueLight, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, borderWidth: 1, borderColor: colors.blue },
+  enCaminoBtnText: { color: colors.blue, fontWeight: '700', fontSize: 14 },
+  enCaminoActivo: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, paddingVertical: 8 },
+  enCaminoActivoText: { color: colors.green, fontSize: 12.5, fontWeight: '600' },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
   modal: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, margin: spacing.xl, width: '90%', ...shadow.lg },
   modalIconWrap: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: spacing.md },

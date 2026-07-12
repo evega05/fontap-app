@@ -199,7 +199,7 @@ export default function PagoScreen({ navigation, route }) {
                 <Text style={s.infoText}>💳 Pago seguro con tarjeta</Text>
                 <Text style={s.infoSub}>
                   Se abrirá la página segura de Stripe para introducir los datos de tu tarjeta.
-                  FonTap nunca ve ni guarda tu número de tarjeta.
+                  Multiservicios Provenza nunca ve ni guarda tu número de tarjeta.
                 </Text>
               </View>
             )}

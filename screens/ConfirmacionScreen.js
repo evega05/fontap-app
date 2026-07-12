@@ -13,7 +13,7 @@ const ESTADOS = {
   pendiente: { emoji: '🔍', titulo: 'Buscando fontanero...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
   aceptado: { emoji: '✅', titulo: '¡Fontanero en camino!', sub: 'El fontanero ha aceptado tu solicitud', color: '#05A357', paso: 2 },
   precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'El fontanero ha terminado el trabajo', color: '#276EF1', paso: 3 },
-  pagado: { emoji: '🎉', titulo: '¡Servicio completado!', sub: 'Gracias por usar FonTap', color: '#05A357', paso: 4 },
+  pagado: { emoji: '🎉', titulo: '¡Servicio completado!', sub: 'Gracias por usar Multiservicios Provenza', color: '#05A357', paso: 4 },
   cancelado: { emoji: '✕', titulo: 'Servicio cancelado', sub: 'Esta solicitud ya no está activa', color: '#ef4444', paso: 0 },
 };
 
@@ -92,7 +92,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Recibo FonTap' });
+        await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Recibo Multiservicios Provenza' });
       } else {
         Alert.alert('Recibo descargado', `Se guardó en: ${res.uri}`);
       }

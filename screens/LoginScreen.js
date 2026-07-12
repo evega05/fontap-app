@@ -5,19 +5,22 @@ import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { registrarNotificaciones } from './notifications';
 import { useGoogleAuth, googleConfigurado } from '../googleAuth';
+import { useIdioma, IDIOMAS } from '../i18n';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
 export default function LoginScreen({ navigation, route }) {
   const { login: guardarSesion } = useAuth();
+  const { t, idioma, cambiarIdioma } = useIdioma();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
   const [mostrarPass, setMostrarPass] = useState(false);
   const [error, setError] = useState('');
+  // Guarda la CLAVE de traducción, no el texto, para que cambie con el idioma
   const [aviso, setAviso] = useState(
-    route?.params?.sesionCaducada ? 'Tu sesión ha caducado, inicia sesión de nuevo'
-    : route?.params?.cuentaEliminada ? 'Tu cuenta ha sido eliminada' : ''
+    route?.params?.sesionCaducada ? 'sesionCaducada'
+    : route?.params?.cuentaEliminada ? 'cuentaEliminada' : ''
   );
   const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync, redirectUri: googleRedirectUri } = useGoogleAuth();
 
@@ -33,16 +36,16 @@ export default function LoginScreen({ navigation, route }) {
 
   const handleLogin = async () => {
     setError(''); setAviso('');
-    if (!email || !password) { setError('Rellena todos los campos'); return; }
+    if (!email || !password) { setError(t('rellenaCampos')); return; }
     setCargando(true);
     try {
       const res = await axios.post(`${API}/login`, { email, password });
       await entrarConToken(res.data, false);
     } catch (e) {
-      if (e.response?.status === 429) {
-        setError(e.response?.data?.detail || 'Demasiados intentos, espera unos minutos');
+      if (e.response?.status === 429 || e.response?.status === 403) {
+        setError(e.response?.data?.detail || t('errorCredenciales'));
       } else {
-        setError('Email o contraseña incorrectos');
+        setError(t('errorCredenciales'));
       }
     } finally {
       setCargando(false);
@@ -72,22 +75,31 @@ export default function LoginScreen({ navigation, route }) {
     <View style={s.container}>
       <StatusBar barStyle="light-content" />
 
+      <View style={s.idiomaRow}>
+        {IDIOMAS.map((i) => (
+          <TouchableOpacity key={i.codigo} onPress={() => cambiarIdioma(i.codigo)}
+            style={[s.idiomaBtn, idioma === i.codigo && s.idiomaBtnActivo]}>
+            <Text style={[s.idiomaText, idioma === i.codigo && s.idiomaTextActivo]}>{i.codigo.toUpperCase()}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={s.hero}>
         <View style={s.logoWrap}>
-          <Text style={s.logoIcon}>🔧</Text>
+          <Text style={s.logoIcon}>🛠️</Text>
         </View>
-        <Text style={s.logoText}>FonTap</Text>
-        <Text style={s.logoSub}>Fontaneros profesionales · Bilbao</Text>
+        <Text style={s.logoText}>{t('marca')}</Text>
+        <Text style={s.logoSub}>{t('marcaSub')}</Text>
       </View>
 
       <View style={s.sheet}>
-        <Text style={s.sheetTitulo}>Bienvenido de nuevo</Text>
-        <Text style={s.sheetSub}>Inicia sesión para continuar</Text>
+        <Text style={s.sheetTitulo}>{t('bienvenido')}</Text>
+        <Text style={s.sheetSub}>{t('iniciaSub')}</Text>
 
         {error ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {error}</Text></View> : null}
-        {aviso ? <View style={s.avisoBox}><Text style={s.avisoText}>ℹ️ {aviso}</Text></View> : null}
+        {aviso ? <View style={s.avisoBox}><Text style={s.avisoText}>ℹ️ {t(aviso)}</Text></View> : null}
 
-        <Text style={s.inputLabel}>Email</Text>
+        <Text style={s.inputLabel}>{t('email')}</Text>
         <View style={s.inputWrap}>
           <Text style={s.inputIcon}>✉️</Text>
           <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor={colors.textFaint}
@@ -95,7 +107,7 @@ export default function LoginScreen({ navigation, route }) {
             keyboardType="email-address" autoCapitalize="none" />
         </View>
 
-        <Text style={s.inputLabel}>Contraseña</Text>
+        <Text style={s.inputLabel}>{t('password')}</Text>
         <View style={s.inputWrap}>
           <Text style={s.inputIcon}>🔒</Text>
           <TextInput style={s.input} placeholder="••••••••" placeholderTextColor={colors.textFaint}
@@ -107,11 +119,11 @@ export default function LoginScreen({ navigation, route }) {
         </View>
 
         <TouchableOpacity style={[s.btnPrimario, cargando && s.btnDesactivado]} onPress={handleLogin} disabled={cargando}>
-          <Text style={s.btnPrimarioText}>{cargando ? 'Entrando...' : 'Iniciar sesión'}</Text>
+          <Text style={s.btnPrimarioText}>{cargando ? t('entrando') : t('iniciarSesion')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('OlvidePassword')} style={s.olvideLink}>
-          <Text style={s.olvideLinkText}>¿Olvidaste tu contraseña?</Text>
+          <Text style={s.olvideLinkText}>{t('olvidastePassword')}</Text>
         </TouchableOpacity>
 
         <View style={s.divider}>
@@ -122,15 +134,15 @@ export default function LoginScreen({ navigation, route }) {
 
         <TouchableOpacity style={s.btnGoogle} onPress={handleGoogle} disabled={!googleRequest || cargando}>
           <Text style={s.btnGoogleIcon}>G</Text>
-          <Text style={s.btnGoogleText}>Continuar con Google</Text>
+          <Text style={s.btnGoogleText}>{t('continuarGoogle')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.btnSecundario} onPress={() => navigation.navigate('Registro')}>
-          <Text style={s.btnSecundarioText}>Crear cuenta nueva</Text>
+          <Text style={s.btnSecundarioText}>{t('crearCuentaNueva')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Registro')} style={s.fontaneroLink}>
-          <Text style={s.fontaneroLinkText}>¿Eres fontanero? <Text style={s.fontaneroLinkBlue}>Únete a FonTap →</Text></Text>
+          <Text style={s.fontaneroLinkText}>{t('eresProfesional')} <Text style={s.fontaneroLinkBlue}>{t('unete')}</Text></Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -142,7 +154,12 @@ const s = StyleSheet.create({
   hero: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
   logoWrap: { width: 88, height: 88, borderRadius: 28, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1.5, borderColor: colors.blue },
   logoIcon: { fontSize: 40 },
-  logoText: { fontSize: 38, fontWeight: 'bold', color: colors.text, letterSpacing: -1 },
+  logoText: { fontSize: 26, fontWeight: 'bold', color: colors.text, letterSpacing: -0.5, textAlign: 'center', paddingHorizontal: 20 },
+  idiomaRow: { position: 'absolute', top: 52, right: 18, flexDirection: 'row', gap: 6, zIndex: 10 },
+  idiomaBtn: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 9, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2 },
+  idiomaBtnActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  idiomaText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  idiomaTextActivo: { color: colors.blue },
   logoSub: { fontSize: 13, color: colors.textMuted, marginTop: 6 },
   sheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 48, borderTopWidth: 1, borderColor: colors.border },
   sheetTitulo: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 4 },

@@ -30,6 +30,8 @@ import OlvidePasswordScreen from './screens/OlvidePasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import VerificarEmailScreen from './screens/VerificarEmailScreen';
 import AjustesCuentaScreen from './screens/AjustesCuentaScreen';
+import SeguimientoScreen from './screens/SeguimientoScreen';
+import { IdiomaProvider } from './i18n';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -56,8 +58,8 @@ function SplashScreen({ onFinish }) {
       <Animated.View style={[s.splashLogo, { transform: [{ scale: escala }], opacity: opacidad }]}>
         <Text style={s.splashEmoji}>🔧</Text>
       </Animated.View>
-      <Animated.Text style={[s.splashNombre, { opacity: opacidadTexto }]}>FonTap</Animated.Text>
-      <Animated.Text style={[s.splashSub, { opacity: opacidadTexto }]}>Fontaneros profesionales</Animated.Text>
+      <Animated.Text style={[s.splashNombre, { opacity: opacidadTexto }]}>Multiservicios Provenza</Animated.Text>
+      <Animated.Text style={[s.splashSub, { opacity: opacidadTexto }]}>Profesionales del hogar</Animated.Text>
     </View>
   );
 }
@@ -113,6 +115,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="VerificarEmail" component={VerificarEmailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Seguimiento" component={SeguimientoScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -130,7 +133,9 @@ export default function App() {
   return (
     <StripeWrapper>
       <AuthProvider>
-        <NavegadorPrincipal />
+        <IdiomaProvider>
+          <NavegadorPrincipal />
+        </IdiomaProvider>
       </AuthProvider>
     </StripeWrapper>
   );
@@ -140,6 +145,6 @@ const s = StyleSheet.create({
   splash: { flex: 1, backgroundColor: '#070B14', justifyContent: 'center', alignItems: 'center' },
   splashLogo: { width: 120, height: 120, borderRadius: 36, backgroundColor: '#0A1836', justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: '#3D7EFF' },
   splashEmoji: { fontSize: 56 },
-  splashNombre: { fontSize: 42, fontWeight: 'bold', color: '#E8EDF5', letterSpacing: -1, marginBottom: 8 },
+  splashNombre: { fontSize: 30, fontWeight: 'bold', color: '#E8EDF5', letterSpacing: -0.5, marginBottom: 8, textAlign: 'center', paddingHorizontal: 24 },
   splashSub: { fontSize: 15, color: '#7A8BA8' },
 });

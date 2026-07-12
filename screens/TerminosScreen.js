@@ -3,16 +3,16 @@ import { colors } from '../theme';
 
 const SECCIONES = [
   {
-    titulo: '1. Qué es FonTap',
+    titulo: '1. Qué es Multiservicios Provenza',
     texto:
-      'FonTap es una plataforma de intermediación que conecta a clientes que necesitan un servicio ' +
+      'Multiservicios Provenza es una plataforma de intermediación que conecta a clientes que necesitan un servicio ' +
       'de fontanería con profesionales independientes ("fontaneros") que ofrecen esos servicios. ' +
-      'FonTap no presta directamente los servicios de fontanería: actúa como intermediario entre ambas partes.',
+      'Multiservicios Provenza no presta directamente los servicios de fontanería: actúa como intermediario entre ambas partes.',
   },
   {
     titulo: '2. Registro y cuenta',
     texto:
-      'Para usar FonTap debes registrarte con datos reales y mantener actualizada tu información de ' +
+      'Para usar Multiservicios Provenza debes registrarte con datos reales y mantener actualizada tu información de ' +
       'contacto. Eres responsable de la actividad realizada desde tu cuenta y de la confidencialidad de ' +
       'tu contraseña. Los fontaneros declaran contar con la cualificación y, en su caso, los seguros ' +
       'necesarios para ejercer su actividad.',
@@ -21,9 +21,9 @@ const SECCIONES = [
     titulo: '3. Precios y pagos',
     texto:
       'El precio de cada servicio lo fija libremente el fontanero y se muestra al cliente antes de ' +
-      'confirmar el pago. FonTap aplica una comisión sobre el importe cobrado por servicios pagados a ' +
+      'confirmar el pago. Multiservicios Provenza aplica una comisión sobre el importe cobrado por servicios pagados a ' +
       'través de la plataforma. Los pagos en efectivo se acuerdan directamente entre cliente y fontanero; ' +
-      'FonTap no es responsable de disputas sobre pagos realizados fuera de la app.',
+      'Multiservicios Provenza no es responsable de disputas sobre pagos realizados fuera de la app.',
   },
   {
     titulo: '4. Cancelaciones',
@@ -35,14 +35,14 @@ const SECCIONES = [
     titulo: '5. Reseñas',
     texto:
       'Al finalizar un servicio pagado, cliente y fontanero pueden valorarse mutuamente. Las reseñas deben ' +
-      'reflejar experiencias reales; FonTap puede retirar reseñas falsas, ofensivas o que infrinjan estos términos.',
+      'reflejar experiencias reales; Multiservicios Provenza puede retirar reseñas falsas, ofensivas o que infrinjan estos términos.',
   },
   {
     titulo: '6. Responsabilidad',
     texto:
-      'FonTap no es parte del contrato de servicio entre cliente y fontanero y no responde por la calidad, ' +
+      'Multiservicios Provenza no es parte del contrato de servicio entre cliente y fontanero y no responde por la calidad, ' +
       'seguridad o resultado del trabajo realizado. Cualquier incidencia relativa a la ejecución del servicio ' +
-      'debe resolverse entre las partes; FonTap puede mediar de buena fe pero no garantiza el resultado.',
+      'debe resolverse entre las partes; Multiservicios Provenza puede mediar de buena fe pero no garantiza el resultado.',
   },
   {
     titulo: '7. Protección de datos',

@@ -25,6 +25,7 @@ import Pressable from '../components/Pressable';
 import FadeInUp from '../components/FadeInUp';
 import GradientBg from '../components/GradientBg';
 import Glass from '../components/Glass';
+import { useIdioma } from '../i18n';
 
 function distanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -47,9 +48,19 @@ const SELECTED_FLOAT_HEIGHT = 176;
 
 const SERVICIOS_FILTRO = ['Todos', 'Desatasco', 'Fuga', 'Caldera', 'Grifo', 'Radiador'];
 
+const GREMIOS_FILTRO = [
+  { valor: '', clave: 'todos', emoji: '🛠️' },
+  { valor: 'fontanero', clave: 'gremioFontanero', emoji: '🔧' },
+  { valor: 'electricista', clave: 'gremioElectricista', emoji: '⚡' },
+  { valor: 'cerrajero', clave: 'gremioCerrajero', emoji: '🔑' },
+  { valor: 'pintor', clave: 'gremioPintor', emoji: '🎨' },
+];
+
 export default function MapaScreen({ navigation, route }) {
   const { usuario, token, logout } = useAuth();
+  const { t } = useIdioma();
   const clienteId = route.params?.clienteId || usuario?.id || null;
+  const [filtroGremio, setFiltroGremio] = useState('');
 
   // --- State ---
   const [seleccionado, setSeleccionado] = useState(null);
@@ -105,14 +116,14 @@ export default function MapaScreen({ navigation, route }) {
     if (isRefresh) setRefreshing(true);
     else setCargando(true);
     axios
-      .get(`${API}/fontaneros`)
+      .get(`${API}/fontaneros`, { params: filtroGremio ? { gremio: filtroGremio } : {} })
       .then((res) => setFontaneros(res.data || []))
       .catch(() => {})
       .finally(() => {
         setCargando(false);
         setRefreshing(false);
       });
-  }, []);
+  }, [filtroGremio]);
 
   useEffect(() => {
     cargarFontaneros();
@@ -315,13 +326,13 @@ export default function MapaScreen({ navigation, route }) {
   };
 
   const DRAWER_ITEMS = [
-    { icon: 'compass-outline', label: 'Explorar', action: () => { cerrarDrawer(); } },
-    { icon: 'receipt-outline', label: 'Mis Servicios', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('MisServicios', { clienteId }), 250); } },
-    { icon: 'heart-outline', label: 'Favoritos', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Favoritos'), 250); } },
-    { icon: 'notifications-outline', label: 'Notificaciones', badge: notifNoLeidas, action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); } },
-    { icon: 'chatbubbles-outline', label: 'Chats recientes', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); } },
-    { icon: 'document-text-outline', label: 'Términos y condiciones', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Terminos'), 250); } },
-    { icon: 'settings-outline', label: 'Mi cuenta', action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('AjustesCuenta'), 250); } },
+    { icon: 'compass-outline', label: t('explorar'), action: () => { cerrarDrawer(); } },
+    { icon: 'receipt-outline', label: t('misServicios'), action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('MisServicios', { clienteId }), 250); } },
+    { icon: 'heart-outline', label: t('favoritos'), action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Favoritos'), 250); } },
+    { icon: 'notifications-outline', label: t('notificaciones'), badge: notifNoLeidas, action: () => { setNotifNoLeidas(0); cerrarDrawer(); setTimeout(() => navigation.navigate('Notificaciones'), 250); } },
+    { icon: 'chatbubbles-outline', label: t('chatsRecientes'), action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('ChatsRecientes'), 250); } },
+    { icon: 'document-text-outline', label: t('terminos'), action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('Terminos'), 250); } },
+    { icon: 'settings-outline', label: t('miCuenta'), action: () => { cerrarDrawer(); setTimeout(() => navigation.navigate('AjustesCuenta'), 250); } },
   ];
 
   const renderDrawer = () => (
@@ -339,7 +350,7 @@ export default function MapaScreen({ navigation, route }) {
             </LinearGradient>
             <View style={{ flex: 1 }}>
               <Text style={s.drawerNombre} numberOfLines={1}>{usuario?.nombre || 'Usuario'}</Text>
-              <Text style={s.drawerTipo}>Cliente</Text>
+              <Text style={s.drawerTipo}>{t('cliente')}</Text>
             </View>
           </View>
 
@@ -365,7 +376,7 @@ export default function MapaScreen({ navigation, route }) {
             <View style={[s.drawerItemIconWrap, s.drawerItemIconWrapDanger]}>
               <Ionicons name="log-out-outline" size={20} color={colors.red} />
             </View>
-            <Text style={s.drawerItemLabelDanger}>Cerrar sesión</Text>
+            <Text style={s.drawerItemLabelDanger}>{t('cerrarSesion')}</Text>
           </Pressable>
         </Glass>
       </Animated.View>
@@ -517,6 +528,14 @@ export default function MapaScreen({ navigation, route }) {
         <View style={s.handle} />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
+          {GREMIOS_FILTRO.map((g) => (
+            <Pressable key={g.valor || 'todos'} style={[s.filtro, filtroGremio === g.valor && s.filtroActivo]} haptic onPress={() => setFiltroGremio(g.valor)}>
+              <Text style={[s.filtroText, filtroGremio === g.valor && s.filtroTextActivo]}>{g.emoji} {t(g.clave)}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
           <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
             <Ionicons name="moon" size={12} color={mostrar24h ? colors.text : colors.textMuted} />
             <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>24h</Text>
@@ -533,16 +552,16 @@ export default function MapaScreen({ navigation, route }) {
             <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaUrgente}>
               <Ionicons name="flash" size={16} color={colors.text} />
               <View>
-                <Text style={s.ctaUrgenteText}>Urgente ahora</Text>
-                <Text style={s.ctaUrgenteSub}>30-60 min</Text>
+                <Text style={s.ctaUrgenteText}>{t('urgenteAhora')}</Text>
+                <Text style={s.ctaUrgenteSub}>{t('urgenteSub')}</Text>
               </View>
             </LinearGradient>
           </Pressable>
           <Pressable style={s.ctaCita} haptic onPress={() => navigation.navigate('Solicitud', { urgente: false, clienteId })}>
             <Ionicons name="calendar-outline" size={16} color={colors.text} />
             <View>
-              <Text style={s.ctaCitaText}>Reservar cita</Text>
-              <Text style={s.ctaCitaSub}>Elige cuándo</Text>
+              <Text style={s.ctaCitaText}>{t('reservarCita')}</Text>
+              <Text style={s.ctaCitaSub}>{t('citaSub')}</Text>
             </View>
           </Pressable>
         </View>
@@ -560,7 +579,7 @@ export default function MapaScreen({ navigation, route }) {
               <RefreshControl refreshing={refreshing} onRefresh={() => cargarFontaneros(true)} tintColor={colors.accent2} colors={[colors.accent2]} progressBackgroundColor={colors.bg} />
             }
           >
-            <Text style={s.listaLabel}>FONTANEROS CERCANOS</Text>
+            <Text style={s.listaLabel}>{t('profesionalesCercanos')}</Text>
             {fontanerosFiltrados.length === 0 ? (
               <View style={s.vacio}>
                 <View style={s.vacioIconWrap}>

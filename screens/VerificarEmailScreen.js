@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import axios from 'axios';
 import { colors } from '../theme';
+import { useIdioma } from '../i18n';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
 export default function VerificarEmailScreen({ navigation, route }) {
   const { email, destino, destinoParams } = route.params || {};
+  const { t } = useIdioma();
   const [codigo, setCodigo] = useState('');
   const [cargando, setCargando] = useState(false);
   const [reenviando, setReenviando] = useState(false);
@@ -17,11 +19,11 @@ export default function VerificarEmailScreen({ navigation, route }) {
 
   const verificar = async () => {
     setError(''); setInfo('');
-    if (!codigo) { setError('Escribe el código'); return; }
+    if (!codigo) { setError(t('rellenaCampos')); return; }
     setCargando(true);
     try {
       await axios.post(`${API}/auth/verificar-email`, { email, token: codigo });
-      setInfo('¡Email verificado!');
+      setInfo(t('emailVerificado'));
       setTimeout(continuar, 1200);
     } catch (e) {
       setError(e.response?.data?.detail || 'Código inválido o caducado');
@@ -35,7 +37,7 @@ export default function VerificarEmailScreen({ navigation, route }) {
     setReenviando(true);
     try {
       await axios.post(`${API}/auth/reenviar-verificacion`, { email });
-      setInfo('Código reenviado, revisa tu email');
+      setInfo(t('smsEnviado'));
     } catch (e) {
       setError('No se pudo reenviar el código');
     } finally {
@@ -48,9 +50,9 @@ export default function VerificarEmailScreen({ navigation, route }) {
       <StatusBar barStyle="light-content" />
       <View style={s.content}>
         <Text style={s.emoji}>✉️</Text>
-        <Text style={s.titulo}>Verifica tu email</Text>
+        <Text style={s.titulo}>{t('verificaEmail')}</Text>
         <Text style={s.sub}>
-          Te enviamos un código de 8 caracteres a{'\n'}
+          {t('codigoEnviadoA')}{'\n'}
           <Text style={s.emailDestacado}>{email}</Text>
         </Text>
 
@@ -59,21 +61,21 @@ export default function VerificarEmailScreen({ navigation, route }) {
 
         <View style={s.inputWrap}>
           <Text style={s.inputIcon}>🔑</Text>
-          <TextInput style={s.input} placeholder="Código de 8 caracteres" placeholderTextColor={colors.textFaint}
-            value={codigo} onChangeText={t => { setCodigo(t); setError(''); }}
+          <TextInput style={s.input} placeholder={t('codigo8')} placeholderTextColor={colors.textFaint}
+            value={codigo} onChangeText={txt => { setCodigo(txt); setError(''); }}
             autoCapitalize="characters" />
         </View>
 
         <TouchableOpacity style={[s.btnPrimario, cargando && s.btnDesactivado]} onPress={verificar} disabled={cargando}>
-          <Text style={s.btnPrimarioText}>{cargando ? 'Verificando...' : 'Verificar'}</Text>
+          <Text style={s.btnPrimarioText}>{cargando ? t('verificando') : t('verificar')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={reenviar} disabled={reenviando} style={s.reenviarLink}>
-          <Text style={s.reenviarText}>{reenviando ? 'Enviando...' : '¿No te llegó? Reenviar código'}</Text>
+          <Text style={s.reenviarText}>{reenviando ? t('enviando') : t('reenviarCodigo')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={continuar} style={s.saltarLink}>
-          <Text style={s.saltarText}>Verificar más tarde →</Text>
+          <Text style={s.saltarText}>{t('verificarMasTarde')}</Text>
         </TouchableOpacity>
       </View>
     </View>

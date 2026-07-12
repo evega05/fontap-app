@@ -4,16 +4,26 @@ import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { useGoogleAuth, googleConfigurado } from '../googleAuth';
+import { useIdioma } from '../i18n';
+
+const GREMIOS = [
+  { valor: 'fontanero', emoji: '🔧', clave: 'gremioFontanero' },
+  { valor: 'electricista', emoji: '⚡', clave: 'gremioElectricista' },
+  { valor: 'cerrajero', emoji: '🔑', clave: 'gremioCerrajero' },
+  { valor: 'pintor', emoji: '🎨', clave: 'gremioPintor' },
+];
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
 export default function RegistroScreen({ navigation }) {
   const { login: guardarSesion } = useAuth();
+  const { t } = useIdioma();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
   const [password, setPassword] = useState('');
   const [tipo, setTipo] = useState('cliente');
+  const [gremio, setGremio] = useState('fontanero');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [mostrarPass, setMostrarPass] = useState(false);
@@ -62,7 +72,7 @@ export default function RegistroScreen({ navigation }) {
     if (!terminosAceptados) { setError('Debes aceptar los términos y condiciones'); return; }
     setCargando(true);
     try {
-      const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados });
+      const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados, gremio });
       await guardarSesion(res.data);
       const destino = tipo === 'fontanero' ? 'PanelFontanero' : 'Mapa';
       const destinoParams = tipo === 'fontanero'
@@ -84,32 +94,47 @@ export default function RegistroScreen({ navigation }) {
         <Text style={s.backText}>← Volver</Text>
       </TouchableOpacity>
 
-      <Text style={s.titulo}>Crear cuenta</Text>
-      <Text style={s.sub}>Únete a FonTap gratis</Text>
+      <Text style={s.titulo}>{t('crearCuenta')}</Text>
+      <Text style={s.sub}>{t('uneteGratis')}</Text>
 
       <View style={s.tipoRow}>
         <TouchableOpacity style={[s.tipoBtn, tipo === 'cliente' && s.tipoBtnActivo]} onPress={() => setTipo('cliente')}>
           <Text style={s.tipoEmoji}>👤</Text>
-          <Text style={[s.tipoTitulo, tipo === 'cliente' && s.tipoTituloActivo]}>Soy cliente</Text>
-          <Text style={s.tipoSub}>Necesito fontanero</Text>
+          <Text style={[s.tipoTitulo, tipo === 'cliente' && s.tipoTituloActivo]}>{t('soyCliente')}</Text>
+          <Text style={s.tipoSub}>{t('necesitoProfesional')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.tipoBtn, tipo === 'fontanero' && s.tipoBtnActivo]} onPress={() => setTipo('fontanero')}>
-          <Text style={s.tipoEmoji}>🔧</Text>
-          <Text style={[s.tipoTitulo, tipo === 'fontanero' && s.tipoTituloActivo]}>Soy fontanero</Text>
-          <Text style={s.tipoSub}>Quiero trabajos</Text>
+          <Text style={s.tipoEmoji}>🛠️</Text>
+          <Text style={[s.tipoTitulo, tipo === 'fontanero' && s.tipoTituloActivo]}>{t('soyProfesional')}</Text>
+          <Text style={s.tipoSub}>{t('quieroTrabajos')}</Text>
         </TouchableOpacity>
       </View>
 
+      {tipo === 'fontanero' && (
+        <>
+          <Text style={s.inputLabel}>{t('tuGremio')}</Text>
+          <View style={s.gremioRow}>
+            {GREMIOS.map((g) => (
+              <TouchableOpacity key={g.valor} style={[s.gremioBtn, gremio === g.valor && s.gremioBtnActivo]}
+                onPress={() => setGremio(g.valor)}>
+                <Text style={s.gremioEmoji}>{g.emoji}</Text>
+                <Text style={[s.gremioText, gremio === g.valor && s.gremioTextActivo]}>{t(g.clave)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
       {error ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {error}</Text></View> : null}
 
-      <Text style={s.inputLabel}>Nombre completo</Text>
+      <Text style={s.inputLabel}>{t('nombreCompleto')}</Text>
       <View style={s.inputWrap}>
         <Text style={s.inputIcon}>👤</Text>
         <TextInput style={s.input} placeholder="Tu nombre" placeholderTextColor={colors.textFaint}
           value={nombre} onChangeText={t => { setNombre(t); setError(''); }} />
       </View>
 
-      <Text style={s.inputLabel}>Email</Text>
+      <Text style={s.inputLabel}>{t('email')}</Text>
       <View style={s.inputWrap}>
         <Text style={s.inputIcon}>✉️</Text>
         <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor={colors.textFaint}
@@ -117,7 +142,7 @@ export default function RegistroScreen({ navigation }) {
           keyboardType="email-address" autoCapitalize="none" />
       </View>
 
-      <Text style={s.inputLabel}>Teléfono</Text>
+      <Text style={s.inputLabel}>{t('telefono')}</Text>
       <View style={s.inputWrap}>
         <Text style={s.inputIcon}>📱</Text>
         <TextInput style={s.input} placeholder="+34 612 345 678" placeholderTextColor={colors.textFaint}
@@ -125,7 +150,7 @@ export default function RegistroScreen({ navigation }) {
           keyboardType="phone-pad" />
       </View>
 
-      <Text style={s.inputLabel}>Contraseña</Text>
+      <Text style={s.inputLabel}>{t('password')}</Text>
       <View style={s.inputWrap}>
         <Text style={s.inputIcon}>🔒</Text>
         <TextInput style={s.input} placeholder="Mínimo 6 caracteres" placeholderTextColor={colors.textFaint}
@@ -181,7 +206,7 @@ export default function RegistroScreen({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity style={[s.btnPrimario, cargando && s.btnDesactivado]} onPress={registrar} disabled={cargando}>
-        <Text style={s.btnPrimarioText}>{cargando ? 'Creando cuenta...' : 'Crear cuenta gratis'}</Text>
+        <Text style={s.btnPrimarioText}>{cargando ? t('creando') : t('crearCuentaGratis')}</Text>
       </TouchableOpacity>
 
       <View style={s.divider}>
@@ -192,11 +217,11 @@ export default function RegistroScreen({ navigation }) {
 
       <TouchableOpacity style={s.btnGoogle} onPress={handleGoogle} disabled={!googleRequest || cargando}>
         <Text style={s.btnGoogleIcon}>G</Text>
-        <Text style={s.btnGoogleText}>Continuar con Google como {tipo === 'fontanero' ? 'fontanero' : 'cliente'}</Text>
+        <Text style={s.btnGoogleText}>Continuar con Google como {tipo === 'fontanero' ? 'profesional' : 'cliente'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')} style={s.loginLink}>
-        <Text style={s.loginLinkText}>¿Ya tienes cuenta? <Text style={s.loginLinkBlue}>Inicia sesión</Text></Text>
+        <Text style={s.loginLinkText}>{t('yaTienesCuenta')} <Text style={s.loginLinkBlue}>{t('iniciarSesion')}</Text></Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -210,6 +235,12 @@ const s = StyleSheet.create({
   titulo: { fontSize: 32, fontWeight: 'bold', color: colors.text, letterSpacing: -0.5, marginBottom: 6 },
   sub: { fontSize: 15, color: colors.textMuted, marginBottom: 28 },
   tipoRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  gremioRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  gremioBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.bgCard2, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border2 },
+  gremioBtnActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  gremioEmoji: { fontSize: 15 },
+  gremioText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  gremioTextActivo: { color: colors.blue },
   tipoBtn: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border },
   tipoBtnActivo: { borderColor: colors.blue, backgroundColor: colors.blueLight },
   tipoEmoji: { fontSize: 28, marginBottom: 8 },

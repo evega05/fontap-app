@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { useIdioma, IDIOMAS } from '../i18n';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
 export default function AjustesCuentaScreen({ navigation }) {
   const { usuario, token, logout, login } = useAuth();
+  const { t, idioma, cambiarIdioma } = useIdioma();
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const [nombre, setNombre] = useState(usuario?.nombre || '');
@@ -29,15 +31,55 @@ export default function AjustesCuentaScreen({ navigation }) {
   const [errEliminar, setErrEliminar] = useState('');
   const [email, setEmail] = useState('');
 
+  const [telVerificado, setTelVerificado] = useState(false);
+  const [smsEnviado, setSmsEnviado] = useState(false);
+  const [smsEnviando, setSmsEnviando] = useState(false);
+  const [codigoSms, setCodigoSms] = useState('');
+  const [smsVerificando, setSmsVerificando] = useState(false);
+  const [msgSms, setMsgSms] = useState('');
+  const [errSms, setErrSms] = useState('');
+
   useEffect(() => {
     axios.get(`${API}/usuarios/${usuario.id}/perfil`, { headers })
       .then((res) => {
         setNombre(res.data.nombre || '');
         setTelefono(res.data.telefono || '');
         setEmail(res.data.email || '');
+        setTelVerificado(!!res.data.telefono_verificado);
       })
       .catch(() => {});
   }, []);
+
+  const enviarSms = async () => {
+    setErrSms(''); setMsgSms('');
+    setSmsEnviando(true);
+    try {
+      await axios.post(`${API}/auth/enviar-sms`, { telefono: telefono.trim() || null }, { headers });
+      setSmsEnviado(true);
+      setMsgSms(t('smsEnviado'));
+    } catch (e) {
+      setErrSms(e.response?.data?.detail || 'No se pudo enviar el SMS');
+    } finally {
+      setSmsEnviando(false);
+    }
+  };
+
+  const verificarSms = async () => {
+    setErrSms(''); setMsgSms('');
+    if (!codigoSms.trim()) { setErrSms(t('rellenaCampos')); return; }
+    setSmsVerificando(true);
+    try {
+      await axios.post(`${API}/auth/verificar-sms`, { codigo: codigoSms.trim() }, { headers });
+      setTelVerificado(true);
+      setSmsEnviado(false);
+      setCodigoSms('');
+      setMsgSms('');
+    } catch (e) {
+      setErrSms(e.response?.data?.detail || 'Código inválido o caducado');
+    } finally {
+      setSmsVerificando(false);
+    }
+  };
 
   const guardarPerfil = async () => {
     setMsgPerfil(''); setErrPerfil('');
@@ -94,13 +136,23 @@ export default function AjustesCuentaScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.btnVolver}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitulo}>Mi cuenta</Text>
+        <Text style={s.headerTitulo}>{t('miCuenta')}</Text>
         <View style={{ width: 38 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={s.seccionTitulo}>Datos personales</Text>
-        {email ? <Text style={s.emailInfo}>Sesión iniciada como {email}</Text> : null}
+        <Text style={s.seccionTitulo}>{t('idioma')}</Text>
+        <View style={s.idiomaRow}>
+          {IDIOMAS.map((i) => (
+            <TouchableOpacity key={i.codigo} onPress={() => cambiarIdioma(i.codigo)}
+              style={[s.idiomaBtn, idioma === i.codigo && s.idiomaBtnActivo]}>
+              <Text style={[s.idiomaText, idioma === i.codigo && s.idiomaTextActivo]}>{i.etiqueta}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={s.seccionTitulo}>{t('datosPersonales')}</Text>
+        {email ? <Text style={s.emailInfo}>{t('sesionComo')} {email}</Text> : null}
         {errPerfil ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {errPerfil}</Text></View> : null}
         {msgPerfil ? <View style={s.okBox}><Text style={s.okText}>✓ {msgPerfil}</Text></View> : null}
         <View style={s.inputWrap}>
@@ -114,10 +166,32 @@ export default function AjustesCuentaScreen({ navigation }) {
             value={telefono} onChangeText={t => { setTelefono(t); setMsgPerfil(''); }} keyboardType="phone-pad" />
         </View>
         <TouchableOpacity style={[s.btnPrimario, guardandoPerfil && s.btnDesactivado]} onPress={guardarPerfil} disabled={guardandoPerfil}>
-          <Text style={s.btnPrimarioText}>{guardandoPerfil ? 'Guardando...' : 'Guardar datos'}</Text>
+          <Text style={s.btnPrimarioText}>{guardandoPerfil ? t('guardando') : t('guardarDatos')}</Text>
         </TouchableOpacity>
 
-        <Text style={s.seccionTitulo}>Cambiar contraseña</Text>
+        <Text style={s.seccionTitulo}>{t('verificarTelefono')}</Text>
+        {errSms ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {errSms}</Text></View> : null}
+        {msgSms ? <View style={s.okBox}><Text style={s.okText}>✓ {msgSms}</Text></View> : null}
+        {telVerificado ? (
+          <View style={s.okBox}><Text style={s.okText}>✓ {t('telefonoVerificado')}</Text></View>
+        ) : !smsEnviado ? (
+          <TouchableOpacity style={[s.btnPrimario, smsEnviando && s.btnDesactivado]} onPress={enviarSms} disabled={smsEnviando}>
+            <Text style={s.btnPrimarioText}>{smsEnviando ? t('enviando') : t('enviarCodigoSMS')}</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <View style={s.inputWrap}>
+              <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textFaint} style={s.inputIcon} />
+              <TextInput style={s.input} placeholder={t('codigoSMS')} placeholderTextColor={colors.textFaint}
+                value={codigoSms} onChangeText={setCodigoSms} keyboardType="number-pad" maxLength={6} />
+            </View>
+            <TouchableOpacity style={[s.btnPrimario, smsVerificando && s.btnDesactivado]} onPress={verificarSms} disabled={smsVerificando}>
+              <Text style={s.btnPrimarioText}>{smsVerificando ? t('verificando') : t('verificar')}</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        <Text style={s.seccionTitulo}>{t('cambiarPassword')}</Text>
         {errPass ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {errPass}</Text></View> : null}
         {msgPass ? <View style={s.okBox}><Text style={s.okText}>✓ {msgPass}</Text></View> : null}
         <View style={s.inputWrap}>
@@ -136,27 +210,25 @@ export default function AjustesCuentaScreen({ navigation }) {
             value={passRepetir} onChangeText={setPassRepetir} secureTextEntry />
         </View>
         <TouchableOpacity style={[s.btnPrimario, guardandoPass && s.btnDesactivado]} onPress={cambiarPassword} disabled={guardandoPass}>
-          <Text style={s.btnPrimarioText}>{guardandoPass ? 'Cambiando...' : 'Cambiar contraseña'}</Text>
+          <Text style={s.btnPrimarioText}>{guardandoPass ? t('cambiando') : t('cambiarPassword')}</Text>
         </TouchableOpacity>
 
-        <Text style={[s.seccionTitulo, s.seccionPeligro]}>Zona peligrosa</Text>
+        <Text style={[s.seccionTitulo, s.seccionPeligro]}>{t('zonaPeligrosa')}</Text>
         {errEliminar ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {errEliminar}</Text></View> : null}
         {!confirmandoEliminar ? (
           <TouchableOpacity style={s.btnPeligroBorde} onPress={() => setConfirmandoEliminar(true)}>
             <Ionicons name="trash-outline" size={17} color="#FF6B6B" />
-            <Text style={s.btnPeligroBordeText}>Eliminar mi cuenta</Text>
+            <Text style={s.btnPeligroBordeText}>{t('eliminarCuenta')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={s.avisoEliminar}>
-            <Text style={s.avisoEliminarTitulo}>¿Seguro que quieres eliminar tu cuenta?</Text>
-            <Text style={s.avisoEliminarTexto}>
-              Esta acción no se puede deshacer. Se borrarán tus datos personales y no podrás volver a acceder con esta cuenta.
-            </Text>
+            <Text style={s.avisoEliminarTitulo}>{t('eliminarConfirmTitulo')}</Text>
+            <Text style={s.avisoEliminarTexto}>{t('eliminarConfirmTexto')}</Text>
             <TouchableOpacity style={[s.btnPeligro, eliminando && s.btnDesactivado]} onPress={eliminarCuenta} disabled={eliminando}>
-              <Text style={s.btnPeligroText}>{eliminando ? 'Eliminando...' : 'Sí, eliminar definitivamente'}</Text>
+              <Text style={s.btnPeligroText}>{eliminando ? t('eliminando') : t('eliminarDefinitivo')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.btnCancelar} onPress={() => setConfirmandoEliminar(false)} disabled={eliminando}>
-              <Text style={s.btnCancelarText}>Cancelar</Text>
+              <Text style={s.btnCancelarText}>{t('cancelar')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -174,6 +246,11 @@ const s = StyleSheet.create({
   seccionTitulo: { fontSize: 13, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 22, marginBottom: 12 },
   seccionPeligro: { color: '#FF6B6B' },
   emailInfo: { color: colors.textFaint, fontSize: 13, marginBottom: 12 },
+  idiomaRow: { flexDirection: 'row', gap: 10 },
+  idiomaBtn: { flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2, alignItems: 'center' },
+  idiomaBtnActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  idiomaText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  idiomaTextActivo: { color: colors.blue },
   errorBox: { backgroundColor: colors.redLight, borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.red },
   errorText: { color: '#FF6B6B', fontSize: 13, textAlign: 'center' },
   okBox: { backgroundColor: colors.greenLight, borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.green },
