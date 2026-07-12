@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, A
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { emojiDeServicio } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -55,10 +56,7 @@ export default function CalendarioScreen({ navigation, route }) {
 
   const citasPorDia = (dia) => citas.filter(c => c.fecha && new Date(c.fecha).toDateString() === dia.toDateString()).length;
 
-  const tipoEmoji = (tipo) => {
-    const m = { Desatasco: '🚽', 'Fuga de agua': '💧', Caldera: '🔥', 'Grifo / ducha': '🚿', Radiador: '♨️' };
-    return m[tipo] || '🔧';
-  };
+  const tipoEmoji = (tipo) => emojiDeServicio(tipo);
 
   return (
     <View style={s.container}>

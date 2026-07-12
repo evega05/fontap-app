@@ -26,6 +26,7 @@ import FadeInUp from '../components/FadeInUp';
 import GradientBg from '../components/GradientBg';
 import Glass from '../components/Glass';
 import { useIdioma } from '../i18n';
+import { GREMIOS, serviciosDe } from '../gremios';
 
 function distanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -46,21 +47,12 @@ const DRAWER_WIDTH = 288;
 const SELECTED_FLOAT_WIDTH = 250;
 const SELECTED_FLOAT_HEIGHT = 176;
 
-const SERVICIOS_FILTRO = ['Todos', 'Desatasco', 'Fuga', 'Caldera', 'Grifo', 'Radiador'];
-
-const GREMIOS_FILTRO = [
-  { valor: '', clave: 'todos', emoji: '🛠️' },
-  { valor: 'fontanero', clave: 'gremioFontanero', emoji: '🔧' },
-  { valor: 'electricista', clave: 'gremioElectricista', emoji: '⚡' },
-  { valor: 'cerrajero', clave: 'gremioCerrajero', emoji: '🔑' },
-  { valor: 'pintor', clave: 'gremioPintor', emoji: '🎨' },
-];
-
 export default function MapaScreen({ navigation, route }) {
   const { usuario, token, logout } = useAuth();
   const { t } = useIdioma();
   const clienteId = route.params?.clienteId || usuario?.id || null;
   const [filtroGremio, setFiltroGremio] = useState('');
+  const [gremioFiltroAbierto, setGremioFiltroAbierto] = useState(false);
 
   // --- State ---
   const [seleccionado, setSeleccionado] = useState(null);
@@ -128,6 +120,13 @@ export default function MapaScreen({ navigation, route }) {
   useEffect(() => {
     cargarFontaneros();
   }, [cargarFontaneros]);
+
+  // Al cambiar de gremio, el sub-filtro de tipo de servicio ya no es válido
+  useEffect(() => {
+    setFiltroServicio('Todos');
+  }, [filtroGremio]);
+
+  const serviciosFiltroDisponibles = filtroGremio ? serviciosDe(filtroGremio).map((sv) => sv.nombre) : [];
 
   // --- Load notifications + favorites ---
   const cargarNotifs = useCallback(() => {
@@ -527,20 +526,41 @@ export default function MapaScreen({ navigation, route }) {
       <Glass strong style={s.sheet}>
         <View style={s.handle} />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
-          {GREMIOS_FILTRO.map((g) => (
-            <Pressable key={g.valor || 'todos'} style={[s.filtro, filtroGremio === g.valor && s.filtroActivo]} haptic onPress={() => setFiltroGremio(g.valor)}>
-              <Text style={[s.filtroText, filtroGremio === g.valor && s.filtroTextActivo]}>{g.emoji} {t(g.clave)}</Text>
+        <Pressable style={s.gremioFiltroBtn} haptic onPress={() => setGremioFiltroAbierto(!gremioFiltroAbierto)}>
+          <Text style={s.gremioFiltroBtnText}>
+            {filtroGremio
+              ? `${GREMIOS.find((g) => g.valor === filtroGremio)?.emoji} ${t(GREMIOS.find((g) => g.valor === filtroGremio)?.clave)}`
+              : `🛠️ ${t('todos')}`}
+          </Text>
+          <Ionicons name={gremioFiltroAbierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+        </Pressable>
+
+        {gremioFiltroAbierto && (
+          <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
+            <Pressable style={[s.gremioFiltroOpcion, !filtroGremio && s.gremioFiltroOpcionActiva]} haptic
+              onPress={() => { setFiltroGremio(''); setGremioFiltroAbierto(false); }}>
+              <Text style={[s.gremioFiltroOpcionText, !filtroGremio && s.gremioFiltroOpcionTextActiva]}>🛠️ {t('todos')}</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+            {GREMIOS.map((g) => (
+              <Pressable key={g.valor} style={[s.gremioFiltroOpcion, filtroGremio === g.valor && s.gremioFiltroOpcionActiva]} haptic
+                onPress={() => { setFiltroGremio(g.valor); setGremioFiltroAbierto(false); }}>
+                <Text style={[s.gremioFiltroOpcionText, filtroGremio === g.valor && s.gremioFiltroOpcionTextActiva]}>{g.emoji} {t(g.clave)}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
           <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
             <Ionicons name="moon" size={12} color={mostrar24h ? colors.text : colors.textMuted} />
             <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>24h</Text>
           </Pressable>
-          {SERVICIOS_FILTRO.map((sv) => (
+          {serviciosFiltroDisponibles.length > 0 && (
+            <Pressable style={[s.filtro, filtroServicio === 'Todos' && s.filtroActivo]} haptic onPress={() => setFiltroServicio('Todos')}>
+              <Text style={[s.filtroText, filtroServicio === 'Todos' && s.filtroTextActivo]}>{t('todos')}</Text>
+            </Pressable>
+          )}
+          {serviciosFiltroDisponibles.map((sv) => (
             <Pressable key={sv} style={[s.filtro, filtroServicio === sv && s.filtroActivo]} haptic onPress={() => setFiltroServicio(sv)}>
               <Text style={[s.filtroText, filtroServicio === sv && s.filtroTextActivo]}>{sv}</Text>
             </Pressable>
@@ -569,7 +589,7 @@ export default function MapaScreen({ navigation, route }) {
         {cargando ? (
           <View style={s.loadingWrap}>
             <ActivityIndicator size="large" color={colors.accent2} />
-            <Text style={s.loadingText}>Buscando fontaneros...</Text>
+            <Text style={s.loadingText}>Buscando profesionales...</Text>
           </View>
         ) : (
           <ScrollView
@@ -585,7 +605,7 @@ export default function MapaScreen({ navigation, route }) {
                 <View style={s.vacioIconWrap}>
                   <Ionicons name="water-outline" size={34} color={colors.textMuted} />
                 </View>
-                <Text style={s.vacioTitulo}>Sin fontaneros disponibles</Text>
+                <Text style={s.vacioTitulo}>Sin profesionales disponibles</Text>
                 <Text style={s.vacioSub}>Prueba cambiando los filtros o desliza para actualizar.</Text>
                 <Pressable style={s.vacioBtn} haptic onPress={() => { setFiltroServicio('Todos'); setBusqueda(''); setMostrar24h(false); }}>
                   <Text style={s.vacioBtnText}>Limpiar filtros</Text>
@@ -670,6 +690,13 @@ const s = StyleSheet.create({
   },
   handle: { width: 36, height: 4, borderRadius: 3, backgroundColor: colors.glassBorderStrong, alignSelf: 'center', marginBottom: spacing.md },
 
+  gremioFiltroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: 11, borderWidth: 1, borderColor: colors.glassBorder, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+  gremioFiltroBtnText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  gremioFiltroLista: { maxHeight: 240, backgroundColor: colors.glass, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+  gremioFiltroOpcion: { paddingHorizontal: spacing.lg, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  gremioFiltroOpcionActiva: { backgroundColor: colors.blueLight },
+  gremioFiltroOpcionText: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
+  gremioFiltroOpcionTextActiva: { color: colors.blue, fontWeight: '700' },
   filtrosScroll: { maxHeight: 42, marginBottom: spacing.md },
   filtrosContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
   filtro: { backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },

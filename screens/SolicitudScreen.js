@@ -4,21 +4,15 @@ import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
 import { agregarArchivo } from '../subirArchivo';
+import { serviciosDe, OTRO_SERVICIO } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
-
-const SERVICIOS = [
-  { id: 1, nombre: 'Desatasco', emoji: '🚽', precio: 'desde 60€' },
-  { id: 2, nombre: 'Fuga de agua', emoji: '💧', precio: 'desde 80€' },
-  { id: 3, nombre: 'Caldera', emoji: '🔥', precio: 'desde 90€' },
-  { id: 4, nombre: 'Grifo / ducha', emoji: '🚿', precio: 'desde 50€' },
-  { id: 5, nombre: 'Radiador', emoji: '♨️', precio: 'desde 70€' },
-  { id: 6, nombre: 'Otro', emoji: '🔧', precio: 'consultar' },
-];
 
 export default function SolicitudScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const fontanero = route.params?.fontanero;
+  const SERVICIOS = [...serviciosDe(fontanero?.gremio), OTRO_SERVICIO]
+    .map((sv, i) => ({ id: i + 1, nombre: sv.nombre, emoji: sv.emoji, precio: 'consultar' }));
   const [tipo, setTipo] = useState(null);
   const [descripcion, setDescripcion] = useState('');
   const [mensaje, setMensaje] = useState('');

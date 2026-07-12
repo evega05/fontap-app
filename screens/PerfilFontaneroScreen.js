@@ -55,7 +55,6 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const [editandoHora, setEditandoHora] = useState(null);
   const [zona, setZona] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [suscripcionActiva, setSuscripcionActiva] = useState(true);
   const [fotosTrabajos, setFotosTrabajos] = useState([]);
   const [fotoPerfil, setFotoPerfil] = useState(null);
 
@@ -314,31 +313,6 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.textFaint} keyboardType="email-address" autoCapitalize="none" />
             </View>
 
-            <Glass style={s.suscripcionCard} colorTint={suscripcionActiva ? colors.glass : colors.redGlass}>
-              <View style={s.suscripcionHeader}>
-                <View style={s.suscripcionTituloRow}>
-                  <Ionicons name={suscripcionActiva ? 'diamond' : 'warning'} size={15} color={suscripcionActiva ? colors.accent2 : colors.red} />
-                  <Text style={s.suscripcionTitulo}>{suscripcionActiva ? 'Suscripción activa' : 'Suscripción inactiva'}</Text>
-                </View>
-                <View style={[s.suscripcionBadge, !suscripcionActiva && s.suscripcionBadgeInactiva]}>
-                  <Text style={s.suscripcionBadgeText}>{suscripcionActiva ? 'PRO' : 'INACTIVA'}</Text>
-                </View>
-              </View>
-              <Text style={s.suscripcionSub}>
-                {suscripcionActiva ? '50€/mes · Próxima renovación: 01/07/26' : 'Reactiva tu suscripción para recibir trabajos'}
-              </Text>
-              <View style={s.suscripcionBotones}>
-                <Pressable style={s.btnGestionar} haptic onPress={() => setSuscripcionActiva(!suscripcionActiva)}>
-                  <Text style={s.btnGestionarText}>{suscripcionActiva ? 'Cancelar suscripción' : 'Reactivar suscripción'}</Text>
-                </Pressable>
-                {suscripcionActiva && (
-                  <Pressable style={s.btnFacturas} haptic>
-                    <Text style={s.btnFacturasText}>Ver facturas</Text>
-                  </Pressable>
-                )}
-              </View>
-            </Glass>
-
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
               <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
             </Pressable>
@@ -578,20 +552,6 @@ const s = StyleSheet.create({
   inputIcon: { marginRight: spacing.sm },
   input: { flex: 1, color: colors.text, paddingVertical: spacing.md, fontSize: 14 },
   textArea: { backgroundColor: colors.bgCard, color: colors.text, borderRadius: radius.md, padding: spacing.lg, fontSize: 14, minHeight: 120, textAlignVertical: 'top', marginBottom: spacing.lg, ...shadow.sm },
-  suscripcionCard: { backgroundColor: colors.blueLight, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm },
-  suscripcionInactiva: { backgroundColor: colors.redLight },
-  suscripcionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  suscripcionTituloRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  suscripcionTitulo: { color: colors.text, fontWeight: '600', fontSize: 15 },
-  suscripcionBadge: { backgroundColor: colors.blue, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  suscripcionBadgeInactiva: { backgroundColor: colors.red },
-  suscripcionBadgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  suscripcionSub: { color: colors.textMuted, fontSize: 13, marginBottom: spacing.lg },
-  suscripcionBotones: { flexDirection: 'row', gap: spacing.md },
-  btnGestionar: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
-  btnGestionarText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
-  btnFacturas: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center' },
-  btnFacturasText: { color: colors.textMuted, fontSize: 13 },
   linkTerminos: { alignItems: 'center', paddingVertical: spacing.lg },
   linkTerminosText: { color: colors.textFaint, fontSize: 12.5, textDecorationLine: 'underline' },
   diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },

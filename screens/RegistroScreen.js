@@ -5,13 +5,8 @@ import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 import { useIdioma } from '../i18n';
-
-const GREMIOS = [
-  { valor: 'fontanero', emoji: '🔧', clave: 'gremioFontanero' },
-  { valor: 'electricista', emoji: '⚡', clave: 'gremioElectricista' },
-  { valor: 'cerrajero', emoji: '🔑', clave: 'gremioCerrajero' },
-  { valor: 'pintor', emoji: '🎨', clave: 'gremioPintor' },
-];
+import { GREMIOS, serviciosDe } from '../gremios';
+import { Ionicons } from '@expo/vector-icons';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -24,6 +19,7 @@ export default function RegistroScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [tipo, setTipo] = useState('cliente');
   const [gremio, setGremio] = useState('fontanero');
+  const [gremioAbierto, setGremioAbierto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [mostrarPass, setMostrarPass] = useState(false);
@@ -57,13 +53,13 @@ export default function RegistroScreen({ navigation }) {
         .finally(() => setCargando(false));
     }
   }, [googleResponse]);
-  const [serviciosRegistro, setServiciosRegistro] = useState([
-    { nombre: 'Desatasco', emoji: '🚽', precio: '' },
-    { nombre: 'Fuga de agua', emoji: '💧', precio: '' },
-    { nombre: 'Caldera', emoji: '🔥', precio: '' },
-    { nombre: 'Grifo / ducha', emoji: '🚿', precio: '' },
-    { nombre: 'Radiador', emoji: '♨️', precio: '' },
-  ]);
+  const [serviciosRegistro, setServiciosRegistro] = useState(
+    serviciosDe('fontanero').map((sv) => ({ ...sv, precio: '' }))
+  );
+
+  useEffect(() => {
+    setServiciosRegistro(serviciosDe(gremio).map((sv) => ({ ...sv, precio: '' })));
+  }, [gremio]);
 
   const registrar = async () => {
     setError('');
@@ -113,15 +109,26 @@ export default function RegistroScreen({ navigation }) {
       {tipo === 'fontanero' && (
         <>
           <Text style={s.inputLabel}>{t('tuGremio')}</Text>
-          <View style={s.gremioRow}>
-            {GREMIOS.map((g) => (
-              <TouchableOpacity key={g.valor} style={[s.gremioBtn, gremio === g.valor && s.gremioBtnActivo]}
-                onPress={() => setGremio(g.valor)}>
-                <Text style={s.gremioEmoji}>{g.emoji}</Text>
-                <Text style={[s.gremioText, gremio === g.valor && s.gremioTextActivo]}>{t(g.clave)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity style={s.gremioDesplegable} onPress={() => setGremioAbierto(!gremioAbierto)}>
+            <View style={s.gremioDesplegableIzq}>
+              <Text style={s.gremioEmoji}>{GREMIOS.find((g) => g.valor === gremio)?.emoji}</Text>
+              <Text style={s.gremioDesplegableText}>{t(GREMIOS.find((g) => g.valor === gremio)?.clave)}</Text>
+            </View>
+            <Ionicons name={gremioAbierto ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          {gremioAbierto && (
+            <View style={s.gremioLista}>
+              {GREMIOS.map((g) => (
+                <TouchableOpacity key={g.valor} style={[s.gremioOpcion, gremio === g.valor && s.gremioOpcionActiva]}
+                  onPress={() => { setGremio(g.valor); setGremioAbierto(false); }}>
+                  <Text style={s.gremioEmoji}>{g.emoji}</Text>
+                  <Text style={[s.gremioOpcionText, gremio === g.valor && s.gremioOpcionTextActiva]}>{t(g.clave)}</Text>
+                  {gremio === g.valor && <Ionicons name="checkmark" size={16} color={colors.blue} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </>
       )}
 
@@ -163,14 +170,10 @@ export default function RegistroScreen({ navigation }) {
 
       {tipo === 'fontanero' && (
         <>
-          <View style={s.infoBox}>
-            <Text style={s.infoTitulo}>🎉 Primer mes gratis</Text>
-            <Text style={s.infoSub}>Después solo 50€/mes · Cancela cuando quieras</Text>
-          </View>
           <Text style={s.inputLabel}>Tus servicios y precios base</Text>
           <Text style={s.inputSublabel}>El cliente los verá antes de contratarte</Text>
           {serviciosRegistro.map((sv, i) => (
-            <View key={i} style={s.servicioRow}>
+            <View key={sv.nombre} style={s.servicioRow}>
               <Text style={s.servicioEmoji}>{sv.emoji}</Text>
               <Text style={s.servicioNombre}>{sv.nombre}</Text>
               <View style={s.servicioPrecioWrap}>
@@ -179,9 +182,9 @@ export default function RegistroScreen({ navigation }) {
                   placeholder="€"
                   placeholderTextColor={colors.textFaint}
                   value={sv.precio}
-                  onChangeText={t => {
+                  onChangeText={valor => {
                     const nuevos = [...serviciosRegistro];
-                    nuevos[i].precio = t;
+                    nuevos[i].precio = valor;
                     setServiciosRegistro(nuevos);
                   }}
                   keyboardType="numeric"
@@ -235,12 +238,15 @@ const s = StyleSheet.create({
   titulo: { fontSize: 32, fontWeight: 'bold', color: colors.text, letterSpacing: -0.5, marginBottom: 6 },
   sub: { fontSize: 15, color: colors.textMuted, marginBottom: 28 },
   tipoRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
-  gremioRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  gremioBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.bgCard2, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border2 },
-  gremioBtnActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
-  gremioEmoji: { fontSize: 15 },
-  gremioText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  gremioTextActivo: { color: colors.blue },
+  gremioDesplegable: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard2, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border2, marginBottom: 10 },
+  gremioDesplegableIzq: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  gremioDesplegableText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  gremioEmoji: { fontSize: 17 },
+  gremioLista: { backgroundColor: colors.bgCard2, borderRadius: 14, borderWidth: 1, borderColor: colors.border2, marginBottom: 20, overflow: 'hidden' },
+  gremioOpcion: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+  gremioOpcionActiva: { backgroundColor: colors.blueLight },
+  gremioOpcionText: { flex: 1, color: colors.textMuted, fontSize: 14, fontWeight: '500' },
+  gremioOpcionTextActiva: { color: colors.blue, fontWeight: '700' },
   tipoBtn: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border },
   tipoBtnActivo: { borderColor: colors.blue, backgroundColor: colors.blueLight },
   tipoEmoji: { fontSize: 28, marginBottom: 8 },
@@ -253,9 +259,6 @@ const s = StyleSheet.create({
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, borderWidth: 1, borderColor: colors.border2 },
   inputIcon: { fontSize: 16, marginRight: 10 },
   input: { flex: 1, color: colors.text, paddingVertical: 15, fontSize: 15 },
-  infoBox: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.green },
-  infoTitulo: { color: colors.green, fontWeight: '700', fontSize: 14, marginBottom: 4 },
-  infoSub: { color: colors.textMuted, fontSize: 13 },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.border2 },
   dividerText: { color: colors.textFaint, marginHorizontal: 12, fontSize: 13 },

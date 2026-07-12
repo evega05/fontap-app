@@ -10,9 +10,9 @@ const API = 'https://fontap-backend-production.up.railway.app';
 const TIMEOUT_URGENTE_MS = 3 * 60 * 1000; // aviso tras 3 min sin respuesta en urgencias
 
 const ESTADOS = {
-  pendiente: { emoji: '🔍', titulo: 'Buscando fontanero...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
-  aceptado: { emoji: '✅', titulo: '¡Fontanero en camino!', sub: 'El fontanero ha aceptado tu solicitud', color: '#05A357', paso: 2 },
-  precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'El fontanero ha terminado el trabajo', color: '#276EF1', paso: 3 },
+  pendiente: { emoji: '🔍', titulo: 'Buscando profesional...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
+  aceptado: { emoji: '✅', titulo: '¡Profesional en camino!', sub: 'El profesional ha aceptado tu solicitud', color: '#05A357', paso: 2 },
+  precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'El profesional ha terminado el trabajo', color: '#276EF1', paso: 3 },
   pagado: { emoji: '🎉', titulo: '¡Servicio completado!', sub: 'Gracias por usar Multiservicios Provenza', color: '#05A357', paso: 4 },
   cancelado: { emoji: '✕', titulo: 'Servicio cancelado', sub: 'Esta solicitud ya no está activa', color: '#ef4444', paso: 0 },
 };
@@ -139,7 +139,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
           <View style={s.avisoTimeout}>
             <Text style={s.avisoTimeoutTitulo}>⏱️ Nadie ha respondido todavía</Text>
             <Text style={s.avisoTimeoutText}>
-              Puede que no haya fontaneros disponibles cerca en este momento. Puedes seguir
+              Puede que no haya profesionales disponibles cerca en este momento. Puedes seguir
               esperando o cancelar e intentarlo de nuevo más tarde.
             </Text>
           </View>
@@ -162,7 +162,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
             <Text style={s.valor}>{tipo?.emoji} {tipo?.nombre}</Text>
           </View>
           <View style={s.fila}>
-            <Text style={s.label}>Fontanero</Text>
+            <Text style={s.label}>Profesional</Text>
             <Text style={s.valor}>{fontanero?.nombre || 'Más cercano'}</Text>
           </View>
           <View style={s.fila}>
@@ -182,7 +182,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
         <View style={s.pasos}>
           <Text style={s.pasosTitulo}>¿Qué pasa ahora?</Text>
           {[
-            { num: 1, texto: 'El fontanero recibe tu solicitud', activo: estadoActual.paso >= 1 },
+            { num: 1, texto: 'El profesional recibe tu solicitud', activo: estadoActual.paso >= 1 },
             { num: 2, texto: 'Acepta y va a tu domicilio', activo: estadoActual.paso >= 2 },
             { num: 3, texto: 'Repara y te envía el precio', activo: estadoActual.paso >= 3 },
             { num: 4, texto: 'Pagas y dejas una reseña', activo: estadoActual.paso >= 4 },
@@ -201,7 +201,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
         {estado === 'precio_enviado' && precio && (
           <>
             <View style={s.precioCard}>
-              <Text style={s.precioCardTitulo}>💰 Precio del fontanero</Text>
+              <Text style={s.precioCardTitulo}>💰 Precio del profesional</Text>
               <Text style={s.precioCardValor}>{precio}€</Text>
             </View>
             <TouchableOpacity style={s.btnPago}
@@ -234,9 +234,9 @@ export default function ConfirmacionScreen({ navigation, route }) {
         {estado === 'aceptado' && servicioId && (
           <TouchableOpacity
             style={[s.btnPrimario, { marginBottom: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.blue }]}
-            onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Fontanero' })}
+            onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Profesional' })}
           >
-            <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el fontanero</Text>
+            <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el profesional</Text>
           </TouchableOpacity>
         )}
         {(estado === 'pendiente' || estado === 'aceptado') && servicioId && (

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Refres
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { emojiDeServicio } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -53,10 +54,7 @@ export default function OfertasScreen({ navigation }) {
     }
   };
 
-  const tipoEmoji = (tipo) => {
-    const m = { Desatasco: '🚽', 'Fuga de agua': '💧', Caldera: '🔥', 'Grifo / ducha': '🚿', Radiador: '♨️' };
-    return m[tipo] || '🔧';
-  };
+  const tipoEmoji = (tipo) => emojiDeServicio(tipo);
 
   return (
     <View style={s.container}>

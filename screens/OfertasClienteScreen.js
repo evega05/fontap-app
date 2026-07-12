@@ -90,7 +90,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
             <View style={s.vacio}>
               <Text style={s.vacioEmoji}>⏳</Text>
               <Text style={s.vacioTitulo}>Sin ofertas aún</Text>
-              <Text style={s.vacioSub}>Los fontaneros disponibles enviarán sus propuestas en breve</Text>
+              <Text style={s.vacioSub}>Los profesionales disponibles enviarán sus propuestas en breve</Text>
             </View>
           ) : (
             <>
