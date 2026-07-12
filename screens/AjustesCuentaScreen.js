@@ -31,55 +31,15 @@ export default function AjustesCuentaScreen({ navigation }) {
   const [errEliminar, setErrEliminar] = useState('');
   const [email, setEmail] = useState('');
 
-  const [telVerificado, setTelVerificado] = useState(false);
-  const [smsEnviado, setSmsEnviado] = useState(false);
-  const [smsEnviando, setSmsEnviando] = useState(false);
-  const [codigoSms, setCodigoSms] = useState('');
-  const [smsVerificando, setSmsVerificando] = useState(false);
-  const [msgSms, setMsgSms] = useState('');
-  const [errSms, setErrSms] = useState('');
-
   useEffect(() => {
     axios.get(`${API}/usuarios/${usuario.id}/perfil`, { headers })
       .then((res) => {
         setNombre(res.data.nombre || '');
         setTelefono(res.data.telefono || '');
         setEmail(res.data.email || '');
-        setTelVerificado(!!res.data.telefono_verificado);
       })
       .catch(() => {});
   }, []);
-
-  const enviarSms = async () => {
-    setErrSms(''); setMsgSms('');
-    setSmsEnviando(true);
-    try {
-      await axios.post(`${API}/auth/enviar-sms`, { telefono: telefono.trim() || null }, { headers });
-      setSmsEnviado(true);
-      setMsgSms(t('smsEnviado'));
-    } catch (e) {
-      setErrSms(e.response?.data?.detail || 'No se pudo enviar el SMS');
-    } finally {
-      setSmsEnviando(false);
-    }
-  };
-
-  const verificarSms = async () => {
-    setErrSms(''); setMsgSms('');
-    if (!codigoSms.trim()) { setErrSms(t('rellenaCampos')); return; }
-    setSmsVerificando(true);
-    try {
-      await axios.post(`${API}/auth/verificar-sms`, { codigo: codigoSms.trim() }, { headers });
-      setTelVerificado(true);
-      setSmsEnviado(false);
-      setCodigoSms('');
-      setMsgSms('');
-    } catch (e) {
-      setErrSms(e.response?.data?.detail || 'Código inválido o caducado');
-    } finally {
-      setSmsVerificando(false);
-    }
-  };
 
   const guardarPerfil = async () => {
     setMsgPerfil(''); setErrPerfil('');
@@ -168,28 +128,6 @@ export default function AjustesCuentaScreen({ navigation }) {
         <TouchableOpacity style={[s.btnPrimario, guardandoPerfil && s.btnDesactivado]} onPress={guardarPerfil} disabled={guardandoPerfil}>
           <Text style={s.btnPrimarioText}>{guardandoPerfil ? t('guardando') : t('guardarDatos')}</Text>
         </TouchableOpacity>
-
-        <Text style={s.seccionTitulo}>{t('verificarTelefono')}</Text>
-        {errSms ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {errSms}</Text></View> : null}
-        {msgSms ? <View style={s.okBox}><Text style={s.okText}>✓ {msgSms}</Text></View> : null}
-        {telVerificado ? (
-          <View style={s.okBox}><Text style={s.okText}>✓ {t('telefonoVerificado')}</Text></View>
-        ) : !smsEnviado ? (
-          <TouchableOpacity style={[s.btnPrimario, smsEnviando && s.btnDesactivado]} onPress={enviarSms} disabled={smsEnviando}>
-            <Text style={s.btnPrimarioText}>{smsEnviando ? t('enviando') : t('enviarCodigoSMS')}</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
-            <View style={s.inputWrap}>
-              <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textFaint} style={s.inputIcon} />
-              <TextInput style={s.input} placeholder={t('codigoSMS')} placeholderTextColor={colors.textFaint}
-                value={codigoSms} onChangeText={setCodigoSms} keyboardType="number-pad" maxLength={6} />
-            </View>
-            <TouchableOpacity style={[s.btnPrimario, smsVerificando && s.btnDesactivado]} onPress={verificarSms} disabled={smsVerificando}>
-              <Text style={s.btnPrimarioText}>{smsVerificando ? t('verificando') : t('verificar')}</Text>
-            </TouchableOpacity>
-          </>
-        )}
 
         <Text style={s.seccionTitulo}>{t('cambiarPassword')}</Text>
         {errPass ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {errPass}</Text></View> : null}
