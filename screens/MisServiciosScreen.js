@@ -66,6 +66,11 @@ export default function MisServiciosScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
+      <TouchableOpacity style={s.recurrentesLink} onPress={() => navigation.navigate('ServiciosRecurrentes')}>
+        <Text style={s.recurrentesLinkText}>🔁 Servicios recurrentes (limpieza, mantenimiento...)</Text>
+        <Text style={s.recurrentesLinkArrow}>→</Text>
+      </TouchableOpacity>
+
       <ScrollView
         style={s.lista}
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
@@ -191,6 +196,9 @@ const s = StyleSheet.create({
   back: { color: colors.blue, fontSize: 15, fontWeight: '500' },
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
   btnNuevoHeader: { color: colors.blue, fontSize: 15, fontWeight: '600' },
+  recurrentesLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, marginHorizontal: 20, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  recurrentesLinkText: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 },
+  recurrentesLinkArrow: { color: colors.blue, fontSize: 16, fontWeight: 'bold' },
   lista: { flex: 1 },
   vacio: { alignItems: 'center', paddingTop: 60 },
   vacioEmoji: { fontSize: 56, marginBottom: 16 },

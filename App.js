@@ -23,6 +23,7 @@ import NotificacionesScreen from './screens/NotificacionesScreen';
 import OfertasScreen from './screens/OfertasScreen';
 import CalendarioScreen from './screens/CalendarioScreen';
 import MisServiciosScreen from './screens/MisServiciosScreen';
+import ServiciosRecurrentesScreen from './screens/ServiciosRecurrentesScreen';
 import EstadisticasScreen from './screens/EstadisticasScreen';
 import OfertasClienteScreen from './screens/OfertasClienteScreen';
 import ChatsRecientesScreen from './screens/ChatsRecientesScreen';
@@ -131,6 +132,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="Ofertas" component={OfertasScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Calendario" component={CalendarioScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MisServicios" component={MisServiciosScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ServiciosRecurrentes" component={ServiciosRecurrentesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Estadisticas" component={EstadisticasScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OfertasCliente" component={OfertasClienteScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChatsRecientes" component={ChatsRecientesScreen} options={{ headerShown: false }} />
