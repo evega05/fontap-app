@@ -71,10 +71,10 @@ export default function RegistroScreen({ navigation }) {
     try {
       const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados, gremio });
       await guardarSesion(res.data);
-      const destino = tipo === 'fontanero' ? 'PanelFontanero' : 'Mapa';
+      const destino = tipo === 'fontanero' ? 'PanelFontanero' : tipo === 'administrador_fincas' ? 'Proyectos' : 'Mapa';
       const destinoParams = tipo === 'fontanero'
         ? { nombre: res.data.nombre || nombre, userId: res.data.id }
-        : { clienteId: res.data.id };
+        : tipo === 'administrador_fincas' ? {} : { clienteId: res.data.id };
       navigation.replace('VerificarEmail', { email: res.data.email, destino, destinoParams });
     } catch (e) {
       if (e.response?.status === 400) {
@@ -109,6 +109,11 @@ export default function RegistroScreen({ navigation }) {
           <Text style={s.tipoEmoji}>🛠️</Text>
           <Text style={[s.tipoTitulo, tipo === 'fontanero' && s.tipoTituloActivo]}>{t('soyProfesional')}</Text>
           <Text style={s.tipoSub}>{t('quieroTrabajos')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.tipoBtn, tipo === 'administrador_fincas' && s.tipoBtnActivo]} onPress={() => setTipo('administrador_fincas')}>
+          <Text style={s.tipoEmoji}>🏢</Text>
+          <Text style={[s.tipoTitulo, tipo === 'administrador_fincas' && s.tipoTituloActivo]}>Administrador</Text>
+          <Text style={s.tipoSub}>Publico proyectos</Text>
         </TouchableOpacity>
       </View>
 

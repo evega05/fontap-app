@@ -47,10 +47,20 @@ const DRAWER_WIDTH = 288;
 const SELECTED_FLOAT_WIDTH = 250;
 const SELECTED_FLOAT_HEIGHT = 176;
 
+const CIUDADES = [
+  { valor: 'Bilbao', lat: 43.2630, lon: -2.9350 },
+  { valor: 'Madrid', lat: 40.4168, lon: -3.7038 },
+  { valor: 'Barcelona', lat: 41.3851, lon: 2.1734 },
+  { valor: 'Valencia', lat: 39.4699, lon: -0.3763 },
+  { valor: 'Sevilla', lat: 37.3891, lon: -5.9845 },
+];
+
 export default function MapaScreen({ navigation, route }) {
   const { usuario, token, logout } = useAuth();
   const { t } = useIdioma();
   const clienteId = route.params?.clienteId || usuario?.id || null;
+  const [ciudad, setCiudad] = useState('Bilbao');
+  const [ciudadAbierta, setCiudadAbierta] = useState(false);
   const [filtroGremio, setFiltroGremio] = useState('');
   const [gremioFiltroAbierto, setGremioFiltroAbierto] = useState(false);
   const [orden, setOrden] = useState('cercania'); // cercania | valoracion | precio
@@ -113,14 +123,17 @@ export default function MapaScreen({ navigation, route }) {
     if (isRefresh) setRefreshing(true);
     else setCargando(true);
     axios
-      .get(`${API}/fontaneros`, { params: filtroGremio ? { gremio: filtroGremio } : {} })
+      .get(`${API}/fontaneros`, { params: { ...(filtroGremio ? { gremio: filtroGremio } : {}), ciudad } })
       .then((res) => setFontaneros(res.data || []))
       .catch(() => {})
       .finally(() => {
         setCargando(false);
         setRefreshing(false);
       });
-  }, [filtroGremio]);
+  }, [filtroGremio, ciudad]);
+
+  const centroCiudad = CIUDADES.find((c) => c.valor === ciudad);
+  const centroForzado = ciudad !== 'Bilbao' && centroCiudad ? { latitud: centroCiudad.lat, longitud: centroCiudad.lon } : null;
 
   useEffect(() => {
     cargarFontaneros();
@@ -441,6 +454,7 @@ export default function MapaScreen({ navigation, route }) {
         <MapaFontaneros
           fontaneros={fontanerosFiltrados}
           miUbicacion={miUbicacion}
+          centroForzado={centroForzado}
           seleccionado={seleccionado}
           onSelect={setSeleccionado}
           onPinPosition={setPinPos}
@@ -574,6 +588,22 @@ export default function MapaScreen({ navigation, route }) {
       {/* HOJA — filtros + acciones + lista */}
       <Glass strong style={s.sheet}>
         <View style={s.handle} />
+
+        <Pressable style={s.gremioFiltroBtn} haptic onPress={() => setCiudadAbierta(!ciudadAbierta)}>
+          <Text style={s.gremioFiltroBtnText}>📍 {ciudad}</Text>
+          <Ionicons name={ciudadAbierta ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+        </Pressable>
+
+        {ciudadAbierta && (
+          <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
+            {CIUDADES.map((c) => (
+              <Pressable key={c.valor} style={[s.gremioFiltroOpcion, ciudad === c.valor && s.gremioFiltroOpcionActiva]} haptic
+                onPress={() => { setCiudad(c.valor); setCiudadAbierta(false); }}>
+                <Text style={[s.gremioFiltroOpcionText, ciudad === c.valor && s.gremioFiltroOpcionTextActiva]}>📍 {c.valor}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         <Pressable style={s.gremioFiltroBtn} haptic onPress={() => setGremioFiltroAbierto(!gremioFiltroAbierto)}>
           <Text style={s.gremioFiltroBtnText}>

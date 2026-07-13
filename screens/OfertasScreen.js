@@ -13,6 +13,8 @@ export default function OfertasScreen({ navigation }) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const [serviciosAbiertos, setServiciosAbiertos] = useState([]);
   const [misOfertas, setMisOfertas] = useState([]);
+  const [proyectos, setProyectos] = useState([]);
+  const [interesEnviado, setInteresEnviado] = useState([]);
   const [tab, setTab] = useState('disponibles');
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
@@ -30,15 +32,26 @@ export default function OfertasScreen({ navigation }) {
         const resPerfil = await axios.get(`${API}/fontaneros/${usuario?.id}/perfil`);
         gremio = resPerfil.data?.gremio || null;
       } catch (e) {}
-      const [resAbiertos, resMis] = await Promise.allSettled([
+      const [resAbiertos, resMis, resProyectos] = await Promise.allSettled([
         axios.get(`${API}/servicios/abiertos`, { headers, params: gremio ? { gremio } : {} }),
         axios.get(`${API}/fontaneros/${usuario?.id}/ofertas`, { headers }),
+        axios.get(`${API}/proyectos`, { headers, params: gremio ? { gremio } : {} }),
       ]);
       if (resAbiertos.status === 'fulfilled') setServiciosAbiertos(resAbiertos.value.data || []);
       if (resMis.status === 'fulfilled') setMisOfertas(resMis.value.data || []);
+      if (resProyectos.status === 'fulfilled') setProyectos(resProyectos.value.data || []);
     } catch (e) {}
     finally { setCargando(false); setRefrescando(false); }
   }, [usuario?.id, token]);
+
+  const expresarInteres = async (proyecto) => {
+    setInteresEnviado(prev => [...prev, proyecto.id]);
+    try {
+      await axios.post(`${API}/proyectos/${proyecto.id}/interes`, {}, { headers });
+    } catch (e) {
+      setInteresEnviado(prev => prev.filter(id => id !== proyecto.id));
+    }
+  };
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -140,6 +153,10 @@ export default function OfertasScreen({ navigation }) {
         <TouchableOpacity style={[s.tab, tab === 'mis' && s.tabActivo]} onPress={() => setTab('mis')}>
           <Text style={[s.tabText, tab === 'mis' && s.tabTextActivo]}>Mis ofertas</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[s.tab, tab === 'proyectos' && s.tabActivo]} onPress={() => setTab('proyectos')}>
+          <Text style={[s.tabText, tab === 'proyectos' && s.tabTextActivo]}>Proyectos</Text>
+          {proyectos.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{proyectos.length}</Text></View>}
+        </TouchableOpacity>
       </View>
 
       {cargando ? (
@@ -150,7 +167,7 @@ export default function OfertasScreen({ navigation }) {
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={refrescando} onRefresh={() => { setRefrescando(true); cargar(); }} tintColor={colors.blue} />}
         >
-          {tab === 'disponibles' ? (
+          {tab === 'disponibles' && (
             serviciosAbiertos.length === 0 ? (
               <View style={s.vacio}>
                 <Text style={s.vacioEmoji}>🔍</Text>
@@ -187,7 +204,9 @@ export default function OfertasScreen({ navigation }) {
                 </View>
               ))
             )
-          ) : (
+          )}
+
+          {tab === 'mis' && (
             misOfertas.length === 0 ? (
               <View style={s.vacio}>
                 <Text style={s.vacioEmoji}>💼</Text>
@@ -212,6 +231,45 @@ export default function OfertasScreen({ navigation }) {
                   {o.mensaje ? <Text style={s.ofertaMensaje}>"{o.mensaje}"</Text> : null}
                 </View>
               ))
+            )
+          )}
+
+          {tab === 'proyectos' && (
+            proyectos.length === 0 ? (
+              <View style={s.vacio}>
+                <Text style={s.vacioEmoji}>🏢</Text>
+                <Text style={s.vacioTitulo}>Sin proyectos abiertos</Text>
+                <Text style={s.vacioSub}>Los proyectos de administradores de fincas aparecerán aquí</Text>
+              </View>
+            ) : (
+              proyectos.map(p => {
+                const yaInteresado = interesEnviado.includes(p.id);
+                return (
+                  <View key={p.id} style={s.card}>
+                    <View style={s.cardTop}>
+                      <View style={s.tipoWrap}>
+                        <Text style={s.tipoEmoji}>🏢</Text>
+                        <View>
+                          <Text style={s.tipoNombre}>{p.titulo}</Text>
+                          <Text style={s.tipoZona}>📍 {p.ciudad}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    {p.descripcion ? <Text style={s.cardDesc}>{p.descripcion}</Text> : null}
+                    <Text style={s.cardCupo}>{p.gremios.split(',').join(' · ')}</Text>
+                    <View style={s.cardFooter}>
+                      <Text style={s.cardFecha}>{p.num_interesados} interesado{p.num_interesados !== 1 ? 's' : ''}</Text>
+                      {yaInteresado ? (
+                        <View style={s.btnOfertarCompleto}><Text style={s.btnOfertarCompletoText}>✓ Interés enviado</Text></View>
+                      ) : (
+                        <TouchableOpacity style={s.btnOfertar} onPress={() => expresarInteres(p)}>
+                          <Text style={s.btnOfertarText}>Me interesa →</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
             )
           )}
         </ScrollView>

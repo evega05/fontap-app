@@ -29,6 +29,8 @@ export default function LoginScreen({ navigation, route }) {
     if (!esGoogle) registrarNotificaciones(data.id, data.access_token);
     if (data.tipo_usuario === 'fontanero') {
       navigation.replace('PanelFontanero', { nombre: data.nombre, userId: data.id });
+    } else if (data.tipo_usuario === 'administrador_fincas') {
+      navigation.replace('Proyectos');
     } else {
       navigation.replace('Mapa');
     }

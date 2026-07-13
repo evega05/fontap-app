@@ -25,11 +25,11 @@ const mapStyle = [
 ];
 
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
-export default function MapComponentNative({ fontaneros, miUbicacion, seleccionado, onSelect, onPinPosition }) {
+export default function MapComponentNative({ fontaneros, miUbicacion, centroForzado, seleccionado, onSelect, onPinPosition }) {
   const mapRef = useRef(null);
-  const centro = miUbicacion
-    ? { latitude: miUbicacion.latitud, longitude: miUbicacion.longitud }
-    : BILBAO;
+  const centro = centroForzado
+    ? { latitude: centroForzado.latitud, longitude: centroForzado.longitud }
+    : miUbicacion ? { latitude: miUbicacion.latitud, longitude: miUbicacion.longitud } : BILBAO;
   const conUbicacion = fontaneros.filter(f => f.disponible && f.latitud != null && f.longitud != null);
 
   const actualizarPosicionPin = () => {
@@ -45,6 +45,12 @@ export default function MapComponentNative({ fontaneros, miUbicacion, selecciona
   };
 
   useEffect(() => { actualizarPosicionPin(); }, [seleccionado?.id]);
+
+  useEffect(() => {
+    if (centroForzado && mapRef.current) {
+      mapRef.current.animateToRegion({ ...centro, latitudeDelta: 0.06, longitudeDelta: 0.06 }, 500);
+    }
+  }, [centroForzado?.latitud, centroForzado?.longitud]);
 
   return (
     <MapView

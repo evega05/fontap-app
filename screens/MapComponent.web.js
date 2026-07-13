@@ -46,11 +46,13 @@ function EventosMapa({ onMove }) {
 }
 
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
-export default function MapComponentWeb({ fontaneros, miUbicacion, seleccionado, onSelect, onPinPosition }) {
+export default function MapComponentWeb({ fontaneros, miUbicacion, centroForzado, seleccionado, onSelect, onPinPosition }) {
   const mapRef = useRef(null);
   useEffect(() => { asegurarCssLeaflet(); }, []);
 
-  const centro = miUbicacion ? [miUbicacion.latitud, miUbicacion.longitud] : BILBAO;
+  const centro = centroForzado
+    ? [centroForzado.latitud, centroForzado.longitud]
+    : miUbicacion ? [miUbicacion.latitud, miUbicacion.longitud] : BILBAO;
   const conUbicacion = fontaneros.filter(f => f.disponible && f.latitud != null && f.longitud != null);
 
   const actualizarPosicionPin = () => {
@@ -67,6 +69,12 @@ export default function MapComponentWeb({ fontaneros, miUbicacion, seleccionado,
   };
 
   useEffect(() => { actualizarPosicionPin(); }, [seleccionado?.id]);
+
+  useEffect(() => {
+    if (centroForzado && mapRef.current) {
+      mapRef.current.setView([centroForzado.latitud, centroForzado.longitud], 13);
+    }
+  }, [centroForzado?.latitud, centroForzado?.longitud]);
 
   return (
     <MapContainer
