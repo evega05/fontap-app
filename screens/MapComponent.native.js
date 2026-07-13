@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors } from '../theme';
+import { GREMIOS } from '../gremios';
 
 const BILBAO = { latitude: 43.2630, longitude: -2.9350 };
+
+function emojiDeGremio(gremio) {
+  return GREMIOS.find((g) => g.valor === gremio)?.emoji || '🔧';
+}
 
 const mapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#EDEFF3' }] },
@@ -58,7 +63,7 @@ export default function MapComponentNative({ fontaneros, miUbicacion, selecciona
           onPress={() => onSelect(seleccionado?.id === f.id ? null : f)}
         >
           <View style={[s.marcador, seleccionado?.id === f.id && s.marcadorActivo]}>
-            <View style={s.marcadorPunto} />
+            <Text style={s.marcadorEmoji}>{emojiDeGremio(f.gremio)}</Text>
           </View>
         </Marker>
       ))}
@@ -76,5 +81,5 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 4,
   },
   marcadorActivo: { backgroundColor: colors.accent2, borderColor: '#fff' },
-  marcadorPunto: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
+  marcadorEmoji: { fontSize: 14, lineHeight: 16 },
 });

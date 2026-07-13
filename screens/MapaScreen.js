@@ -164,7 +164,7 @@ export default function MapaScreen({ navigation, route }) {
         return false;
       if (filtroServicio !== 'Todos' && f.servicios && !f.servicios.includes(filtroServicio))
         return false;
-      if (mostrar24h && !f.disponible24h) return false;
+      if (mostrar24h && !f.disponible_24h) return false;
       if (valoracionMinima > 0 && (f.valoracion == null || f.valoracion < valoracionMinima)) return false;
       return true;
     })

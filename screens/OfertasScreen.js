@@ -22,8 +22,13 @@ export default function OfertasScreen({ navigation }) {
 
   const cargar = useCallback(async () => {
     try {
+      let gremio = null;
+      try {
+        const resPerfil = await axios.get(`${API}/fontaneros/${usuario?.id}/perfil`);
+        gremio = resPerfil.data?.gremio || null;
+      } catch (e) {}
       const [resAbiertos, resMis] = await Promise.allSettled([
-        axios.get(`${API}/servicios/abiertos`, { headers }),
+        axios.get(`${API}/servicios/abiertos`, { headers, params: gremio ? { gremio } : {} }),
         axios.get(`${API}/fontaneros/${usuario?.id}/ofertas`, { headers }),
       ]);
       if (resAbiertos.status === 'fulfilled') setServiciosAbiertos(resAbiertos.value.data || []);

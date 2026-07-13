@@ -3,8 +3,13 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { colors } from '../theme';
 import { LEAFLET_CSS } from './leafletCss';
+import { GREMIOS } from '../gremios';
 
 const BILBAO = [43.2630, -2.9350];
+
+function emojiDeGremio(gremio) {
+  return GREMIOS.find((g) => g.valor === gremio)?.emoji || '🔧';
+}
 
 function asegurarCssLeaflet() {
   if (typeof document === 'undefined') return;
@@ -15,11 +20,12 @@ function asegurarCssLeaflet() {
   document.head.appendChild(style);
 }
 
-function crearIcono(activo) {
+function crearIcono(activo, gremio) {
   const color = activo ? colors.accent : 'rgba(76,224,210,0.85)';
+  const emoji = emojiDeGremio(gremio);
   return L.divIcon({
     className: '',
-    html: `<div style="width:26px;height:26px;border-radius:13px;background:${color};display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,0.8);box-shadow:0 2px 8px rgba(0,0,0,0.4);"><div style="width:9px;height:9px;border-radius:5px;background:#fff;"></div></div>`,
+    html: `<div style="width:26px;height:26px;border-radius:13px;background:${color};display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,0.8);box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:13px;line-height:1;">${emoji}</div>`,
     iconSize: [26, 26],
     iconAnchor: [13, 13],
   });
@@ -81,7 +87,7 @@ export default function MapComponentWeb({ fontaneros, miUbicacion, seleccionado,
         <Marker
           key={f.id}
           position={[f.latitud, f.longitud]}
-          icon={crearIcono(seleccionado?.id === f.id)}
+          icon={crearIcono(seleccionado?.id === f.id, f.gremio)}
           eventHandlers={{ click: () => onSelect(seleccionado?.id === f.id ? null : f) }}
         />
       ))}
