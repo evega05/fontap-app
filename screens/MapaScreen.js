@@ -53,6 +53,9 @@ export default function MapaScreen({ navigation, route }) {
   const clienteId = route.params?.clienteId || usuario?.id || null;
   const [filtroGremio, setFiltroGremio] = useState('');
   const [gremioFiltroAbierto, setGremioFiltroAbierto] = useState(false);
+  const [orden, setOrden] = useState('cercania'); // cercania | valoracion | precio
+  const [ordenAbierto, setOrdenAbierto] = useState(false);
+  const [valoracionMinima, setValoracionMinima] = useState(0); // 0 = sin filtro
 
   // --- State ---
   const [seleccionado, setSeleccionado] = useState(null);
@@ -162,6 +165,7 @@ export default function MapaScreen({ navigation, route }) {
       if (filtroServicio !== 'Todos' && f.servicios && !f.servicios.includes(filtroServicio))
         return false;
       if (mostrar24h && !f.disponible24h) return false;
+      if (valoracionMinima > 0 && (f.valoracion == null || f.valoracion < valoracionMinima)) return false;
       return true;
     })
     .map((f) => {
@@ -171,6 +175,18 @@ export default function MapaScreen({ navigation, route }) {
       return { ...f, distanciaKm: km, distancia: formatDistancia(km) || '—' };
     })
     .sort((a, b) => {
+      if (orden === 'valoracion') {
+        if (a.valoracion == null && b.valoracion == null) return 0;
+        if (a.valoracion == null) return 1;
+        if (b.valoracion == null) return -1;
+        return b.valoracion - a.valoracion;
+      }
+      if (orden === 'precio') {
+        if (a.precio_desde == null && b.precio_desde == null) return 0;
+        if (a.precio_desde == null) return 1;
+        if (b.precio_desde == null) return -1;
+        return a.precio_desde - b.precio_desde;
+      }
       if (a.distanciaKm == null && b.distanciaKm == null) return 0;
       if (a.distanciaKm == null) return 1;
       if (b.distanciaKm == null) return -1;
@@ -567,6 +583,39 @@ export default function MapaScreen({ navigation, route }) {
           ))}
         </ScrollView>
 
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
+          <Pressable style={s.ordenBtn} haptic onPress={() => setOrdenAbierto(!ordenAbierto)}>
+            <Ionicons name="swap-vertical" size={13} color={colors.textMuted} />
+            <Text style={s.ordenBtnText}>
+              {orden === 'valoracion' ? t('mejorValorados') : orden === 'precio' ? t('precioBajo') : t('cercania')}
+            </Text>
+            <Ionicons name={ordenAbierto ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+          </Pressable>
+          {[0, 3, 4, 4.5].map((v) => (
+            <Pressable key={v} style={[s.filtro, valoracionMinima === v && s.filtroActivo]} haptic onPress={() => setValoracionMinima(v)}>
+              <Text style={[s.filtroText, valoracionMinima === v && s.filtroTextActivo]}>
+                {v === 0 ? t('todos') : `★ ${v}+`}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {ordenAbierto && (
+          <View style={s.gremioFiltroLista}>
+            {[
+              { valor: 'cercania', clave: 'cercania', icon: 'navigate-outline' },
+              { valor: 'valoracion', clave: 'mejorValorados', icon: 'star-outline' },
+              { valor: 'precio', clave: 'precioBajo', icon: 'cash-outline' },
+            ].map((o) => (
+              <Pressable key={o.valor} style={[s.gremioFiltroOpcion, orden === o.valor && s.gremioFiltroOpcionActiva]} haptic
+                onPress={() => { setOrden(o.valor); setOrdenAbierto(false); }}>
+                <Ionicons name={o.icon} size={15} color={orden === o.valor ? colors.blue : colors.textMuted} />
+                <Text style={[s.gremioFiltroOpcionText, orden === o.valor && s.gremioFiltroOpcionTextActiva, { marginLeft: 8 }]}>{t(o.clave)}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         <View style={s.ctaRow}>
           <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { urgente: true, clienteId })}>
             <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaUrgente}>
@@ -691,6 +740,8 @@ const s = StyleSheet.create({
   handle: { width: 36, height: 4, borderRadius: 3, backgroundColor: colors.glassBorderStrong, alignSelf: 'center', marginBottom: spacing.md },
 
   gremioFiltroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: 11, borderWidth: 1, borderColor: colors.glassBorder, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+  ordenBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
+  ordenBtnText: { color: colors.textMuted, ...type.caption },
   gremioFiltroBtnText: { color: colors.text, fontSize: 14, fontWeight: '600' },
   gremioFiltroLista: { maxHeight: 240, backgroundColor: colors.glass, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   gremioFiltroOpcion: { paddingHorizontal: spacing.lg, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },

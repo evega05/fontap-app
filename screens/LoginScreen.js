@@ -12,7 +12,7 @@ const API = 'https://fontap-backend-production.up.railway.app';
 export default function LoginScreen({ navigation, route }) {
   const { login: guardarSesion } = useAuth();
   const { t, idioma, cambiarIdioma } = useIdioma();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(route?.params?.emailPrellenado || '');
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
   const [mostrarPass, setMostrarPass] = useState(false);

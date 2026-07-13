@@ -22,6 +22,7 @@ export default function RegistroScreen({ navigation }) {
   const [gremioAbierto, setGremioAbierto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [emailYaRegistrado, setEmailYaRegistrado] = useState(false);
   const [mostrarPass, setMostrarPass] = useState(false);
   const [terminosAceptados, setTerminosAceptados] = useState(false);
   const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync, redirectUri: googleRedirectUri } = useGoogleAuth();
@@ -76,7 +77,12 @@ export default function RegistroScreen({ navigation }) {
         : { clienteId: res.data.id };
       navigation.replace('VerificarEmail', { email: res.data.email, destino, destinoParams });
     } catch (e) {
-      setError('Este email ya está registrado');
+      if (e.response?.status === 400) {
+        setError('Este email ya está registrado');
+        setEmailYaRegistrado(true);
+      } else {
+        setError('No se pudo crear la cuenta, inténtalo de nuevo');
+      }
     } finally {
       setCargando(false);
     }
@@ -132,7 +138,16 @@ export default function RegistroScreen({ navigation }) {
         </>
       )}
 
-      {error ? <View style={s.errorBox}><Text style={s.errorText}>⚠️ {error}</Text></View> : null}
+      {error ? (
+        <View style={s.errorBox}>
+          <Text style={s.errorText}>⚠️ {error}</Text>
+          {emailYaRegistrado && (
+            <TouchableOpacity onPress={() => navigation.replace('Login', { emailPrellenado: email.trim() })}>
+              <Text style={s.errorLink}>Inicia sesión con este email →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : null}
 
       <Text style={s.inputLabel}>{t('nombreCompleto')}</Text>
       <View style={s.inputWrap}>
@@ -145,7 +160,7 @@ export default function RegistroScreen({ navigation }) {
       <View style={s.inputWrap}>
         <Text style={s.inputIcon}>✉️</Text>
         <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor={colors.textFaint}
-          value={email} onChangeText={t => { setEmail(t); setError(''); }}
+          value={email} onChangeText={t => { setEmail(t); setError(''); setEmailYaRegistrado(false); }}
           keyboardType="email-address" autoCapitalize="none" />
       </View>
 
@@ -255,6 +270,7 @@ const s = StyleSheet.create({
   tipoSub: { color: colors.textFaint, fontSize: 11 },
   errorBox: { backgroundColor: colors.redLight, borderRadius: 12, padding: 12, marginBottom: 18, borderWidth: 1, borderColor: colors.red },
   errorText: { color: '#FF6B6B', fontSize: 13 },
+  errorLink: { color: colors.blue, fontSize: 13, fontWeight: '700', marginTop: 8 },
   inputLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, borderWidth: 1, borderColor: colors.border2 },
   inputIcon: { fontSize: 16, marginRight: 10 },

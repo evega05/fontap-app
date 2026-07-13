@@ -1,10 +1,12 @@
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import axios from 'axios';
+import * as Notifications from 'expo-notifications';
 import { AuthProvider, useAuth } from './AuthContext';
 import StripeWrapper from './StripeWrapper';
+import { rutaParaNotificacion } from './pushNavigation';
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import LoginScreen from './screens/LoginScreen';
 import RegistroScreen from './screens/RegistroScreen';
 import MapaScreen from './screens/MapaScreen';
@@ -65,7 +67,30 @@ function SplashScreen({ onFinish }) {
 }
 
 function NavegadorPrincipal() {
-  const { logout } = useAuth();
+  const { logout, usuario } = useAuth();
+
+  // Deep-link de notificaciones push: al tocar una notificación (app en primer/segundo
+  // plano, o cerrada del todo) navega a la pantalla relevante en vez de dejar al usuario
+  // en la pantalla por defecto. expo-notifications no soporta esto en web.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const irA = (data) => {
+      if (!navigationRef.isReady()) return;
+      const ruta = rutaParaNotificacion(data, usuario);
+      if (ruta) navigationRef.navigate(ruta.name, ruta.params);
+    };
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      irA(response.notification.request.content.data);
+    });
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) irA(response.notification.request.content.data);
+    });
+
+    return () => sub.remove();
+  }, [usuario]);
 
   // Sesión caducada: si una llamada autenticada devuelve 401, el token JWT expiró.
   // Se limpia la sesión y se vuelve al Login con un aviso. El login normal (contraseña

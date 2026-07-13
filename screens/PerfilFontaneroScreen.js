@@ -56,6 +56,8 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const [zona, setZona] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [fotosTrabajos, setFotosTrabajos] = useState([]);
+  const [documentos, setDocumentos] = useState([]);
+  const [subiendoDoc, setSubiendoDoc] = useState(null);
   const [fotoPerfil, setFotoPerfil] = useState(null);
 
   useEffect(() => {
@@ -93,6 +95,44 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
         setFotosTrabajos(res.data.map(f => ({ id: f.id, uri: `${API}${f.url}`, desc: f.descripcion || 'Trabajo realizado' })));
       }
     } catch (e) {}
+
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/documentos`, { headers });
+      setDocumentos(res.data || []);
+    } catch (e) {}
+  };
+
+  const DOCUMENTOS_TIPOS = [
+    { tipo: 'dni', label: 'DNI / NIE' },
+    { tipo: 'carnet_profesional', label: 'Carnet profesional' },
+    { tipo: 'seguro', label: 'Seguro de responsabilidad civil' },
+  ];
+
+  const documentoDe = (tipo) => documentos.filter(d => d.tipo === tipo).sort((a, b) => b.id - a.id)[0];
+
+  const subirDocumento = async (tipo) => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) return;
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (resultado.canceled) return;
+    const uri = resultado.assets[0].uri;
+    setSubiendoDoc(tipo);
+    try {
+      const form = new FormData();
+      await agregarArchivo(form, 'archivo', uri, `${tipo}.jpg`, 'image/jpeg');
+      const res = await axios.post(`${API}/fontaneros/${userId}/documentos`, form, {
+        params: { tipo },
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+      });
+      setDocumentos(prev => [...prev.filter(d => d.id !== res.data.id), res.data]);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo subir el documento');
+    } finally {
+      setSubiendoDoc(null);
+    }
   };
 
   const subirFotoPerfil = async () => {
@@ -312,6 +352,29 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <Ionicons name="mail-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
               <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.textFaint} keyboardType="email-address" autoCapitalize="none" />
             </View>
+
+            <Text style={s.seccionTitulo}>Verificación de identidad</Text>
+            <Text style={s.seccionSub}>Sube estos documentos para que un administrador verifique tu perfil</Text>
+            {DOCUMENTOS_TIPOS.map(({ tipo, label }) => {
+              const doc = documentoDe(tipo);
+              const estado = doc?.estado || 'sin_subir';
+              const pillEstilo = estado === 'verificado' ? s.docPillOk : estado === 'rechazado' ? s.docPillMal : estado === 'pendiente' ? s.docPillPendiente : s.docPillVacio;
+              const pillTexto = estado === 'verificado' ? '✓ Verificado' : estado === 'rechazado' ? '✕ Rechazado' : estado === 'pendiente' ? '⏳ Revisando' : 'Sin subir';
+              return (
+                <Glass key={tipo} style={s.docCard}>
+                  <View style={s.docInfo}>
+                    <Text style={s.docLabel}>{label}</Text>
+                    <View style={pillEstilo}><Text style={s.docPillText}>{pillTexto}</Text></View>
+                  </View>
+                  <Pressable style={s.docBtn} haptic onPress={() => subirDocumento(tipo)} disabled={subiendoDoc === tipo}>
+                    <Ionicons name={doc ? 'refresh-outline' : 'cloud-upload-outline'} size={15} color={colors.blue} />
+                    <Text style={s.docBtnText}>
+                      {subiendoDoc === tipo ? 'Subiendo...' : doc ? 'Reemplazar' : 'Subir'}
+                    </Text>
+                  </Pressable>
+                </Glass>
+              );
+            })}
 
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
               <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
@@ -552,6 +615,16 @@ const s = StyleSheet.create({
   inputIcon: { marginRight: spacing.sm },
   input: { flex: 1, color: colors.text, paddingVertical: spacing.md, fontSize: 14 },
   textArea: { backgroundColor: colors.bgCard, color: colors.text, borderRadius: radius.md, padding: spacing.lg, fontSize: 14, minHeight: 120, textAlignVertical: 'top', marginBottom: spacing.lg, ...shadow.sm },
+  docCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
+  docInfo: { flex: 1 },
+  docLabel: { color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 6 },
+  docPillOk: { alignSelf: 'flex-start', backgroundColor: colors.greenLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.green },
+  docPillMal: { alignSelf: 'flex-start', backgroundColor: colors.redLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.red },
+  docPillPendiente: { alignSelf: 'flex-start', backgroundColor: colors.bgCard2, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.amber },
+  docPillVacio: { alignSelf: 'flex-start', backgroundColor: colors.bgCard2, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.border2 },
+  docPillText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  docBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.blueLight, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8 },
+  docBtnText: { color: colors.blue, fontSize: 12.5, fontWeight: '700' },
   linkTerminos: { alignItems: 'center', paddingVertical: spacing.lg },
   linkTerminosText: { color: colors.textFaint, fontSize: 12.5, textDecorationLine: 'underline' },
   diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
