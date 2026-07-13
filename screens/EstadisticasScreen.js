@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Dimensions, Alert } from 'react-native';
 import axios from 'axios';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
@@ -28,6 +30,7 @@ export default function EstadisticasScreen({ navigation, route }) {
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [periodoIngresos, setPeriodoIngresos] = useState('semana');
+  const [descargandoFiscal, setDescargandoFiscal] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -62,6 +65,29 @@ export default function EstadisticasScreen({ navigation, route }) {
   }, [userId, token]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  const descargarResumenFiscal = async () => {
+    if (descargandoFiscal) return;
+    setDescargandoFiscal(true);
+    const anio = new Date().getFullYear();
+    try {
+      const destino = `${FileSystem.cacheDirectory}resumen_fiscal_${anio}.pdf`;
+      const res = await FileSystem.downloadAsync(
+        `${API}/fontaneros/${userId}/resumen-fiscal?anio=${anio}`,
+        destino,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: `Resumen fiscal ${anio}` });
+      } else {
+        Alert.alert('Resumen descargado', `Se guardó en: ${res.uri}`);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo descargar el resumen fiscal');
+    } finally {
+      setDescargandoFiscal(false);
+    }
+  };
 
   const datosLinea = {
     labels: periodoIngresos === 'semana'
@@ -191,6 +217,12 @@ export default function EstadisticasScreen({ navigation, route }) {
               </View>
             </View>
           )}
+
+          <TouchableOpacity style={s.btnFiscal} onPress={descargarResumenFiscal} disabled={descargandoFiscal}>
+            <Text style={s.btnFiscalText}>
+              {descargandoFiscal ? 'Generando...' : `📄 Descargar resumen fiscal ${new Date().getFullYear()}`}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </View>
@@ -231,4 +263,6 @@ const s = StyleSheet.create({
   estrella: { fontSize: 32, color: colors.textFaint },
   estrellaActiva: { color: colors.amber },
   estrellasNum: { color: colors.text, fontSize: 22, fontWeight: 'bold', marginLeft: 8 },
+  btnFiscal: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 12, borderWidth: 1, borderColor: colors.border },
+  btnFiscalText: { color: colors.blue, fontWeight: '600', fontSize: 14 },
 });

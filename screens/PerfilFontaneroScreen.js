@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Alert, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -47,6 +47,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const [resenas, setResenas] = useState([]);
   const [stats, setStats] = useState(null);
   const [verificado, setVerificado] = useState(false);
+  const [certificadoPro, setCertificadoPro] = useState(false);
+  const [codigoReferido, setCodigoReferido] = useState('');
+  const [trabajosGratis, setTrabajosGratis] = useState(0);
   const [horario, setHorario] = useState(HORARIO_INICIAL);
   const [nuevoServicio, setNuevoServicio] = useState('');
   const [nuevoPrecio, setNuevoPrecio] = useState('');
@@ -71,6 +74,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       setZona(p.zona || '');
       setDescripcion(p.descripcion || '');
       setVerificado(!!p.verificado);
+      setCertificadoPro(!!p.certificado_pro);
+      setCodigoReferido(p.codigo_referido || '');
+      setTrabajosGratis(p.primeros_trabajos_gratis || 0);
       if (p.foto_url) setFotoPerfil(`${API}${p.foto_url}`);
     } catch (e) {}
 
@@ -305,7 +311,33 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <Text style={verificado ? s.verificado : s.noVerificado}>
                 {verificado ? 'Identidad verificada' : 'Verificación pendiente'}
               </Text>
+              {certificadoPro && <Text style={s.badgeProGrande}>🏅 Provenza Pro</Text>}
             </View>
+
+            {trabajosGratis > 0 && (
+              <Glass style={s.referidoCard}>
+                <Text style={s.referidoTitulo}>🎁 Te quedan {trabajosGratis} trabajo{trabajosGratis > 1 ? 's' : ''} sin comisión</Text>
+                <Text style={s.referidoSub}>Los primeros trabajos que cobres no le pagan comisión a la plataforma.</Text>
+              </Glass>
+            )}
+
+            {!!codigoReferido && (
+              <Glass style={s.referidoCard}>
+                <Text style={s.referidoTitulo}>🎟️ Invita a un colega de tu gremio</Text>
+                <Text style={s.referidoSub}>Comparte tu código y cuando complete su primer trabajo, tú tendrás comisión reducida (2,5%) durante 90 días.</Text>
+                <View style={s.referidoCodigoRow}>
+                  <Text style={s.referidoCodigo}>{codigoReferido}</Text>
+                  <Pressable
+                    haptic
+                    style={s.referidoBtn}
+                    onPress={() => Share.share({ message: `Únete a Multiservicios Provenza como profesional usando mi código ${codigoReferido} y los dos salimos ganando.` })}
+                  >
+                    <Ionicons name="share-social-outline" size={14} color={colors.text} />
+                    <Text style={s.referidoBtnText}>Compartir</Text>
+                  </Pressable>
+                </View>
+              </Glass>
+            )}
 
             <View style={s.statsRow}>
               <Glass style={s.statCard}>
@@ -605,6 +637,14 @@ const s = StyleSheet.create({
   verificadoRow: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'center', marginBottom: spacing.xl },
   verificado: { color: colors.green, fontSize: 13 },
   noVerificado: { color: colors.amber, fontSize: 13 },
+  badgeProGrande: { color: colors.amber, fontSize: 12, fontWeight: '700', marginLeft: 10 },
+  referidoCard: { width: '100%', padding: spacing.lg, borderRadius: radius.md, marginTop: spacing.md, gap: 6 },
+  referidoTitulo: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  referidoSub: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  referidoCodigoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  referidoCodigo: { color: colors.accent2, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
+  referidoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.glass, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
+  referidoBtnText: { color: colors.text, fontSize: 12, fontWeight: '600' },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
   statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold' },

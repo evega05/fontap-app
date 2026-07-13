@@ -19,6 +19,7 @@ export default function RegistroScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [tipo, setTipo] = useState('cliente');
   const [gremio, setGremio] = useState('fontanero');
+  const [codigoReferido, setCodigoReferido] = useState('');
   const [gremioAbierto, setGremioAbierto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -69,7 +70,10 @@ export default function RegistroScreen({ navigation }) {
     if (!terminosAceptados) { setError('Debes aceptar los términos y condiciones'); return; }
     setCargando(true);
     try {
-      const res = await axios.post(`${API}/registro`, { nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados, gremio });
+      const res = await axios.post(`${API}/registro`, {
+        nombre, email, telefono, password, tipo, terminos_aceptados: terminosAceptados, gremio,
+        codigo_referido: codigoReferido.trim() || null,
+      });
       await guardarSesion(res.data);
       const destino = tipo === 'fontanero' ? 'PanelFontanero' : tipo === 'administrador_fincas' ? 'Proyectos' : 'Mapa';
       const destinoParams = tipo === 'fontanero'
@@ -140,6 +144,14 @@ export default function RegistroScreen({ navigation }) {
               ))}
             </View>
           )}
+
+          <Text style={s.inputLabel}>Código de invitación de un colega (opcional)</Text>
+          <View style={s.inputWrap}>
+            <Text style={s.inputIcon}>🎟️</Text>
+            <TextInput style={s.input} placeholder="Ej. A1B2C3" placeholderTextColor={colors.textFaint}
+              value={codigoReferido} onChangeText={setCodigoReferido}
+              autoCapitalize="characters" />
+          </View>
         </>
       )}
 

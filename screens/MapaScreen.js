@@ -330,6 +330,7 @@ export default function MapaScreen({ navigation, route }) {
                 <View style={s.cardNombreRow}>
                   <Text style={s.cardNombre}>{f.nombre}</Text>
                   {esVerificado && <Ionicons name="checkmark-circle" size={14} color={colors.accent2} />}
+                  {f.certificado_pro && <Text style={s.badgePro}>🏅 Pro</Text>}
                 </View>
                 <View style={s.cardZonaRow}>
                   <Ionicons name="location" size={11} color={colors.textMuted} />
@@ -870,6 +871,7 @@ const s = StyleSheet.create({
   cardInfo: { flex: 1 },
   cardNombreRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   cardNombre: { color: colors.text, ...type.h3 },
+  badgePro: { color: colors.amber, fontSize: 10, fontWeight: '700', backgroundColor: '#1a1400', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   cardZonaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
   cardZona: { color: colors.textMuted, fontSize: 12 },
   cardStatDot: { color: colors.textFaint, fontSize: 12 },

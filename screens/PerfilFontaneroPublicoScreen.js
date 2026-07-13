@@ -76,6 +76,9 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
         <Text style={perfil.verificado ? s.verificado : s.noVerificado}>
           {perfil.verificado ? '✅ Identidad verificada' : '⏳ Verificación pendiente'}
         </Text>
+        {perfil.certificado_pro && (
+          <Text style={s.certificadoPro}>🏅 Certificado Provenza Pro</Text>
+        )}
 
         {perfil.descripcion ? <Text style={s.descripcion}>{perfil.descripcion}</Text> : null}
 
@@ -159,6 +162,7 @@ const s = StyleSheet.create({
   nombre: { color: colors.text, fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginTop: 12 },
   zona: { color: colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 4 },
   verificado: { color: colors.green, fontSize: 13, textAlign: 'center', marginTop: 8 },
+  certificadoPro: { color: colors.amber, fontSize: 13, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   noVerificado: { color: colors.amber, fontSize: 13, textAlign: 'center', marginTop: 8 },
   descripcion: { color: colors.text, fontSize: 14, textAlign: 'center', marginTop: 14, lineHeight: 20 },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 22, marginBottom: 8 },
