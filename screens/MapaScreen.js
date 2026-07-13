@@ -73,6 +73,8 @@ export default function MapaScreen({ navigation, route }) {
   const [drawerAbierto, setDrawerAbierto] = useState(false);
   const [miUbicacion, setMiUbicacion] = useState(null);
   const [ubicacionDenegada, setUbicacionDenegada] = useState(false);
+  const [gremiosEnEspera, setGremiosEnEspera] = useState([]);
+  const [procesandoEspera, setProcesandoEspera] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -148,6 +150,37 @@ export default function MapaScreen({ navigation, route }) {
   useEffect(() => {
     cargarNotifs();
   }, [cargarNotifs]);
+
+  // --- Lista de espera de disponibilidad por gremio ---
+  const cargarListaEspera = useCallback(() => {
+    if (!token) return;
+    axios
+      .get(`${API}/lista-espera`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setGremiosEnEspera((res.data || []).map((e) => e.gremio)))
+      .catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    cargarListaEspera();
+  }, [cargarListaEspera]);
+
+  const enListaEspera = filtroGremio && gremiosEnEspera.includes(filtroGremio);
+
+  const toggleListaEspera = async () => {
+    if (!filtroGremio || procesandoEspera) return;
+    setProcesandoEspera(true);
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      if (enListaEspera) {
+        await axios.delete(`${API}/lista-espera/${filtroGremio}`, { headers });
+        setGremiosEnEspera((prev) => prev.filter((g) => g !== filtroGremio));
+      } else {
+        await axios.post(`${API}/lista-espera`, { gremio: filtroGremio }, { headers });
+        setGremiosEnEspera((prev) => [...prev, filtroGremio]);
+      }
+    } catch (e) {}
+    finally { setProcesandoEspera(false); }
+  };
 
   useFocusEffect(useCallback(() => {
     cargarNotifs();
@@ -659,6 +692,18 @@ export default function MapaScreen({ navigation, route }) {
                 <Pressable style={s.vacioBtn} haptic onPress={() => { setFiltroServicio('Todos'); setBusqueda(''); setMostrar24h(false); }}>
                   <Text style={s.vacioBtnText}>Limpiar filtros</Text>
                 </Pressable>
+                {!!filtroGremio && (
+                  <Pressable
+                    style={[s.vacioBtn, s.vacioBtnEspera, enListaEspera && s.vacioBtnEsperaActivo]}
+                    haptic
+                    onPress={toggleListaEspera}
+                    disabled={procesandoEspera}
+                  >
+                    <Text style={[s.vacioBtnText, enListaEspera && s.vacioBtnEsperaActivoText]}>
+                      {enListaEspera ? '✓ Te avisaremos cuando haya alguien libre' : '🔔 Avísame cuando haya alguien libre'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
               fontanerosFiltrados.map((f, i) => renderTarjetaFontanero(f, i))
@@ -778,6 +823,9 @@ const s = StyleSheet.create({
   vacioTitulo: { color: colors.text, ...type.h2, marginBottom: spacing.sm, textAlign: 'center' },
   vacioSub: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: spacing.xl },
   vacioBtn: { backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.glassBorder },
+  vacioBtnEspera: { marginTop: spacing.sm },
+  vacioBtnEsperaActivo: { backgroundColor: colors.greenGlass, borderColor: colors.green },
+  vacioBtnEsperaActivoText: { color: colors.green },
   vacioBtnText: { color: colors.accent2, fontWeight: '700', fontSize: 14 },
 
   card: { borderRadius: radius.lg, marginBottom: spacing.md, position: 'relative' },

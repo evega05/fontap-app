@@ -120,6 +120,13 @@ export default function OfertasClienteScreen({ navigation, route }) {
                         </View>
                       </View>
 
+                      {(o.materiales != null || o.mano_obra != null) && (
+                        <View style={s.desgloseWrap}>
+                          <Text style={s.desgloseTexto}>🧱 Materiales: {o.materiales || 0}€</Text>
+                          <Text style={s.desgloseTexto}>🔧 Mano de obra: {o.mano_obra || 0}€</Text>
+                        </View>
+                      )}
+
                       {o.mensaje ? (
                         <View style={s.mensajeWrap}>
                           <Text style={s.mensajeTexto}>"{o.mensaje}"</Text>
@@ -213,6 +220,8 @@ const s = StyleSheet.create({
   precioWrap: { alignItems: 'flex-end' },
   precio: { color: colors.green, fontSize: 22, fontWeight: 'bold' },
   precioLabel: { color: colors.textMuted, fontSize: 11 },
+  desgloseWrap: { marginBottom: 10, gap: 2 },
+  desgloseTexto: { color: colors.textMuted, fontSize: 12 },
   mensajeWrap: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   mensajeTexto: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic', lineHeight: 18 },
   tiempoEstimado: { color: colors.textMuted, fontSize: 12, marginBottom: 12 },
