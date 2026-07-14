@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "FonTap",
+    "name": "Multiservicios Provenza",
     "slug": "fontap",
+    "scheme": "fontap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -41,7 +42,13 @@
           "enableGooglePay": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FonTap usa tu ubicación para mostrarte los fontaneros más cercanos y para que los clientes puedan encontrarte a ti."
+        }
+      ]
     ]
   }
 }

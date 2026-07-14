@@ -3,61 +3,81 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Refres
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { emojiDeServicio } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
+const CUPO_MAXIMO_OFERTAS = 4; // igual que CUPO_MAXIMO_OFERTAS en el backend (estilo Habitissimo)
 
 export default function OfertasScreen({ navigation }) {
   const { usuario, token } = useAuth();
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const [serviciosAbiertos, setServiciosAbiertos] = useState([]);
   const [misOfertas, setMisOfertas] = useState([]);
+  const [proyectos, setProyectos] = useState([]);
+  const [interesEnviado, setInteresEnviado] = useState([]);
   const [tab, setTab] = useState('disponibles');
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [ofertando, setOfertando] = useState(null);
-  const [precioOferta, setPrecioOferta] = useState('');
+  const [materialesOferta, setMaterialesOferta] = useState('');
+  const [manoObraOferta, setManoObraOferta] = useState('');
   const [mensajeOferta, setMensajeOferta] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const totalOferta = (parseFloat(materialesOferta) || 0) + (parseFloat(manoObraOferta) || 0);
 
   const cargar = useCallback(async () => {
     try {
-      const [resAbiertos, resMis] = await Promise.allSettled([
-        axios.get(`${API}/servicios/abiertos`, { headers }),
+      let gremio = null;
+      try {
+        const resPerfil = await axios.get(`${API}/fontaneros/${usuario?.id}/perfil`);
+        gremio = resPerfil.data?.gremio || null;
+      } catch (e) {}
+      const [resAbiertos, resMis, resProyectos] = await Promise.allSettled([
+        axios.get(`${API}/servicios/abiertos`, { headers, params: gremio ? { gremio } : {} }),
         axios.get(`${API}/fontaneros/${usuario?.id}/ofertas`, { headers }),
+        axios.get(`${API}/proyectos`, { headers, params: gremio ? { gremio } : {} }),
       ]);
       if (resAbiertos.status === 'fulfilled') setServiciosAbiertos(resAbiertos.value.data || []);
       if (resMis.status === 'fulfilled') setMisOfertas(resMis.value.data || []);
+      if (resProyectos.status === 'fulfilled') setProyectos(resProyectos.value.data || []);
     } catch (e) {}
     finally { setCargando(false); setRefrescando(false); }
   }, [usuario?.id, token]);
 
+  const expresarInteres = async (proyecto) => {
+    setInteresEnviado(prev => [...prev, proyecto.id]);
+    try {
+      await axios.post(`${API}/proyectos/${proyecto.id}/interes`, {}, { headers });
+    } catch (e) {
+      setInteresEnviado(prev => prev.filter(id => id !== proyecto.id));
+    }
+  };
+
   useEffect(() => { cargar(); }, [cargar]);
 
   const enviarOferta = async () => {
-    if (!precioOferta || !ofertando) return;
+    if (totalOferta <= 0 || !ofertando) return;
     setEnviando(true);
     try {
       await axios.post(`${API}/servicios/${ofertando.id}/ofertas`, {
-        fontanero_id: usuario?.id,
-        precio_oferta: parseInt(precioOferta),
+        materiales: parseFloat(materialesOferta) || 0,
+        mano_obra: parseFloat(manoObraOferta) || 0,
         mensaje: mensajeOferta,
       }, { headers });
       Alert.alert('✅ Oferta enviada', 'El cliente recibirá tu propuesta');
       setOfertando(null);
-      setPrecioOferta('');
+      setMaterialesOferta('');
+      setManoObraOferta('');
       setMensajeOferta('');
       cargar();
     } catch (e) {
-      Alert.alert('Error', 'No se pudo enviar la oferta');
+      Alert.alert('Error', e.response?.data?.detail || 'No se pudo enviar la oferta');
     } finally {
       setEnviando(false);
     }
   };
 
-  const tipoEmoji = (tipo) => {
-    const m = { Desatasco: '🚽', 'Fuga de agua': '💧', Caldera: '🔥', 'Grifo / ducha': '🚿', Radiador: '♨️' };
-    return m[tipo] || '🔧';
-  };
+  const tipoEmoji = (tipo) => emojiDeServicio(tipo);
 
   return (
     <View style={s.container}>
@@ -66,17 +86,33 @@ export default function OfertasScreen({ navigation }) {
           <View style={s.modal}>
             <Text style={s.modalTitulo}>💼 Enviar oferta</Text>
             <Text style={s.modalSub}>{tipoEmoji(ofertando.tipo)} {ofertando.tipo} · {ofertando.zona || 'Bilbao'}</Text>
-            <Text style={s.modalLabel}>Tu precio (€)</Text>
+            <Text style={s.modalLabel}>Materiales (€)</Text>
             <View style={s.modalInputWrap}>
               <TextInput
                 style={s.modalInput}
                 placeholder="0"
                 placeholderTextColor="#555"
-                value={precioOferta}
-                onChangeText={setPrecioOferta}
+                value={materialesOferta}
+                onChangeText={setMaterialesOferta}
                 keyboardType="numeric"
               />
               <Text style={s.euro}>€</Text>
+            </View>
+            <Text style={s.modalLabel}>Mano de obra (€)</Text>
+            <View style={s.modalInputWrap}>
+              <TextInput
+                style={s.modalInput}
+                placeholder="0"
+                placeholderTextColor="#555"
+                value={manoObraOferta}
+                onChangeText={setManoObraOferta}
+                keyboardType="numeric"
+              />
+              <Text style={s.euro}>€</Text>
+            </View>
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>Total</Text>
+              <Text style={s.totalValor}>{totalOferta}€</Text>
             </View>
             <Text style={s.modalLabel}>Mensaje al cliente (opcional)</Text>
             <TextInput
@@ -88,13 +124,13 @@ export default function OfertasScreen({ navigation }) {
               multiline
             />
             <TouchableOpacity
-              style={[s.modalBtn, (!precioOferta || enviando) && s.modalBtnOff]}
+              style={[s.modalBtn, (totalOferta <= 0 || enviando) && s.modalBtnOff]}
               onPress={enviarOferta}
-              disabled={!precioOferta || enviando}
+              disabled={totalOferta <= 0 || enviando}
             >
               <Text style={s.modalBtnText}>{enviando ? 'Enviando...' : 'Enviar oferta →'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.modalCancelar} onPress={() => { setOfertando(null); setPrecioOferta(''); setMensajeOferta(''); }}>
+            <TouchableOpacity style={s.modalCancelar} onPress={() => { setOfertando(null); setMaterialesOferta(''); setManoObraOferta(''); setMensajeOferta(''); }}>
               <Text style={s.modalCancelarText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
@@ -117,6 +153,10 @@ export default function OfertasScreen({ navigation }) {
         <TouchableOpacity style={[s.tab, tab === 'mis' && s.tabActivo]} onPress={() => setTab('mis')}>
           <Text style={[s.tabText, tab === 'mis' && s.tabTextActivo]}>Mis ofertas</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[s.tab, tab === 'proyectos' && s.tabActivo]} onPress={() => setTab('proyectos')}>
+          <Text style={[s.tabText, tab === 'proyectos' && s.tabTextActivo]}>Proyectos</Text>
+          {proyectos.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{proyectos.length}</Text></View>}
+        </TouchableOpacity>
       </View>
 
       {cargando ? (
@@ -127,7 +167,7 @@ export default function OfertasScreen({ navigation }) {
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={refrescando} onRefresh={() => { setRefrescando(true); cargar(); }} tintColor={colors.blue} />}
         >
-          {tab === 'disponibles' ? (
+          {tab === 'disponibles' && (
             serviciosAbiertos.length === 0 ? (
               <View style={s.vacio}>
                 <Text style={s.vacioEmoji}>🔍</Text>
@@ -150,16 +190,23 @@ export default function OfertasScreen({ navigation }) {
                     )}
                   </View>
                   {sv.descripcion ? <Text style={s.cardDesc}>{sv.descripcion}</Text> : null}
+                  <Text style={s.cardCupo}>{sv.num_ofertas || 0}/{CUPO_MAXIMO_OFERTAS} profesionales interesados</Text>
                   <View style={s.cardFooter}>
                     <Text style={s.cardFecha}>{sv.fecha ? new Date(sv.fecha).toLocaleDateString('es-ES') : 'Hoy'}</Text>
-                    <TouchableOpacity style={s.btnOfertar} onPress={() => setOfertando(sv)}>
-                      <Text style={s.btnOfertarText}>Hacer oferta →</Text>
-                    </TouchableOpacity>
+                    {(sv.num_ofertas || 0) >= CUPO_MAXIMO_OFERTAS ? (
+                      <View style={s.btnOfertarCompleto}><Text style={s.btnOfertarCompletoText}>Completo</Text></View>
+                    ) : (
+                      <TouchableOpacity style={s.btnOfertar} onPress={() => setOfertando(sv)}>
+                        <Text style={s.btnOfertarText}>Hacer oferta →</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               ))
             )
-          ) : (
+          )}
+
+          {tab === 'mis' && (
             misOfertas.length === 0 ? (
               <View style={s.vacio}>
                 <Text style={s.vacioEmoji}>💼</Text>
@@ -177,10 +224,52 @@ export default function OfertasScreen({ navigation }) {
                       </Text>
                     </View>
                   </View>
-                  <Text style={s.ofertaPrecio}>{o.precio_oferta}€</Text>
+                  <Text style={s.ofertaPrecio}>{o.precio}€</Text>
+                  {(o.materiales != null || o.mano_obra != null) && (
+                    <Text style={s.ofertaDesglose}>Materiales {o.materiales || 0}€ · Mano de obra {o.mano_obra || 0}€</Text>
+                  )}
                   {o.mensaje ? <Text style={s.ofertaMensaje}>"{o.mensaje}"</Text> : null}
                 </View>
               ))
+            )
+          )}
+
+          {tab === 'proyectos' && (
+            proyectos.length === 0 ? (
+              <View style={s.vacio}>
+                <Text style={s.vacioEmoji}>🏢</Text>
+                <Text style={s.vacioTitulo}>Sin proyectos abiertos</Text>
+                <Text style={s.vacioSub}>Los proyectos de administradores de fincas aparecerán aquí</Text>
+              </View>
+            ) : (
+              proyectos.map(p => {
+                const yaInteresado = interesEnviado.includes(p.id);
+                return (
+                  <View key={p.id} style={s.card}>
+                    <View style={s.cardTop}>
+                      <View style={s.tipoWrap}>
+                        <Text style={s.tipoEmoji}>🏢</Text>
+                        <View>
+                          <Text style={s.tipoNombre}>{p.titulo}</Text>
+                          <Text style={s.tipoZona}>📍 {p.ciudad}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    {p.descripcion ? <Text style={s.cardDesc}>{p.descripcion}</Text> : null}
+                    <Text style={s.cardCupo}>{p.gremios.split(',').join(' · ')}</Text>
+                    <View style={s.cardFooter}>
+                      <Text style={s.cardFecha}>{p.num_interesados} interesado{p.num_interesados !== 1 ? 's' : ''}</Text>
+                      {yaInteresado ? (
+                        <View style={s.btnOfertarCompleto}><Text style={s.btnOfertarCompletoText}>✓ Interés enviado</Text></View>
+                      ) : (
+                        <TouchableOpacity style={s.btnOfertar} onPress={() => expresarInteres(p)}>
+                          <Text style={s.btnOfertarText}>Me interesa →</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
             )
           )}
         </ScrollView>
@@ -210,6 +299,9 @@ const s = StyleSheet.create({
   modalInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border2 },
   modalInput: { flex: 1, color: colors.text, paddingVertical: 14, fontSize: 22, fontWeight: 'bold' },
   euro: { color: colors.green, fontSize: 22, fontWeight: 'bold' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
+  totalLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  totalValor: { color: colors.green, fontSize: 18, fontWeight: 'bold' },
   modalTextarea: { backgroundColor: colors.bg, color: colors.text, borderRadius: 12, padding: 14, fontSize: 14, minHeight: 80, textAlignVertical: 'top', borderWidth: 1, borderColor: colors.border2, marginBottom: 16 },
   modalBtn: { backgroundColor: colors.blue, borderRadius: 12, padding: 14, alignItems: 'center' },
   modalBtnOff: { opacity: 0.4 },
@@ -241,15 +333,19 @@ const s = StyleSheet.create({
   urgenteBadge: { backgroundColor: '#2d1515', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: colors.red },
   urgenteText: { color: colors.red, fontSize: 11, fontWeight: 'bold' },
   cardDesc: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic', marginBottom: 10, borderTopWidth: 0.5, borderTopColor: colors.border, paddingTop: 10 },
+  cardCupo: { color: colors.textMuted, fontSize: 11 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, borderTopWidth: 0.5, borderTopColor: colors.border, paddingTop: 12 },
   cardFecha: { color: colors.textMuted, fontSize: 12 },
   btnOfertar: { backgroundColor: colors.blue, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
   btnOfertarText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  btnOfertarCompleto: { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border },
+  btnOfertarCompletoText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
   ofertaCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   ofertaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   ofertaTipo: { color: colors.text, fontWeight: '600', fontSize: 14 },
   ofertaEstado: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
   ofertaEstadoText: { fontSize: 12, fontWeight: '600' },
   ofertaPrecio: { color: colors.green, fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
+  ofertaDesglose: { color: colors.textMuted, fontSize: 12, marginBottom: 6 },
   ofertaMensaje: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic' },
 });

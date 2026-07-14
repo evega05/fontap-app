@@ -6,51 +6,37 @@ import { colors } from '../theme';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
-const ETIQUETAS = ['Puntual', 'Profesional', 'Limpio', 'Precio justo', 'Rápido', 'Amable', 'Transparente'];
 const CATEGORIAS = [
   { key: 'puntualidad', label: 'Puntualidad', emoji: '🕐' },
-  { key: 'calidad', label: 'Calidad', emoji: '⭐' },
-  { key: 'precio_justo', label: 'Precio', emoji: '💰' },
-  { key: 'limpieza', label: 'Limpieza', emoji: '✨' },
+  { key: 'trato', label: 'Trato', emoji: '🤝' },
+  { key: 'comunicacion', label: 'Comunicación', emoji: '💬' },
 ];
 
-export default function ReseñaScreen({ navigation, route }) {
-  const { usuario, token } = useAuth();
-  const { fontanero, servicio, servicioId } = route.params || {};
+export default function ReseñaClienteScreen({ navigation, route }) {
+  const { token } = useAuth();
+  const { cliente, servicioId } = route.params || {};
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const [valoracion, setValoracion] = useState(0);
-  const [categorias, setCategorias] = useState({ puntualidad: 0, calidad: 0, precio_justo: 0, limpieza: 0 });
-  const [etiquetasSelec, setEtiquetasSelec] = useState([]);
+  const [categorias, setCategorias] = useState({ puntualidad: 0, trato: 0, comunicacion: 0 });
   const [comentario, setComentario] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
-  const toggleEtiqueta = (e) => {
-    setEtiquetasSelec(prev => prev.includes(e) ? prev.filter(x => x !== e) : [...prev, e]);
-  };
-
   const enviar = async () => {
-    if (valoracion === 0) return;
+    if (valoracion === 0 || !servicioId) return;
     setEnviando(true);
     try {
-      const sid = servicioId || route.params?.servicioId;
-      if (!sid) {
-        Alert.alert('Error', 'No se pudo identificar el servicio a valorar');
-        setEnviando(false);
-        return;
-      }
-      await axios.post(`${API}/servicios/${sid}/resena`, {
+      await axios.post(`${API}/servicios/${servicioId}/resena-cliente`, {
         puntualidad: categorias.puntualidad,
-        calidad: categorias.calidad,
-        precio_justo: categorias.precio_justo,
-        trato: categorias.limpieza,
+        trato: categorias.trato,
+        comunicacion: categorias.comunicacion,
         comentario,
       }, { headers });
       setEnviado(true);
-      setTimeout(() => navigation.navigate('Mapa'), 2000);
+      setTimeout(() => navigation.navigate('PanelFontanero'), 2000);
     } catch (e) {
-      console.log('[Resena] Error al enviar:', e.response?.status, e.response?.data);
+      console.log('[ResenaCliente] Error al enviar:', e.response?.status, e.response?.data);
       Alert.alert('Error', e.response?.data?.detail || 'No se pudo enviar la reseña');
     } finally {
       setEnviando(false);
@@ -63,14 +49,11 @@ export default function ReseñaScreen({ navigation, route }) {
         <View style={s.enviado}>
           <Text style={s.enviadoEmoji}>🎉</Text>
           <Text style={s.enviadoTitulo}>¡Gracias por tu reseña!</Text>
-          <Text style={s.enviadoSub}>Tu opinión ayuda a otros clientes</Text>
+          <Text style={s.enviadoSub}>Ayuda a mantener la comunidad de confianza</Text>
         </View>
       </View>
     );
   }
-
-  const promedioCateg = Object.values(categorias).filter(v => v > 0);
-  const mediaCateg = promedioCateg.length ? (promedioCateg.reduce((a, b) => a + b, 0) / promedioCateg.length).toFixed(1) : null;
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>
@@ -78,17 +61,16 @@ export default function ReseñaScreen({ navigation, route }) {
         <Text style={s.backText}>← Volver</Text>
       </TouchableOpacity>
 
-      <Text style={s.titulo}>Deja tu reseña</Text>
-      <Text style={s.sub}>Tu opinión es importante para la comunidad</Text>
+      <Text style={s.titulo}>Valora al cliente</Text>
+      <Text style={s.sub}>Tu opinión ayuda a otros profesionales</Text>
 
-      {fontanero && (
-        <View style={s.fontaneroCard}>
+      {cliente && (
+        <View style={s.clienteCard}>
           <View style={s.avatar}>
-            <Text style={s.avatarText}>{(fontanero.nombre || 'F')[0]}</Text>
+            <Text style={s.avatarText}>{(cliente.nombre || 'C')[0]}</Text>
           </View>
           <View>
-            <Text style={s.fontaneroNombre}>{fontanero.nombre}</Text>
-            <Text style={s.fontaneroServicio}>{servicio?.nombre || 'Servicio de fontanería'}</Text>
+            <Text style={s.clienteNombre}>{cliente.nombre}</Text>
           </View>
         </View>
       )}
@@ -98,7 +80,7 @@ export default function ReseñaScreen({ navigation, route }) {
         {[1, 2, 3, 4, 5].map(i => (
           <TouchableOpacity key={i} onPress={() => {
             setValoracion(i);
-            setCategorias({ puntualidad: i, calidad: i, precio_justo: i, limpieza: i });
+            setCategorias({ puntualidad: i, trato: i, comunicacion: i });
           }}>
             <Text style={[s.estrella, i <= valoracion && s.estrellaActiva]}>
               {i <= valoracion ? '⭐' : '☆'}
@@ -123,25 +105,11 @@ export default function ReseñaScreen({ navigation, route }) {
           </View>
         </View>
       ))}
-      {mediaCateg && <Text style={s.mediaCateg}>Media categorías: {mediaCateg} ⭐</Text>}
-
-      <Text style={s.seccionTitulo}>¿Qué destacarías?</Text>
-      <View style={s.etiquetasWrap}>
-        {ETIQUETAS.map(e => (
-          <TouchableOpacity
-            key={e}
-            style={[s.etiqueta, etiquetasSelec.includes(e) && s.etiquetaActiva]}
-            onPress={() => toggleEtiqueta(e)}
-          >
-            <Text style={[s.etiquetaText, etiquetasSelec.includes(e) && s.etiquetaTextActiva]}>{e}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       <Text style={s.seccionTitulo}>Comentario (opcional)</Text>
       <TextInput
         style={s.textArea}
-        placeholder="Cuéntanos tu experiencia con detalle..."
+        placeholder="Cuéntanos cómo fue trabajar con este cliente..."
         placeholderTextColor={colors.textFaint}
         value={comentario}
         onChangeText={setComentario}
@@ -167,11 +135,10 @@ const s = StyleSheet.create({
   backText: { color: colors.blue, fontSize: 15 },
   titulo: { fontSize: 26, fontWeight: 'bold', color: colors.text, marginBottom: 6 },
   sub: { fontSize: 14, color: colors.textMuted, marginBottom: 24 },
-  fontaneroCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, gap: 12, marginBottom: 24, borderWidth: 1, borderColor: colors.border },
+  clienteCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, gap: 12, marginBottom: 24, borderWidth: 1, borderColor: colors.border },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
-  fontaneroNombre: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 3 },
-  fontaneroServicio: { color: colors.textMuted, fontSize: 13 },
+  clienteNombre: { color: colors.text, fontWeight: '600', fontSize: 15 },
   seccionTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 12, marginTop: 4 },
   estrellas: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
   estrella: { fontSize: 36, color: colors.textFaint },
@@ -182,12 +149,6 @@ const s = StyleSheet.create({
   miniEstrellas: { flexDirection: 'row', gap: 4 },
   miniEstrella: { fontSize: 20, color: colors.textFaint },
   miniEstrellaActiva: { color: '#f59e0b' },
-  mediaCateg: { color: colors.textMuted, fontSize: 12, textAlign: 'right', marginBottom: 12, marginTop: -4 },
-  etiquetasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  etiqueta: { backgroundColor: colors.bgCard, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border },
-  etiquetaActiva: { backgroundColor: colors.blueLight, borderColor: colors.blue },
-  etiquetaText: { color: colors.textMuted, fontSize: 13 },
-  etiquetaTextActiva: { color: colors.blue, fontWeight: '600' },
   textArea: { backgroundColor: colors.bgCard, color: colors.text, borderRadius: 12, padding: 14, fontSize: 14, minHeight: 120, textAlignVertical: 'top', borderWidth: 1, borderColor: colors.border2, marginBottom: 24 },
   btnEnviar: { backgroundColor: colors.blue, borderRadius: 14, padding: 16, alignItems: 'center' },
   btnDesactivado: { opacity: 0.4 },

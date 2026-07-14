@@ -55,9 +55,9 @@ export default function FavoritosScreen({ navigation }) {
             <View style={s.vacio}>
               <Text style={s.vacioEmoji}>❤️</Text>
               <Text style={s.vacioTitulo}>Sin favoritos aún</Text>
-              <Text style={s.vacioSub}>Guarda fontaneros desde el buscador</Text>
+              <Text style={s.vacioSub}>Guarda profesionales desde el buscador</Text>
               <TouchableOpacity style={s.btnBuscar} onPress={() => navigation.navigate('Mapa')}>
-                <Text style={s.btnBuscarText}>Buscar fontaneros →</Text>
+                <Text style={s.btnBuscarText}>Buscar profesionales →</Text>
               </TouchableOpacity>
             </View>
           ) : (

@@ -3,23 +3,26 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image,
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
+import { agregarArchivo } from '../subirArchivo';
+import { GREMIOS, serviciosDe, OTRO_SERVICIO } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
-
-const SERVICIOS = [
-  { id: 1, nombre: 'Desatasco', emoji: '🚽', precio: 'desde 60€' },
-  { id: 2, nombre: 'Fuga de agua', emoji: '💧', precio: 'desde 80€' },
-  { id: 3, nombre: 'Caldera', emoji: '🔥', precio: 'desde 90€' },
-  { id: 4, nombre: 'Grifo / ducha', emoji: '🚿', precio: 'desde 50€' },
-  { id: 5, nombre: 'Radiador', emoji: '♨️', precio: 'desde 70€' },
-  { id: 6, nombre: 'Otro', emoji: '🔧', precio: 'consultar' },
-];
 
 export default function SolicitudScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const fontanero = route.params?.fontanero;
+  const [gremioElegido, setGremioElegido] = useState(fontanero?.gremio || null);
+  const necesitaPasoGremio = !fontanero;
+  const PASO_GREMIO = necesitaPasoGremio ? 1 : null;
+  const PASO_SERVICIO = necesitaPasoGremio ? 2 : 1;
+  const PASO_DETALLES = necesitaPasoGremio ? 3 : 2;
+  const PASO_CUANDO = necesitaPasoGremio ? 4 : 3;
+  const TOTAL_PASOS = necesitaPasoGremio ? 4 : 3;
+  const SERVICIOS = [...serviciosDe(fontanero?.gremio || gremioElegido), OTRO_SERVICIO]
+    .map((sv, i) => ({ id: i + 1, nombre: sv.nombre, emoji: sv.emoji, precio: 'consultar' }));
   const [tipo, setTipo] = useState(null);
   const [descripcion, setDescripcion] = useState('');
+  const [mensaje, setMensaje] = useState('');
   const [urgente, setUrgente] = useState(route.params?.urgente || false);
   const [paso, setPaso] = useState(1);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
@@ -40,8 +43,8 @@ export default function SolicitudScreen({ navigation, route }) {
     for (const uri of fotosProblema) {
       try {
         const form = new FormData();
-        form.append('foto', { uri, name: 'foto.jpg', type: 'image/jpeg' });
-        await axios.post(`${API}/servicios/${servicioId}/fotos`, form, {
+        await agregarArchivo(form, 'archivo', uri, 'foto.jpg', 'image/jpeg');
+        await axios.post(`${API}/servicios/${servicioId}/imagenes`, form, {
           headers: { 'Content-Type': 'multipart/form-data', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
       } catch (e) {}
@@ -49,9 +52,21 @@ export default function SolicitudScreen({ navigation, route }) {
     setSubiendoFoto(false);
   };
 
+  const enviarMensajeInicial = async (servicioId) => {
+    if (!mensaje.trim() || !servicioId || !token) return;
+    try {
+      await axios.post(
+        `${API}/servicios/${servicioId}/mensajes`,
+        { contenido: mensaje.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (e) {}
+  };
+
   const continuar = async () => {
-    if (paso === 1 && !tipo) return;
-    if (paso < 3) setPaso(paso + 1);
+    if (paso === PASO_GREMIO && !gremioElegido) return;
+    if (paso === PASO_SERVICIO && !tipo) return;
+    if (paso < TOTAL_PASOS) setPaso(paso + 1);
     else {
       try {
   const clienteId = route.params?.clienteId || usuario?.id || 1;
@@ -61,6 +76,7 @@ export default function SolicitudScreen({ navigation, route }) {
     urgente,
     fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
     fontanero_id: fontanero?.id || null,
+    gremio: fontanero?.gremio || gremioElegido,
   };
   console.log('[Solicitud] Enviando servicio:', JSON.stringify(body), 'cliente_id:', clienteId);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -70,6 +86,7 @@ export default function SolicitudScreen({ navigation, route }) {
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;
   await subirFotosServicio(servicioId);
+  await enviarMensajeInicial(servicioId);
 
   navigation.navigate('Confirmacion', {
     fontanero, tipo, descripcion, urgente,
@@ -93,19 +110,41 @@ export default function SolicitudScreen({ navigation, route }) {
           <Text style={s.back}>← Volver</Text>
         </TouchableOpacity>
         <Text style={s.titulo}>
-          {paso === 1 ? 'Tipo de servicio' : paso === 2 ? 'Detalles' : 'Cuándo'}
+          {paso === PASO_GREMIO ? 'Tipo de profesional'
+            : paso === PASO_SERVICIO ? 'Tipo de servicio'
+            : paso === PASO_DETALLES ? 'Detalles' : 'Cuándo'}
         </Text>
-        <Text style={s.paso}>{paso}/3</Text>
+        <Text style={s.paso}>{paso}/{TOTAL_PASOS}</Text>
       </View>
 
       <View style={s.progreso}>
-        {[1, 2, 3].map(p => (
+        {Array.from({ length: TOTAL_PASOS }, (_, i) => i + 1).map(p => (
           <View key={p} style={[s.progresoBarra, p <= paso && s.progresoBarraActiva]} />
         ))}
       </View>
 
       <ScrollView style={s.contenido} contentContainerStyle={{ padding: 20 }}>
-        {paso === 1 && (
+        {paso === PASO_GREMIO && (
+          <>
+            <Text style={s.subtitulo}>¿Qué tipo de profesional necesitas?</Text>
+            <View style={s.grid}>
+              {GREMIOS.map(g => (
+                <TouchableOpacity
+                  key={g.valor}
+                  style={[s.servicioCard, gremioElegido === g.valor && s.servicioCardActivo]}
+                  onPress={() => setGremioElegido(g.valor)}
+                >
+                  <Text style={s.servicioEmoji}>{g.emoji}</Text>
+                  <Text style={[s.servicioNombre, gremioElegido === g.valor && s.servicioNombreActivo]}>
+                    {g.valor.charAt(0).toUpperCase() + g.valor.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {paso === PASO_SERVICIO && (
           <>
             <Text style={s.subtitulo}>¿Qué necesitas reparar?</Text>
             <View style={s.grid}>
@@ -124,7 +163,7 @@ export default function SolicitudScreen({ navigation, route }) {
           </>
         )}
 
-        {paso === 2 && (
+        {paso === PASO_DETALLES && (
           <>
             <Text style={s.subtitulo}>Cuéntanos más</Text>
             <TextInput
@@ -166,7 +205,7 @@ export default function SolicitudScreen({ navigation, route }) {
           </>
         )}
 
-        {paso === 3 && (
+        {paso === PASO_CUANDO && (
           <>
             <Text style={s.subtitulo}>¿Cuándo lo necesitas?</Text>
 
@@ -217,6 +256,17 @@ export default function SolicitudScreen({ navigation, route }) {
               </View>
             )}
 
+            <Text style={s.subtitulo}>💬 Mensaje para el fontanero (opcional)</Text>
+            <TextInput
+              style={s.mensajeInput}
+              placeholder="Ej: Estoy en el 3ºB, hay que llamar al portero automático..."
+              placeholderTextColor="#555"
+              value={mensaje}
+              onChangeText={setMensaje}
+              multiline
+              numberOfLines={3}
+            />
+
             <View style={s.resumen}>
               <Text style={s.resumenTitulo}>Resumen</Text>
               <View style={s.resumenFila}>
@@ -246,12 +296,12 @@ export default function SolicitudScreen({ navigation, route }) {
 
       <View style={s.footer}>
         <TouchableOpacity
-          style={[s.btnContinuar, paso === 1 && !tipo && s.btnDesactivado]}
+          style={[s.btnContinuar, ((paso === PASO_GREMIO && !gremioElegido) || (paso === PASO_SERVICIO && !tipo)) && s.btnDesactivado]}
           onPress={continuar}
-          disabled={paso === 1 && !tipo}
+          disabled={(paso === PASO_GREMIO && !gremioElegido) || (paso === PASO_SERVICIO && !tipo)}
         >
           <Text style={s.btnContinuarText}>
-            {paso === 3 ? '✓ Confirmar solicitud' : 'Continuar →'}
+            {paso === PASO_CUANDO ? '✓ Confirmar solicitud' : 'Continuar →'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -278,6 +328,7 @@ const s = StyleSheet.create({
   servicioNombreActivo: { color: '#3b82f6' },
   servicioPrecio: { color: '#aaa', fontSize: 11 },
   textArea: { backgroundColor: '#1e1e2e', color: '#fff', borderRadius: 12, padding: 16, fontSize: 14, minHeight: 120, textAlignVertical: 'top', marginBottom: 20 },
+  mensajeInput: { backgroundColor: '#1e1e2e', color: '#fff', borderRadius: 12, padding: 16, fontSize: 14, minHeight: 80, textAlignVertical: 'top', marginBottom: 16, borderWidth: 1, borderColor: '#2a2a3e' },
   fontaneroCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e2e', borderRadius: 12, padding: 14, gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },

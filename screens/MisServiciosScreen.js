@@ -7,15 +7,16 @@ import { colors } from '../theme';
 const API = 'https://fontap-backend-production.up.railway.app';
 
 const ESTADOS = {
-  pendiente:      { label: 'Buscando fontanero',              color: '#FFC043', emoji: '🔍' },
-  aceptado:       { label: 'Fontanero en camino',             color: '#05A357', emoji: '🚗' },
+  pendiente:      { label: 'Buscando profesional',            color: '#FFC043', emoji: '🔍' },
+  aceptado:       { label: 'Profesional asignado',            color: '#05A357', emoji: '👷' },
+  en_camino:      { label: 'Profesional en camino',           color: '#276EF1', emoji: '🚗' },
   precio_enviado: { label: 'Precio recibido — toca para pagar', color: '#276EF1', emoji: '💰' },
   pago_pendiente: { label: 'Pendiente confirmar efectivo',    color: '#7356BF', emoji: '💵' },
   pagado:         { label: 'Completado',                      color: '#05A357', emoji: '✅' },
   rechazado:      { label: 'Rechazado',                       color: '#E11900', emoji: '❌' },
 };
 
-const ACTIVOS = new Set(['pendiente', 'aceptado', 'precio_enviado', 'pago_pendiente']);
+const ACTIVOS = new Set(['pendiente', 'aceptado', 'en_camino', 'precio_enviado', 'pago_pendiente']);
 const COMPLETADOS_RESEÑA = new Set(['pagado']);
 
 export default function MisServiciosScreen({ navigation, route }) {
@@ -64,6 +65,11 @@ export default function MisServiciosScreen({ navigation, route }) {
           <Text style={s.btnNuevoHeader}>+ Nuevo</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={s.recurrentesLink} onPress={() => navigation.navigate('ServiciosRecurrentes')}>
+        <Text style={s.recurrentesLinkText}>🔁 Servicios recurrentes (limpieza, mantenimiento...)</Text>
+        <Text style={s.recurrentesLinkArrow}>→</Text>
+      </TouchableOpacity>
 
       <ScrollView
         style={s.lista}
@@ -140,11 +146,21 @@ export default function MisServiciosScreen({ navigation, route }) {
                       </TouchableOpacity>
                     )}
 
+                    {/* Seguir en el mapa — solo cuando el profesional va en camino */}
+                    {sv.estado === 'en_camino' && (
+                      <TouchableOpacity
+                        style={[s.btnAccion, s.btnAccionSeguir]}
+                        onPress={() => navigation.navigate('Seguimiento', { servicioId: sv.id })}
+                      >
+                        <Text style={s.btnAccionTextSeguir}>🗺️ Seguir en el mapa</Text>
+                      </TouchableOpacity>
+                    )}
+
                     {/* Chat — solo cuando hay fontanero asignado */}
                     {esActivo && sv.fontanero_id && sv.estado !== 'pendiente' && (
                       <TouchableOpacity
                         style={s.btnAccion}
-                        onPress={() => navigation.navigate('Chat', { servicioId: sv.id, otroNombre: sv.fontanero_nombre || 'Fontanero' })}
+                        onPress={() => navigation.navigate('Chat', { servicioId: sv.id, otroNombre: sv.fontanero_nombre || 'Profesional' })}
                       >
                         <Text style={s.btnAccionText}>💬 Chat</Text>
                       </TouchableOpacity>
@@ -180,6 +196,9 @@ const s = StyleSheet.create({
   back: { color: colors.blue, fontSize: 15, fontWeight: '500' },
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
   btnNuevoHeader: { color: colors.blue, fontSize: 15, fontWeight: '600' },
+  recurrentesLink: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, marginHorizontal: 20, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  recurrentesLinkText: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 },
+  recurrentesLinkArrow: { color: colors.blue, fontSize: 16, fontWeight: 'bold' },
   lista: { flex: 1 },
   vacio: { alignItems: 'center', paddingTop: 60 },
   vacioEmoji: { fontSize: 56, marginBottom: 16 },
@@ -205,4 +224,6 @@ const s = StyleSheet.create({
   btnAccionText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
   btnAccionDestacado: { backgroundColor: '#1a1400', borderColor: colors.amber },
   btnAccionTextDestacado: { color: colors.amber },
+  btnAccionSeguir: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  btnAccionTextSeguir: { color: colors.blue, fontWeight: '700', fontSize: 13 },
 });

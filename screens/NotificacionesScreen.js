@@ -29,7 +29,7 @@ export default function NotificacionesScreen({ navigation }) {
 
   const marcarLeida = async (id) => {
     setLeidasLocal(prev => new Set([...prev, id]));
-    try { await axios.put(`${API}/notificaciones/${id}/leida`, null, { headers }); } catch (e) {}
+    try { await axios.put(`${API}/notificaciones/${id}/leer`, null, { headers }); } catch (e) {}
   };
 
   const esLeida = (n) => n.leida || leidasLocal.has(n.id);
@@ -53,7 +53,7 @@ export default function NotificacionesScreen({ navigation }) {
   const marcarTodasLeidas = async () => {
     setLeidasLocal(new Set(notifs.map(n => n.id)));
     try {
-      await axios.put(`${API}/usuarios/${usuario.id}/notificaciones/leidas`, null, { headers });
+      await axios.put(`${API}/usuarios/${usuario.id}/notificaciones/leer-todas`, null, { headers });
     } catch (e) {}
   };
 

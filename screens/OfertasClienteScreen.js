@@ -90,7 +90,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
             <View style={s.vacio}>
               <Text style={s.vacioEmoji}>⏳</Text>
               <Text style={s.vacioTitulo}>Sin ofertas aún</Text>
-              <Text style={s.vacioSub}>Los fontaneros disponibles enviarán sus propuestas en breve</Text>
+              <Text style={s.vacioSub}>Los profesionales disponibles enviarán sus propuestas en breve</Text>
             </View>
           ) : (
             <>
@@ -115,10 +115,17 @@ export default function OfertasClienteScreen({ navigation, route }) {
                           {o.fontanero_zona && <Text style={s.fontaneroZona}>📍 {o.fontanero_zona}</Text>}
                         </View>
                         <View style={s.precioWrap}>
-                          <Text style={s.precio}>{o.precio_oferta}€</Text>
+                          <Text style={s.precio}>{o.precio}€</Text>
                           <Text style={s.precioLabel}>oferta</Text>
                         </View>
                       </View>
+
+                      {(o.materiales != null || o.mano_obra != null) && (
+                        <View style={s.desgloseWrap}>
+                          <Text style={s.desgloseTexto}>🧱 Materiales: {o.materiales || 0}€</Text>
+                          <Text style={s.desgloseTexto}>🔧 Mano de obra: {o.mano_obra || 0}€</Text>
+                        </View>
+                      )}
 
                       {o.mensaje ? (
                         <View style={s.mensajeWrap}>
@@ -166,7 +173,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
                           <Text style={s.fontaneroNombre}>{o.fontanero_nombre}</Text>
                         </View>
                         <View style={s.precioWrap}>
-                          <Text style={[s.precio, { fontSize: 16 }]}>{o.precio_oferta}€</Text>
+                          <Text style={[s.precio, { fontSize: 16 }]}>{o.precio}€</Text>
                           <View style={[s.estadoPill, { borderColor: estadoColor(o.estado) }]}>
                             <Text style={[s.estadoText, { color: estadoColor(o.estado) }]}>{estadoLabel(o.estado)}</Text>
                           </View>
@@ -213,6 +220,8 @@ const s = StyleSheet.create({
   precioWrap: { alignItems: 'flex-end' },
   precio: { color: colors.green, fontSize: 22, fontWeight: 'bold' },
   precioLabel: { color: colors.textMuted, fontSize: 11 },
+  desgloseWrap: { marginBottom: 10, gap: 2 },
+  desgloseTexto: { color: colors.textMuted, fontSize: 12 },
   mensajeWrap: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   mensajeTexto: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic', lineHeight: 18 },
   tiempoEstimado: { color: colors.textMuted, fontSize: 12, marginBottom: 12 },

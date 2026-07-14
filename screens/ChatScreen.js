@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
+  FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
 import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
+import { agregarArchivo } from '../subirArchivo';
 import { colors } from '../theme';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -18,6 +20,7 @@ export default function ChatScreen({ navigation, route }) {
   const [texto, setTexto] = useState('');
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
   const flatListRef = useRef(null);
   const pollingRef = useRef(null);
   const ultimoIdRef = useRef(0);
@@ -73,8 +76,8 @@ export default function ChatScreen({ navigation, route }) {
 
     const mensajeTemporal = {
       id: `tmp_${Date.now()}`,
-      texto: msg,
-      emisor_id: usuario?.id,
+      contenido: msg,
+      remitente_tipo: usuario?.tipo,
       creado_en: new Date().toISOString(),
       pendiente: true,
     };
@@ -82,7 +85,7 @@ export default function ChatScreen({ navigation, route }) {
 
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
-      const body = { texto: msg };
+      const body = { contenido: msg };
       console.log('[Chat] POST body:', JSON.stringify(body), 'servicioId:', servicioId, 'token:', !!token);
       const res = await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
@@ -101,16 +104,42 @@ export default function ChatScreen({ navigation, route }) {
     }
   };
 
-  const esMio = (msg) => Number(msg.emisor_id) === Number(usuario?.id);
+  const enviarFoto = async () => {
+    if (enviandoFoto) return;
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (res.canceled) return;
+    setEnviandoFoto(true);
+    try {
+      const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
+      const form = new FormData();
+      await agregarArchivo(form, 'archivo', res.assets[0].uri, 'foto.jpg', 'image/jpeg');
+      await axios.post(`${API}/servicios/${servicioId}/mensajes/imagen`, form, {
+        headers: { ...hdrs, 'Content-Type': 'multipart/form-data' },
+      });
+      await cargarMensajes();
+    } catch (e) {
+      console.log('[Chat] ERROR foto:', e?.response?.status, JSON.stringify(e?.response?.data));
+    } finally {
+      setEnviandoFoto(false);
+    }
+  };
+
+  const esMio = (msg) => msg.remitente_tipo === usuario?.tipo;
 
   const renderMensaje = ({ item }) => {
     const mio = esMio(item);
     return (
       <View style={[s.msgRow, mio ? s.msgRowMio : s.msgRowOtro]}>
-        <View style={[s.bubble, mio ? s.bubbleMio : s.bubbleOtro, item.error && s.bubbleError]}>
-          <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>
-            {item.texto}
-          </Text>
+        <View style={[s.bubble, mio ? s.bubbleMio : s.bubbleOtro, item.error && s.bubbleError, item.imagen_url && s.bubbleFoto]}>
+          {item.imagen_url ? (
+            <Image source={{ uri: `${API}${item.imagen_url}` }} style={s.fotoMensaje} resizeMode="cover" />
+          ) : (
+            <Text style={[s.bubbleText, mio ? s.bubbleTextMio : s.bubbleTextOtro]}>
+              {item.contenido}
+            </Text>
+          )}
           <Text style={[s.bubbleHora, mio ? s.bubbleHoraMio : s.bubbleHoraOtro]}>
             {item.pendiente ? '⏳' : item.error ? '⚠️' : formatHora(item.creado_en)}
           </Text>
@@ -163,6 +192,13 @@ export default function ChatScreen({ navigation, route }) {
       )}
 
       <View style={s.inputRow}>
+        <TouchableOpacity
+          style={[s.adjuntarBtn, enviandoFoto && s.sendBtnDisabled]}
+          onPress={enviarFoto}
+          disabled={enviandoFoto}
+        >
+          {enviandoFoto ? <ActivityIndicator color={colors.text} size="small" /> : <Text style={s.adjuntarIcon}>📷</Text>}
+        </TouchableOpacity>
         <TextInput
           style={s.input}
           placeholder="Escribe un mensaje..."
@@ -225,6 +261,8 @@ const s = StyleSheet.create({
   bubbleMio: { backgroundColor: colors.blue, borderColor: colors.blue, borderBottomRightRadius: 4 },
   bubbleOtro: { backgroundColor: colors.bgCard, borderColor: colors.border, borderBottomLeftRadius: 4 },
   bubbleError: { borderColor: colors.red, opacity: 0.7 },
+  bubbleFoto: { padding: 4 },
+  fotoMensaje: { width: 200, height: 200, borderRadius: 14 },
   bubbleText: { fontSize: 15, lineHeight: 21 },
   bubbleTextMio: { color: '#fff' },
   bubbleTextOtro: { color: colors.text },
@@ -251,4 +289,9 @@ const s = StyleSheet.create({
   },
   sendBtnDisabled: { backgroundColor: colors.blueLight, opacity: 0.5 },
   sendIcon: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  adjuntarBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bgCard2,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border2,
+  },
+  adjuntarIcon: { fontSize: 18 },
 });
