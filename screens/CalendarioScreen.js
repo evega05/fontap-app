@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
@@ -18,6 +20,45 @@ export default function CalendarioScreen({ navigation, route }) {
   const [refrescando, setRefrescando] = useState(false);
   const [semanaOffset, setSemanaOffset] = useState(0);
   const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().toDateString());
+  const [googleConectado, setGoogleConectado] = useState(false);
+  const [conectandoGoogle, setConectandoGoogle] = useState(false);
+
+  const cargarEstadoGoogle = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const r = await axios.get(`${API}/fontaneros/${userId}/perfil`);
+      setGoogleConectado(!!r.data?.google_calendar_conectado);
+    } catch (e) {}
+  }, [userId]);
+
+  useFocusEffect(useCallback(() => { cargarEstadoGoogle(); }, [cargarEstadoGoogle]));
+
+  const conectarGoogleCalendar = async () => {
+    setConectandoGoogle(true);
+    try {
+      const r = await axios.get(`${API}/fontaneros/${userId}/google-calendar/conectar`, { headers });
+      await WebBrowser.openBrowserAsync(r.data.url);
+      await cargarEstadoGoogle();
+    } catch (e) {
+      Alert.alert('No se pudo conectar', 'Inténtalo de nuevo en unos minutos');
+    } finally {
+      setConectandoGoogle(false);
+    }
+  };
+
+  const desconectarGoogleCalendar = () => {
+    Alert.alert('Desconectar Google Calendar', '¿Seguro que quieres dejar de sincronizar tus citas?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Desconectar', style: 'destructive', onPress: async () => {
+          try {
+            await axios.delete(`${API}/fontaneros/${userId}/google-calendar`, { headers });
+            setGoogleConectado(false);
+          } catch (e) {}
+        },
+      },
+    ]);
+  };
 
   const cargar = useCallback(async () => {
     try {
@@ -67,6 +108,26 @@ export default function CalendarioScreen({ navigation, route }) {
         <Text style={s.titulo}>Calendario</Text>
         <View style={{ width: 60 }} />
       </View>
+
+      <TouchableOpacity
+        style={[s.googleCard, googleConectado && s.googleCardActivo]}
+        onPress={googleConectado ? desconectarGoogleCalendar : conectarGoogleCalendar}
+        disabled={conectandoGoogle}
+      >
+        {conectandoGoogle ? (
+          <ActivityIndicator color={colors.blue} size="small" />
+        ) : (
+          <Text style={s.googleIcono}>📆</Text>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={s.googleTitulo}>
+            {googleConectado ? 'Google Calendar conectado' : 'Conectar Google Calendar'}
+          </Text>
+          <Text style={s.googleSub}>
+            {googleConectado ? 'Tus citas confirmadas se sincronizan automáticamente · toca para desconectar' : 'Recibe tus citas confirmadas directamente en tu calendario'}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       <View style={s.semanaNav}>
         <TouchableOpacity style={s.navBtn} onPress={() => setSemanaOffset(semanaOffset - 1)}>
@@ -165,6 +226,11 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 52 },
   back: { color: colors.blue, fontSize: 15, fontWeight: '500' },
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
+  googleCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, marginHorizontal: 20, marginBottom: 16 },
+  googleCardActivo: { borderColor: colors.green },
+  googleIcono: { fontSize: 22 },
+  googleTitulo: { color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 2 },
+  googleSub: { color: colors.textMuted, fontSize: 11.5 },
   semanaNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   navBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   navBtnText: { color: colors.text, fontSize: 20, fontWeight: 'bold' },
