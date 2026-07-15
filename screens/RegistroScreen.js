@@ -29,8 +29,8 @@ export default function RegistroScreen({ navigation }) {
   const [terminosAceptados, setTerminosAceptados] = useState(false);
   const { request: googleRequest, response: googleResponse, promptAsync: googlePromptAsync, redirectUri: googleRedirectUri } = useGoogleAuth();
 
-  const entrarConGoogle = (data) => {
-    guardarSesion(data);
+  const entrarConGoogle = async (data) => {
+    await guardarSesion(data);
     if (data.tipo_usuario === 'fontanero') {
       navigation.replace('PanelFontanero', { nombre: data.nombre, userId: data.id });
     } else {

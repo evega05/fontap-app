@@ -27,7 +27,7 @@ export default function LoginScreen({ navigation, route }) {
 
   const entrarConToken = async (data, esGoogle) => {
     await guardarSesion(data);
-    if (!esGoogle) registrarNotificaciones(data.id, data.access_token);
+    if (!esGoogle) registrarNotificaciones(data.id, data.access_token).catch(() => {});
     if (data.tipo_usuario === 'fontanero') {
       navigation.replace('PanelFontanero', { nombre: data.nombre, userId: data.id });
     } else if (data.tipo_usuario === 'administrador_fincas') {

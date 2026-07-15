@@ -36,10 +36,19 @@ export default function PagoScreen({ navigation, route }) {
     setError('');
     try {
       const res = await axios.post(`${API}/servicios/${servicioId}/stripe/crear-checkout`, {}, { headers });
-      await WebBrowser.openBrowserAsync(res.data.checkout_url);
-      // Al volver del navegador, comprobamos directamente con Stripe si se pagó de verdad
-      const verif = await axios.post(`${API}/servicios/${servicioId}/stripe/verificar`, {}, { headers });
-      if (verif.data.pagado) {
+      const resultado = await WebBrowser.openBrowserAsync(res.data.checkout_url);
+      // Al volver del navegador, comprobamos directamente con Stripe si se pagó de verdad.
+      // En web, openBrowserAsync abre una pestaña nueva y devuelve type:'opened' sin esperar
+      // a que se cierre, así que ahí reintentamos por si el usuario todavía está pagando.
+      const esperaIncierta = resultado?.type === 'opened';
+      const maxIntentos = esperaIncierta ? 20 : 1;
+      let pagado = false;
+      for (let intento = 0; intento < maxIntentos && !pagado; intento++) {
+        if (intento > 0) await new Promise(r => setTimeout(r, 3000));
+        const verif = await axios.post(`${API}/servicios/${servicioId}/stripe/verificar`, {}, { headers });
+        pagado = verif.data.pagado;
+      }
+      if (pagado) {
         marcarPagado();
       } else {
         setCargando(false);

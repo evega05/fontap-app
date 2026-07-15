@@ -70,11 +70,21 @@ export default function SolicitudScreen({ navigation, route }) {
     else {
       try {
   const clienteId = route.params?.clienteId || usuario?.id || 1;
+  let fecha = null;
+  if (diaSeleccionado !== null) {
+    fecha = new Date();
+    fecha.setDate(fecha.getDate() + diaSeleccionado + 1);
+    if (horaSeleccionada) {
+      const [hh, mm] = horaSeleccionada.split(':').map(Number);
+      fecha.setHours(hh, mm, 0, 0);
+    }
+    fecha = fecha.toISOString();
+  }
   const body = {
     tipo: tipo.nombre,
     descripcion,
     urgente,
-    fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
+    fecha,
     fontanero_id: fontanero?.id || null,
     gremio: fontanero?.gremio || gremioElegido,
   };
