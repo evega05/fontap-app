@@ -521,7 +521,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                       <Text style={s.trabajoCliente}>{t.cliente_nombre || t.cliente}</Text>
                       <View style={s.trabajoZonaRow}>
                         <Ionicons name="location" size={11} color={colors.textMuted} />
-                        <Text style={s.trabajoZona}>{t.zona || 'Bilbao'}</Text>
+                        <Text style={s.trabajoZona}>{t.zona || '—'}</Text>
                         {t.urgente && (
                           <>
                             <Text style={s.cardStatDot}>·</Text>
