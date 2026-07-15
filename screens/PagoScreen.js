@@ -18,8 +18,6 @@ export default function PagoScreen({ navigation, route }) {
   const [pagado, setPagado] = useState(false);
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState('tarjeta');
-  const [bizumInfo, setBizumInfo] = useState(null);
-  const [cargandoBizum, setCargandoBizum] = useState(false);
 
   const pollingRef = useRef(null);
   const redireccionRef = useRef(null);
@@ -31,13 +29,16 @@ export default function PagoScreen({ navigation, route }) {
     redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
   };
 
-  const pagarConTarjeta = async () => {
+  // Tarjeta y Bizum se cobran los dos de verdad vía la página de Stripe: Bizum
+  // te redirige a autorizarlo desde tu propio banco, igual que cuando pagas por
+  // Bizum en cualquier tienda online. Al volver, se comprueba con Stripe si de
+  // verdad se pagó — nunca nos fiamos de que el cliente "diga" que ya pagó.
+  const pagarConStripe = async (metodo) => {
     setCargando(true);
     setError('');
     try {
-      const res = await axios.post(`${API}/servicios/${servicioId}/stripe/crear-checkout`, {}, { headers });
+      const res = await axios.post(`${API}/servicios/${servicioId}/stripe/crear-checkout`, { metodo }, { headers });
       await WebBrowser.openBrowserAsync(res.data.checkout_url);
-      // Al volver del navegador, comprobamos directamente con Stripe si se pagó de verdad
       const verif = await axios.post(`${API}/servicios/${servicioId}/stripe/verificar`, {}, { headers });
       if (verif.data.pagado) {
         marcarPagado();
@@ -48,30 +49,6 @@ export default function PagoScreen({ navigation, route }) {
     } catch (e) {
       setCargando(false);
       setError(e.response?.data?.detail || 'Error al procesar el pago. Inténtalo de nuevo.');
-    }
-  };
-
-  const cargarBizum = async () => {
-    setCargandoBizum(true);
-    try {
-      const res = await axios.get(`${API}/servicios/${servicioId}/bizum/instrucciones`, { headers });
-      setBizumInfo(res.data);
-    } catch (e) {
-      setError('No se pudieron cargar las instrucciones de Bizum');
-    } finally {
-      setCargandoBizum(false);
-    }
-  };
-
-  const confirmarBizum = async () => {
-    setCargando(true);
-    setError('');
-    try {
-      await axios.put(`${API}/servicios/${servicioId}/pagar`, { metodo: 'bizum' }, { headers });
-      marcarPagado();
-    } catch (e) {
-      setCargando(false);
-      setError('Error al confirmar el pago. Inténtalo de nuevo.');
     }
   };
 
@@ -109,9 +86,9 @@ export default function PagoScreen({ navigation, route }) {
 
   const pagar = () => {
     if (!precio || !servicioId) return;
-    if (metodoPago === 'tarjeta') return pagarConTarjeta();
+    if (metodoPago === 'tarjeta') return pagarConStripe('card');
     if (metodoPago === 'efectivo') return pagarEfectivo();
-    if (metodoPago === 'bizum') return confirmarBizum();
+    if (metodoPago === 'bizum') return pagarConStripe('bizum');
   };
 
   if (pagado) {
@@ -187,7 +164,7 @@ export default function PagoScreen({ navigation, route }) {
                 <TouchableOpacity
                   key={m.id}
                   style={[s.metodoBtn, metodoPago === m.id && s.metodoBtnActivo]}
-                  onPress={() => { setMetodoPago(m.id); setBizumInfo(null); setError(''); }}>
+                  onPress={() => { setMetodoPago(m.id); setError(''); }}>
                   <Text style={s.metodoEmoji}>{m.emoji}</Text>
                   <Text style={[s.metodoText, metodoPago === m.id && s.metodoTextActivo]}>{m.label}</Text>
                 </TouchableOpacity>
@@ -211,22 +188,11 @@ export default function PagoScreen({ navigation, route }) {
               </View>
             )}
 
-            {metodoPago === 'bizum' && !bizumInfo && (
-              <TouchableOpacity style={s.btnSecundario} onPress={cargarBizum} disabled={cargandoBizum}>
-                {cargandoBizum
-                  ? <ActivityIndicator color="#3b82f6" />
-                  : <Text style={s.btnSecundarioText}>📱 Ver instrucciones de Bizum</Text>}
-              </TouchableOpacity>
-            )}
-
-            {metodoPago === 'bizum' && bizumInfo && (
+            {metodoPago === 'bizum' && (
               <View style={s.infoBox}>
-                <Text style={s.infoText}>📱 Paga por Bizum</Text>
-                {bizumInfo.instrucciones.map((linea, i) => (
-                  <Text key={i} style={s.infoSub}>{linea}</Text>
-                ))}
-                <Text style={[s.infoSub, { marginTop: 8, fontWeight: '600' }]}>
-                  Teléfono: {bizumInfo.telefono_destino} · Importe: {bizumInfo.importe}€
+                <Text style={s.infoText}>📱 Pago seguro con Bizum</Text>
+                <Text style={s.infoSub}>
+                  Se abrirá la página segura de Stripe, que te llevará a autorizar el pago desde tu propio banco.
                 </Text>
               </View>
             )}
@@ -237,23 +203,19 @@ export default function PagoScreen({ navigation, route }) {
               </View>
             ) : null}
 
-            {(metodoPago !== 'bizum' || bizumInfo) && (
-              <TouchableOpacity
-                style={[s.btnPagar, cargando && s.btnDesactivado]}
-                onPress={pagar}
-                disabled={cargando}
-              >
-                {cargando ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={s.btnPagarText}>
-                    {metodoPago === 'efectivo' && 'Confirmar pago en efectivo'}
-                    {metodoPago === 'bizum' && 'Ya he pagado por Bizum'}
-                    {metodoPago === 'tarjeta' && `Pagar ${precio}€ →`}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={[s.btnPagar, cargando && s.btnDesactivado]}
+              onPress={pagar}
+              disabled={cargando}
+            >
+              {cargando ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={s.btnPagarText}>
+                  {metodoPago === 'efectivo' ? 'Confirmar pago en efectivo' : `Pagar ${precio}€ →`}
+                </Text>
+              )}
+            </TouchableOpacity>
 
             <Text style={s.seguro}>🔒 Transacción segura</Text>
           </>
@@ -287,8 +249,6 @@ const s = StyleSheet.create({
   metodoEmoji: { fontSize: 24, marginBottom: 6 },
   metodoText: { color: '#aaa', fontSize: 12, fontWeight: '500' },
   metodoTextActivo: { color: '#3b82f6' },
-  btnSecundario: { backgroundColor: '#1e1e2e', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#3b82f6' },
-  btnSecundarioText: { color: '#3b82f6', fontWeight: 'bold', fontSize: 15 },
   infoBox: { backgroundColor: '#1a2e1a', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#22c55e' },
   infoText: { color: '#4ade80', fontWeight: '600', fontSize: 14, marginBottom: 6 },
   infoSub: { color: '#aaa', fontSize: 13 },
