@@ -46,6 +46,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [stripeEstado, setStripeEstado] = useState(null);
   const [comisionPendiente, setComisionPendiente] = useState(0);
   const [conectandoStripe, setConectandoStripe] = useState(false);
+  const [checklist, setChecklist] = useState(null);
   const [pagandoComision, setPagandoComision] = useState(false);
 
   const pollingRef = useRef(null);
@@ -75,6 +76,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     const intervalo = setInterval(cargarEstadisticas, 15000);
     return () => clearInterval(intervalo);
   }, [cargarEstadisticas, cargarCobros]);
+
+  useEffect(() => {
+    axios.get(`${API}/fontaneros/${userId}/checklist-perfil`)
+      .then(res => setChecklist(res.data))
+      .catch(() => {});
+  }, [userId]);
 
   const conectarStripe = async () => {
     setConectandoStripe(true);
@@ -356,6 +363,23 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         <Switch value={disponible24h} onValueChange={toggle24h}
           trackColor={{ false: colors.glassStrong, true: colors.purple }} thumbColor={disponible24h ? '#fff' : colors.textFaint} />
       </Glass>
+
+      {checklist && checklist.porcentaje < 100 && (
+        <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
+          <Glass style={s.checklistCard}>
+            <View style={s.checklistHeader}>
+              <Text style={s.checklistTitulo}>Completa tu perfil</Text>
+              <Text style={s.checklistPct}>{checklist.porcentaje}%</Text>
+            </View>
+            <View style={s.checklistBarraFondo}>
+              <View style={[s.checklistBarraRelleno, { width: `${checklist.porcentaje}%` }]} />
+            </View>
+            <Text style={s.checklistSub}>
+              {checklist.items.filter(i => !i.hecho).slice(0, 2).map(i => i.etiqueta).join(' · ')}
+            </Text>
+          </Glass>
+        </Pressable>
+      )}
 
       <View style={s.statsRow}>
         <Glass style={s.statCard}>
@@ -653,6 +677,13 @@ const s = StyleSheet.create({
   indicadorRojo: { backgroundColor: colors.red },
   disponibilidadTitulo: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
   disponibilidadSub: { color: colors.textMuted, fontSize: 12 },
+  checklistCard: { backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
+  checklistHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  checklistTitulo: { color: colors.text, fontWeight: '600', fontSize: 14 },
+  checklistPct: { color: colors.accent2, fontWeight: '700', fontSize: 14 },
+  checklistBarraFondo: { height: 6, borderRadius: 3, backgroundColor: colors.glassStrong, overflow: 'hidden', marginBottom: 8 },
+  checklistBarraRelleno: { height: 6, borderRadius: 3, backgroundColor: colors.accent2 },
+  checklistSub: { color: colors.textMuted, fontSize: 12 },
   statsRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.xl, marginVertical: spacing.lg },
   statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
   cobrosCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md, marginHorizontal: spacing.xl },

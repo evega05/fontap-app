@@ -409,6 +409,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               );
             })}
 
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: { usuario_id: userId, nombre } })}>
+              <Text style={s.linkTerminosText}>👁️ Ver vista previa de tu perfil público</Text>
+            </Pressable>
+
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
               <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
             </Pressable>

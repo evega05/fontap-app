@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useAuth } from '../AuthContext';
 import { agregarArchivo } from '../subirArchivo';
 import { GREMIOS, serviciosDe, OTRO_SERVICIO } from '../gremios';
@@ -70,6 +71,16 @@ export default function SolicitudScreen({ navigation, route }) {
     else {
       try {
   const clienteId = route.params?.clienteId || usuario?.id || 1;
+  let latitud_cliente = null;
+  let longitud_cliente = null;
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === 'granted') {
+      const pos = await Location.getCurrentPositionAsync({});
+      latitud_cliente = pos.coords.latitude;
+      longitud_cliente = pos.coords.longitude;
+    }
+  } catch (e) {}
   const body = {
     tipo: tipo.nombre,
     descripcion,
@@ -77,6 +88,9 @@ export default function SolicitudScreen({ navigation, route }) {
     fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
     fontanero_id: fontanero?.id || null,
     gremio: fontanero?.gremio || gremioElegido,
+    ciudad: route.params?.ciudad || null,
+    latitud_cliente,
+    longitud_cliente,
   };
   console.log('[Solicitud] Enviando servicio:', JSON.stringify(body), 'cliente_id:', clienteId);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
