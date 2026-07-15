@@ -233,10 +233,11 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
-  const confirmarEfectivo = async () => {
+  const confirmarCobroDirecto = async () => {
     if (!trabajoActivo) return;
+    const esBizum = trabajoActivo.metodo_pago === 'bizum';
     try {
-      await axios.put(`${API}/servicios/${trabajoActivo.id}/confirmar_efectivo`, null, { headers });
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/${esBizum ? 'confirmar_bizum' : 'confirmar_efectivo'}`, null, { headers });
       setCompletados(prev => [{
         id: trabajoActivo.id,
         cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
@@ -248,7 +249,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       }, ...prev]);
       setTrabajoActivo(null);
     } catch (e) {
-      avisar('Error', 'No se pudo confirmar el cobro');
+      avisar('Error', `No se pudo confirmar el cobro por ${esBizum ? 'Bizum' : 'efectivo'}`);
     }
   };
 
@@ -459,10 +460,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             </View>
           )}
           {trabajoActivo.estado === 'pago_pendiente' && (
-            <Pressable haptic onPress={confirmarEfectivo}>
+            <Pressable haptic onPress={confirmarCobroDirecto}>
               <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
-                <Text style={s.enCursoBtnText}>Confirmar cobro en efectivo</Text>
-                <Ionicons name="cash" size={15} color={colors.text} />
+                <Text style={s.enCursoBtnText}>
+                  {trabajoActivo.metodo_pago === 'bizum' ? 'Confirmar Bizum recibido' : 'Confirmar cobro en efectivo'}
+                </Text>
+                <Ionicons name={trabajoActivo.metodo_pago === 'bizum' ? 'phone-portrait' : 'cash'} size={15} color={colors.text} />
               </LinearGradient>
             </Pressable>
           )}
