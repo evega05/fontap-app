@@ -85,6 +85,7 @@ export default function MapaScreen({ navigation, route }) {
   const [ubicacionDenegada, setUbicacionDenegada] = useState(false);
   const [gremiosEnEspera, setGremiosEnEspera] = useState([]);
   const [procesandoEspera, setProcesandoEspera] = useState(false);
+  const [errorCarga, setErrorCarga] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -124,8 +125,8 @@ export default function MapaScreen({ navigation, route }) {
     else setCargando(true);
     axios
       .get(`${API}/fontaneros`, { params: { ...(filtroGremio ? { gremio: filtroGremio } : {}), ciudad } })
-      .then((res) => setFontaneros(res.data || []))
-      .catch(() => {})
+      .then((res) => { setFontaneros(res.data || []); setErrorCarga(false); })
+      .catch(() => { setFontaneros([]); setErrorCarga(true); })
       .finally(() => {
         setCargando(false);
         setRefreshing(false);
@@ -133,7 +134,7 @@ export default function MapaScreen({ navigation, route }) {
   }, [filtroGremio, ciudad]);
 
   const centroCiudad = CIUDADES.find((c) => c.valor === ciudad);
-  const centroForzado = ciudad !== 'Bilbao' && centroCiudad ? { latitud: centroCiudad.lat, longitud: centroCiudad.lon } : null;
+  const centroForzado = centroCiudad ? { latitud: centroCiudad.lat, longitud: centroCiudad.lon } : null;
 
   useEffect(() => {
     cargarFontaneros();
@@ -590,45 +591,55 @@ export default function MapaScreen({ navigation, route }) {
       <Glass strong style={s.sheet}>
         <View style={s.handle} />
 
-        <Pressable style={s.gremioFiltroBtn} haptic onPress={() => setCiudadAbierta(!ciudadAbierta)}>
-          <Text style={s.gremioFiltroBtnText}>📍 {ciudad}</Text>
-          <Ionicons name={ciudadAbierta ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-        </Pressable>
-
-        {ciudadAbierta && (
-          <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
-            {CIUDADES.map((c) => (
-              <Pressable key={c.valor} style={[s.gremioFiltroOpcion, ciudad === c.valor && s.gremioFiltroOpcionActiva]} haptic
-                onPress={() => { setCiudad(c.valor); setCiudadAbierta(false); }}>
-                <Text style={[s.gremioFiltroOpcionText, ciudad === c.valor && s.gremioFiltroOpcionTextActiva]}>📍 {c.valor}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-
-        <Pressable style={s.gremioFiltroBtn} haptic onPress={() => setGremioFiltroAbierto(!gremioFiltroAbierto)}>
-          <Text style={s.gremioFiltroBtnText}>
-            {filtroGremio
-              ? `${GREMIOS.find((g) => g.valor === filtroGremio)?.emoji} ${t(GREMIOS.find((g) => g.valor === filtroGremio)?.clave)}`
-              : `🛠️ ${t('todos')}`}
-          </Text>
-          <Ionicons name={gremioFiltroAbierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-        </Pressable>
-
-        {gremioFiltroAbierto && (
-          <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
-            <Pressable style={[s.gremioFiltroOpcion, !filtroGremio && s.gremioFiltroOpcionActiva]} haptic
-              onPress={() => { setFiltroGremio(''); setGremioFiltroAbierto(false); }}>
-              <Text style={[s.gremioFiltroOpcionText, !filtroGremio && s.gremioFiltroOpcionTextActiva]}>🛠️ {t('todos')}</Text>
+        <View style={s.filtrosRow}>
+          <View style={s.filtroDropdownWrap}>
+            <Pressable style={s.gremioFiltroBtn} haptic onPress={() => { setCiudadAbierta(!ciudadAbierta); setGremioFiltroAbierto(false); }}>
+              <Text style={s.gremioFiltroBtnText} numberOfLines={1}>📍 {ciudad}</Text>
+              <Ionicons name={ciudadAbierta ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
             </Pressable>
-            {GREMIOS.map((g) => (
-              <Pressable key={g.valor} style={[s.gremioFiltroOpcion, filtroGremio === g.valor && s.gremioFiltroOpcionActiva]} haptic
-                onPress={() => { setFiltroGremio(g.valor); setGremioFiltroAbierto(false); }}>
-                <Text style={[s.gremioFiltroOpcionText, filtroGremio === g.valor && s.gremioFiltroOpcionTextActiva]}>{g.emoji} {t(g.clave)}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
+
+            {ciudadAbierta && (
+              <View style={s.dropdownOverlay}>
+                <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
+                  {CIUDADES.map((c) => (
+                    <Pressable key={c.valor} style={[s.gremioFiltroOpcion, ciudad === c.valor && s.gremioFiltroOpcionActiva]} haptic
+                      onPress={() => { setCiudad(c.valor); setCiudadAbierta(false); }}>
+                      <Text style={[s.gremioFiltroOpcionText, ciudad === c.valor && s.gremioFiltroOpcionTextActiva]}>📍 {c.valor}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          <View style={s.filtroDropdownWrap}>
+            <Pressable style={s.gremioFiltroBtn} haptic onPress={() => { setGremioFiltroAbierto(!gremioFiltroAbierto); setCiudadAbierta(false); }}>
+              <Text style={s.gremioFiltroBtnText} numberOfLines={1}>
+                {filtroGremio
+                  ? `${GREMIOS.find((g) => g.valor === filtroGremio)?.emoji} ${t(GREMIOS.find((g) => g.valor === filtroGremio)?.clave)}`
+                  : `🛠️ ${t('todos')}`}
+              </Text>
+              <Ionicons name={gremioFiltroAbierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+            </Pressable>
+
+            {gremioFiltroAbierto && (
+              <View style={s.dropdownOverlay}>
+                <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
+                  <Pressable style={[s.gremioFiltroOpcion, !filtroGremio && s.gremioFiltroOpcionActiva]} haptic
+                    onPress={() => { setFiltroGremio(''); setGremioFiltroAbierto(false); }}>
+                    <Text style={[s.gremioFiltroOpcionText, !filtroGremio && s.gremioFiltroOpcionTextActiva]}>🛠️ {t('todos')}</Text>
+                  </Pressable>
+                  {GREMIOS.map((g) => (
+                    <Pressable key={g.valor} style={[s.gremioFiltroOpcion, filtroGremio === g.valor && s.gremioFiltroOpcionActiva]} haptic
+                      onPress={() => { setFiltroGremio(g.valor); setGremioFiltroAbierto(false); }}>
+                      <Text style={[s.gremioFiltroOpcionText, filtroGremio === g.valor && s.gremioFiltroOpcionTextActiva]}>{g.emoji} {t(g.clave)}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
           <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
@@ -716,10 +727,14 @@ export default function MapaScreen({ navigation, route }) {
             {fontanerosFiltrados.length === 0 ? (
               <View style={s.vacio}>
                 <View style={s.vacioIconWrap}>
-                  <Ionicons name="water-outline" size={34} color={colors.textMuted} />
+                  <Ionicons name={errorCarga ? 'cloud-offline-outline' : 'water-outline'} size={34} color={colors.textMuted} />
                 </View>
-                <Text style={s.vacioTitulo}>Sin profesionales disponibles</Text>
-                <Text style={s.vacioSub}>Prueba cambiando los filtros o desliza para actualizar.</Text>
+                <Text style={s.vacioTitulo}>{errorCarga ? 'No se pudo conectar' : 'Sin profesionales disponibles'}</Text>
+                <Text style={s.vacioSub}>
+                  {errorCarga
+                    ? 'No se pudo cargar la lista de profesionales. Revisa tu conexión y desliza para reintentar.'
+                    : 'Prueba cambiando los filtros o desliza para actualizar.'}
+                </Text>
                 <Pressable style={s.vacioBtn} haptic onPress={() => { setFiltroServicio('Todos'); setBusqueda(''); setMostrar24h(false); }}>
                   <Text style={s.vacioBtnText}>Limpiar filtros</Text>
                 </Pressable>
@@ -815,11 +830,14 @@ const s = StyleSheet.create({
   },
   handle: { width: 36, height: 4, borderRadius: 3, backgroundColor: colors.glassBorderStrong, alignSelf: 'center', marginBottom: spacing.md },
 
-  gremioFiltroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: 11, borderWidth: 1, borderColor: colors.glassBorder, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+  filtrosRow: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.lg, marginBottom: spacing.sm, zIndex: 20 },
+  filtroDropdownWrap: { flex: 1, position: 'relative', zIndex: 20 },
+  dropdownOverlay: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, zIndex: 30 },
+  gremioFiltroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 11, borderWidth: 1, borderColor: colors.glassBorder },
   ordenBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
   ordenBtnText: { color: colors.textMuted, ...type.caption },
-  gremioFiltroBtnText: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  gremioFiltroLista: { maxHeight: 240, backgroundColor: colors.glass, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+  gremioFiltroBtnText: { flex: 1, color: colors.text, fontSize: 13.5, fontWeight: '600' },
+  gremioFiltroLista: { maxHeight: 240, backgroundColor: colors.glassStrong, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, ...shadow.md },
   gremioFiltroOpcion: { paddingHorizontal: spacing.lg, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   gremioFiltroOpcionActiva: { backgroundColor: colors.blueLight },
   gremioFiltroOpcionText: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
