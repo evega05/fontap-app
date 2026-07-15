@@ -78,6 +78,10 @@ export default function EstadisticasScreen({ navigation, route }) {
         destino,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
+      if (res.status !== 200) {
+        avisar('Error', 'No se pudo descargar el resumen fiscal');
+        return;
+      }
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: `Resumen fiscal ${anio}` });
       } else {
