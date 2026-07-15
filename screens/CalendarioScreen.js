@@ -191,7 +191,7 @@ export default function CalendarioScreen({ navigation, route }) {
                     {c.urgente && <View style={s.urgenteBadge}><Text style={s.urgenteText}>⚡</Text></View>}
                   </View>
                   <Text style={s.citaCliente}>👤 {c.cliente || '—'}</Text>
-                  <Text style={s.citaZona}>📍 {c.zona || 'Bilbao'}</Text>
+                  <Text style={s.citaZona}>📍 {c.zona || '—'}</Text>
                   <View style={[s.estadoPill, { borderColor: estadoColor(c.estado) }]}>
                     <Text style={[s.estadoText, { color: estadoColor(c.estado) }]}>{estadoLabel(c.estado)}</Text>
                   </View>

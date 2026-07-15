@@ -47,7 +47,7 @@ const DRAWER_WIDTH = 288;
 const SELECTED_FLOAT_WIDTH = 250;
 const SELECTED_FLOAT_HEIGHT = 176;
 
-const CIUDADES = [
+export const CIUDADES = [
   { valor: 'Bilbao', lat: 43.2630, lon: -2.9350 },
   { valor: 'Madrid', lat: 40.4168, lon: -3.7038 },
   { valor: 'Barcelona', lat: 41.3851, lon: 2.1734 },

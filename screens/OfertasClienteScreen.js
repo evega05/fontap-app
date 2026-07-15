@@ -105,7 +105,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
                           </View>
                         </View>
                         <View style={s.ofertaInfo}>
-                          <Text style={s.fontaneroNombre}>{o.fontanero_nombre || 'Fontanero'}</Text>
+                          <Text style={s.fontaneroNombre}>{o.fontanero_nombre || 'Profesional'}</Text>
                           {o.fontanero_valoracion && (
                             <Text style={s.fontaneroVal}>⭐ {o.fontanero_valoracion} · {o.fontanero_trabajos ?? 0} trabajos</Text>
                           )}
