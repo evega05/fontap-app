@@ -30,6 +30,7 @@ export default function AjustesCuentaScreen({ navigation }) {
   const [eliminando, setEliminando] = useState(false);
   const [errEliminar, setErrEliminar] = useState('');
   const [email, setEmail] = useState('');
+  const [aniversario, setAniversario] = useState(null);
 
   useEffect(() => {
     axios.get(`${API}/usuarios/${usuario.id}/perfil`, { headers })
@@ -38,6 +39,9 @@ export default function AjustesCuentaScreen({ navigation }) {
         setTelefono(res.data.telefono || '');
         setEmail(res.data.email || '');
       })
+      .catch(() => {});
+    axios.get(`${API}/usuarios/${usuario.id}/aniversario`, { headers })
+      .then((res) => setAniversario(res.data))
       .catch(() => {});
   }, []);
 
@@ -101,6 +105,22 @@ export default function AjustesCuentaScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        {aniversario && aniversario.años > 0 && (
+          <View style={[s.aniversarioCard, aniversario.es_aniversario && s.aniversarioCardDestacada]}>
+            <Text style={s.aniversarioEmoji}>{aniversario.es_aniversario ? '🎉' : '🏅'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.aniversarioTitulo}>
+                {aniversario.años} {aniversario.años === 1 ? 'año' : 'años'} con Multiservicios Provenza
+              </Text>
+              <Text style={s.aniversarioSub}>
+                {aniversario.resumen_ultimo_año.servicios_completados != null
+                  ? `${aniversario.resumen_ultimo_año.servicios_completados} trabajos completados · ${aniversario.resumen_ultimo_año.total_ganado}€ ganados este año`
+                  : `${aniversario.resumen_ultimo_año.servicios_contratados} servicios contratados · ${aniversario.resumen_ultimo_año.total_gastado}€ este año`}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <Text style={s.seccionTitulo}>{t('idioma')}</Text>
         <View style={s.idiomaRow}>
           {IDIOMAS.map((i) => (
@@ -179,6 +199,11 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 56, paddingHorizontal: 18, paddingBottom: 12 },
   btnVolver: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
+  aniversarioCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
+  aniversarioCardDestacada: { borderColor: colors.amber },
+  aniversarioEmoji: { fontSize: 30 },
+  aniversarioTitulo: { color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 4 },
+  aniversarioSub: { color: colors.textMuted, fontSize: 12 },
   headerTitulo: { fontSize: 18, fontWeight: 'bold', color: colors.text },
   scroll: { padding: 20, paddingBottom: 60 },
   seccionTitulo: { fontSize: 13, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: 22, marginBottom: 12 },

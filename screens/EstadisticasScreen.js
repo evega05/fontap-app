@@ -32,13 +32,16 @@ export default function EstadisticasScreen({ navigation, route }) {
   const [refrescando, setRefrescando] = useState(false);
   const [periodoIngresos, setPeriodoIngresos] = useState('semana');
   const [descargandoFiscal, setDescargandoFiscal] = useState(false);
+  const [comparativa, setComparativa] = useState(null);
 
   const cargar = useCallback(async () => {
     try {
-      const [resStats, resSolicitudes] = await Promise.allSettled([
+      const [resStats, resSolicitudes, resComparativa] = await Promise.allSettled([
         axios.get(`${API}/fontaneros/${userId}/estadisticas`, { headers }),
         axios.get(`${API}/fontaneros/${userId}/solicitudes`, { headers }),
+        axios.get(`${API}/fontaneros/${userId}/comparativa-precio`, { headers }),
       ]);
+      if (resComparativa.status === 'fulfilled') setComparativa(resComparativa.value.data);
 
       if (resStats.status === 'fulfilled' && resStats.value.data) {
         setStats(resStats.value.data);
@@ -52,7 +55,7 @@ export default function EstadisticasScreen({ navigation, route }) {
         const tasaAcep = todas.length ? Math.round((aceptadas / todas.length) * 100) : 0;
         setStats({
           trabajos_completados: completados.length,
-          ingresos_total: ingresos,
+          ingresos_totales: ingresos,
           valoracion_media: mediaVal,
           tasa_aceptacion: tasaAcep,
           ingresos_semana: [0, 0, 0, 0, 0, 0, ingresos > 0 ? ingresos : 0],
@@ -78,6 +81,11 @@ export default function EstadisticasScreen({ navigation, route }) {
         destino,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
+      if (res.status !== 200) {
+        await FileSystem.deleteAsync(res.uri, { idempotent: true });
+        avisar('Error', 'No se pudo descargar el resumen fiscal');
+        return;
+      }
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: `Resumen fiscal ${anio}` });
       } else {
@@ -129,7 +137,7 @@ export default function EstadisticasScreen({ navigation, route }) {
             </View>
             <View style={[s.kpiCard, s.kpiGreen]}>
               <Text style={s.kpiEmoji}>💰</Text>
-              <Text style={s.kpiNum}>{stats?.ingresos_total ?? 0}€</Text>
+              <Text style={s.kpiNum}>{stats?.ingresos_totales ?? 0}€</Text>
               <Text style={s.kpiLabel}>Ingresos totales</Text>
             </View>
           </View>
@@ -192,7 +200,7 @@ export default function EstadisticasScreen({ navigation, route }) {
               <Text style={s.resumenLabel}>Ingresos medios por trabajo</Text>
               <Text style={s.resumenValor}>
                 {stats?.trabajos_completados
-                  ? `${Math.round((stats.ingresos_total || 0) / stats.trabajos_completados)}€`
+                  ? `${Math.round((stats.ingresos_totales || 0) / stats.trabajos_completados)}€`
                   : '—'}
               </Text>
             </View>
@@ -216,6 +224,29 @@ export default function EstadisticasScreen({ navigation, route }) {
                 ))}
                 <Text style={s.estrellasNum}>{stats.valoracion_media}</Text>
               </View>
+            </View>
+          )}
+
+          {comparativa?.precio_propio_medio != null && comparativa?.precio_gremio_zona_medio != null && (
+            <View style={s.resumenCard}>
+              <Text style={s.resumenTitulo}>Tu precio frente al gremio en tu zona</Text>
+              <View style={s.resumenFila}>
+                <Text style={s.resumenLabel}>Tu precio medio</Text>
+                <Text style={s.resumenValor}>{comparativa.precio_propio_medio}€</Text>
+              </View>
+              <View style={[s.resumenFila, { borderBottomWidth: 0 }]}>
+                <Text style={s.resumenLabel}>Media del gremio en tu zona</Text>
+                <Text style={s.resumenValor}>{comparativa.precio_gremio_zona_medio}€</Text>
+              </View>
+              {comparativa.diferencia_pct != null && (
+                <Text style={[s.comparativaNota, { color: comparativa.diferencia_pct > 0 ? colors.amber : colors.green }]}>
+                  {comparativa.diferencia_pct > 0
+                    ? `Cobras un ${comparativa.diferencia_pct}% más que la media`
+                    : comparativa.diferencia_pct < 0
+                    ? `Cobras un ${Math.abs(comparativa.diferencia_pct)}% menos que la media`
+                    : 'Estás justo en la media'}
+                </Text>
+              )}
             </View>
           )}
 
@@ -258,6 +289,7 @@ const s = StyleSheet.create({
   resumenFila: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   resumenLabel: { color: colors.textMuted, fontSize: 13 },
   resumenValor: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  comparativaNota: { fontSize: 12, fontWeight: '600', marginTop: 10, textAlign: 'center' },
   estrellasCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
   estrellasTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 12 },
   estrellasRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

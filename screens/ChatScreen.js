@@ -11,6 +11,11 @@ import { colors } from '../theme';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
+const RESPUESTAS_RAPIDAS = {
+  fontanero: ['Voy en camino 🚗', '¿A qué hora te viene bien?', 'Ya he terminado ✅', 'Necesito más detalles del problema', '5 minutos y llego'],
+  cliente: ['¿Cuánto tardarás?', 'Estoy en casa, puedes venir', '¿Cuál es el precio aproximado?', 'Gracias, quedo a la espera', '¿Puedes venir mañana?'],
+};
+
 export default function ChatScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const { servicioId, otroNombre } = route.params || {};
@@ -191,6 +196,19 @@ export default function ChatScreen({ navigation, route }) {
         />
       )}
 
+      <FlatList
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        data={RESPUESTAS_RAPIDAS[usuario?.tipo] || []}
+        keyExtractor={(item) => item}
+        contentContainerStyle={s.respuestasRapidas}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={s.chipRapido} onPress={() => setTexto(item)}>
+            <Text style={s.chipRapidoText}>{item}</Text>
+          </TouchableOpacity>
+        )}
+      />
+
       <View style={s.inputRow}>
         <TouchableOpacity
           style={[s.adjuntarBtn, enviandoFoto && s.sendBtnDisabled]}
@@ -273,6 +291,9 @@ const s = StyleSheet.create({
   vacioEmoji: { fontSize: 48, marginBottom: 12 },
   vacioText: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 6 },
   vacioSub: { color: colors.textMuted, fontSize: 13 },
+  respuestasRapidas: { gap: 8, paddingHorizontal: 12, paddingBottom: 8, backgroundColor: colors.bgCard },
+  chipRapido: { backgroundColor: colors.bgCard2, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border2 },
+  chipRapidoText: { color: colors.text, fontSize: 13 },
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 10,
     padding: 12, paddingBottom: 28,

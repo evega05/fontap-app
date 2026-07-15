@@ -325,7 +325,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
             {!!codigoReferido && (
               <Glass style={s.referidoCard}>
                 <Text style={s.referidoTitulo}>🎟️ Invita a un colega de tu gremio</Text>
-                <Text style={s.referidoSub}>Comparte tu código y cuando complete su primer trabajo, tú tendrás comisión reducida (2,5%) durante 90 días.</Text>
+                <Text style={s.referidoSub}>Comparte tu código: en cuanto tu colega se registre con él, tú tendrás comisión reducida (2,5%) durante los 90 días siguientes.</Text>
                 <View style={s.referidoCodigoRow}>
                   <Text style={s.referidoCodigo}>{codigoReferido}</Text>
                   <Pressable
@@ -408,6 +408,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 </Glass>
               );
             })}
+
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: { usuario_id: userId, nombre } })}>
+              <Text style={s.linkTerminosText}>👁️ Ver vista previa de tu perfil público</Text>
+            </Pressable>
 
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
               <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>

@@ -23,6 +23,24 @@ export default function CalendarioScreen({ navigation, route }) {
   const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().toDateString());
   const [googleConectado, setGoogleConectado] = useState(false);
   const [conectandoGoogle, setConectandoGoogle] = useState(false);
+  const [rutaHoy, setRutaHoy] = useState(null);
+  const [cargandoRuta, setCargandoRuta] = useState(false);
+  const [mostrandoRuta, setMostrandoRuta] = useState(false);
+  const esHoySeleccionado = diaSeleccionado === new Date().toDateString();
+
+  const cargarRutaHoy = async () => {
+    if (!userId) return;
+    setCargandoRuta(true);
+    try {
+      const r = await axios.get(`${API}/fontaneros/${userId}/ruta-hoy`, { headers });
+      setRutaHoy(r.data);
+      setMostrandoRuta(true);
+    } catch (e) {
+      avisar('No se pudo calcular la ruta', 'Inténtalo de nuevo en unos minutos');
+    } finally {
+      setCargandoRuta(false);
+    }
+  };
 
   const cargarEstadoGoogle = useCallback(async () => {
     if (!userId) return;
@@ -160,12 +178,57 @@ export default function CalendarioScreen({ navigation, route }) {
         })}
       </View>
 
-      <Text style={s.diaLabel}>
-        {new Date(diaSeleccionado).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-      </Text>
+      <View style={s.diaLabelRow}>
+        <Text style={s.diaLabel}>
+          {new Date(diaSeleccionado).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </Text>
+        {esHoySeleccionado && (
+          <TouchableOpacity style={s.btnRuta} onPress={cargarRutaHoy} disabled={cargandoRuta}>
+            {cargandoRuta ? <ActivityIndicator color={colors.blue} size="small" /> : <Text style={s.btnRutaText}>🧭 Ruta del día</Text>}
+          </TouchableOpacity>
+        )}
+      </View>
 
       {cargando ? (
         <View style={s.centro}><ActivityIndicator color={colors.blue} /></View>
+      ) : mostrandoRuta && esHoySeleccionado ? (
+        <ScrollView style={s.lista} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+          <TouchableOpacity onPress={() => setMostrandoRuta(false)} style={{ marginBottom: 12 }}>
+            <Text style={s.back}>← Ver calendario normal</Text>
+          </TouchableOpacity>
+          {(!rutaHoy || (rutaHoy.con_ubicacion.length === 0 && rutaHoy.sin_ubicacion.length === 0)) ? (
+            <View style={s.vacio}>
+              <Text style={s.vacioEmoji}>🧭</Text>
+              <Text style={s.vacioTitulo}>Sin citas para hoy</Text>
+            </View>
+          ) : (
+            <>
+              {rutaHoy.con_ubicacion.map((c, i) => (
+                <View key={c.id} style={s.rutaCard}>
+                  <View style={s.rutaNum}><Text style={s.rutaNumText}>{i + 1}</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.citaTipo}>{tipoEmoji(c.titulo)} {c.titulo}</Text>
+                    <Text style={s.citaCliente}>{c.fecha_inicio ? new Date(c.fecha_inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}</Text>
+                  </View>
+                </View>
+              ))}
+              {rutaHoy.sin_ubicacion.length > 0 && (
+                <>
+                  <Text style={s.vacioSub}>Sin ubicación conocida (orden por hora):</Text>
+                  {rutaHoy.sin_ubicacion.map(c => (
+                    <View key={c.id} style={s.rutaCard}>
+                      <View style={[s.rutaNum, { backgroundColor: colors.bgCard2 }]}><Text style={s.rutaNumText}>?</Text></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.citaTipo}>{tipoEmoji(c.titulo)} {c.titulo}</Text>
+                        <Text style={s.citaCliente}>{c.fecha_inicio ? new Date(c.fecha_inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </ScrollView>
       ) : (
         <ScrollView
           style={s.lista}
@@ -191,7 +254,7 @@ export default function CalendarioScreen({ navigation, route }) {
                     {c.urgente && <View style={s.urgenteBadge}><Text style={s.urgenteText}>⚡</Text></View>}
                   </View>
                   <Text style={s.citaCliente}>👤 {c.cliente || '—'}</Text>
-                  <Text style={s.citaZona}>📍 {c.zona || 'Bilbao'}</Text>
+                  <Text style={s.citaZona}>📍 {c.zona || '—'}</Text>
                   <View style={[s.estadoPill, { borderColor: estadoColor(c.estado) }]}>
                     <Text style={[s.estadoText, { color: estadoColor(c.estado) }]}>{estadoLabel(c.estado)}</Text>
                   </View>
@@ -241,7 +304,13 @@ const s = StyleSheet.create({
   diaNumHoy: { color: colors.blue },
   diaDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.blue, marginTop: 4 },
   diaDotActivo: { backgroundColor: '#fff' },
-  diaLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600', paddingHorizontal: 20, marginTop: 12, marginBottom: 4, textTransform: 'capitalize' },
+  diaLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 12, marginBottom: 4 },
+  diaLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
+  btnRuta: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  btnRutaText: { color: colors.blue, fontSize: 12, fontWeight: '700' },
+  rutaCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
+  rutaNum: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  rutaNumText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   lista: { flex: 1 },
   vacio: { alignItems: 'center', paddingTop: 40 },

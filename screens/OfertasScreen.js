@@ -5,6 +5,7 @@ import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { avisar } from '../confirmar';
 import { emojiDeServicio } from '../gremios';
+import { CIUDADES } from './MapaScreen';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const CUPO_MAXIMO_OFERTAS = 4; // igual que CUPO_MAXIMO_OFERTAS en el backend (estilo Habitissimo)
@@ -17,6 +18,7 @@ export default function OfertasScreen({ navigation }) {
   const [proyectos, setProyectos] = useState([]);
   const [interesEnviado, setInteresEnviado] = useState([]);
   const [tab, setTab] = useState('disponibles');
+  const [ciudadFiltro, setCiudadFiltro] = useState('');
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [ofertando, setOfertando] = useState(null);
@@ -36,14 +38,14 @@ export default function OfertasScreen({ navigation }) {
       const [resAbiertos, resMis, resProyectos] = await Promise.allSettled([
         axios.get(`${API}/servicios/abiertos`, { headers, params: gremio ? { gremio } : {} }),
         axios.get(`${API}/fontaneros/${usuario?.id}/ofertas`, { headers }),
-        axios.get(`${API}/proyectos`, { headers, params: gremio ? { gremio } : {} }),
+        axios.get(`${API}/proyectos`, { headers, params: { ...(gremio ? { gremio } : {}), ...(ciudadFiltro ? { ciudad: ciudadFiltro } : {}) } }),
       ]);
       if (resAbiertos.status === 'fulfilled') setServiciosAbiertos(resAbiertos.value.data || []);
       if (resMis.status === 'fulfilled') setMisOfertas(resMis.value.data || []);
       if (resProyectos.status === 'fulfilled') setProyectos(resProyectos.value.data || []);
     } catch (e) {}
     finally { setCargando(false); setRefrescando(false); }
-  }, [usuario?.id, token]);
+  }, [usuario?.id, token, ciudadFiltro]);
 
   const expresarInteres = async (proyecto) => {
     setInteresEnviado(prev => [...prev, proyecto.id]);
@@ -86,7 +88,7 @@ export default function OfertasScreen({ navigation }) {
         <View style={s.modalOverlay}>
           <View style={s.modal}>
             <Text style={s.modalTitulo}>💼 Enviar oferta</Text>
-            <Text style={s.modalSub}>{tipoEmoji(ofertando.tipo)} {ofertando.tipo} · {ofertando.zona || 'Bilbao'}</Text>
+            <Text style={s.modalSub}>{tipoEmoji(ofertando.tipo)} {ofertando.tipo} · {ofertando.zona || '—'}</Text>
             <Text style={s.modalLabel}>Materiales (€)</Text>
             <View style={s.modalInputWrap}>
               <TextInput
@@ -183,7 +185,7 @@ export default function OfertasScreen({ navigation }) {
                       <Text style={s.tipoEmoji}>{tipoEmoji(sv.tipo)}</Text>
                       <View>
                         <Text style={s.tipoNombre}>{sv.tipo}</Text>
-                        <Text style={s.tipoZona}>📍 {sv.zona || 'Bilbao'}</Text>
+                        <Text style={s.tipoZona}>📍 {sv.zona || '—'}</Text>
                       </View>
                     </View>
                     {sv.urgente && (
@@ -233,6 +235,19 @@ export default function OfertasScreen({ navigation }) {
                 </View>
               ))
             )
+          )}
+
+          {tab === 'proyectos' && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.ciudadFiltroScroll} contentContainerStyle={s.ciudadFiltroContent}>
+              <TouchableOpacity style={[s.ciudadChip, !ciudadFiltro && s.ciudadChipActivo]} onPress={() => setCiudadFiltro('')}>
+                <Text style={[s.ciudadChipText, !ciudadFiltro && s.ciudadChipTextActivo]}>Todas</Text>
+              </TouchableOpacity>
+              {CIUDADES.map(c => (
+                <TouchableOpacity key={c.valor} style={[s.ciudadChip, ciudadFiltro === c.valor && s.ciudadChipActivo]} onPress={() => setCiudadFiltro(c.valor)}>
+                  <Text style={[s.ciudadChipText, ciudadFiltro === c.valor && s.ciudadChipTextActivo]}>📍 {c.valor}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           )}
 
           {tab === 'proyectos' && (
@@ -319,6 +334,12 @@ const s = StyleSheet.create({
   tabTextActivo: { color: colors.blue },
   badge: { backgroundColor: colors.red, borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  ciudadFiltroScroll: { maxHeight: 40, marginTop: 4, marginBottom: 8 },
+  ciudadFiltroContent: { paddingHorizontal: 20, gap: 8 },
+  ciudadChip: { backgroundColor: colors.bgCard2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border2 },
+  ciudadChipActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  ciudadChipText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  ciudadChipTextActivo: { color: colors.blue, fontWeight: '700' },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   lista: { flex: 1 },
   vacio: { alignItems: 'center', paddingTop: 60 },

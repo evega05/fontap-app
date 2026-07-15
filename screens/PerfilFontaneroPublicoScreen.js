@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIn
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { confirmarAccion, avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -42,6 +43,27 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
 
   const contratar = () => {
     navigation.navigate('Solicitud', { fontanero: perfil, clienteId: usuario?.id });
+  };
+
+  const [ocultado, setOcultado] = useState(false);
+  const esCliente = usuario?.tipo === 'cliente';
+
+  const noMostrarMas = () => {
+    confirmarAccion(
+      '¿Dejar de ver a este profesional?',
+      'No volverás a verlo en el mapa ni recibirás avisos de sus ofertas. Puedes deshacerlo cuando quieras desde Ajustes de cuenta.',
+      async () => {
+        try {
+          await axios.post(`${API}/clientes/${usuario.id}/lista-negra/${perfil.id}`, {}, { headers });
+          setOcultado(true);
+          avisar('Hecho', 'No volverás a ver a este profesional');
+          navigation.goBack();
+        } catch (e) {
+          avisar('Error', 'No se pudo completar la acción');
+        }
+      },
+      { textoConfirmar: 'Dejar de ver' }
+    );
   };
 
   if (cargando) {
@@ -144,6 +166,11 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
         <TouchableOpacity style={s.btnContratar} onPress={contratar}>
           <Text style={s.btnContratarText}>Contratar a {perfil.nombre?.split(' ')[0]} →</Text>
         </TouchableOpacity>
+        {esCliente && (
+          <TouchableOpacity style={s.btnNoMostrar} onPress={noMostrarMas}>
+            <Text style={s.btnNoMostrarText}>No quiero ver más a este profesional</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -182,4 +209,6 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 30, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border },
   btnContratar: { backgroundColor: colors.blue, borderRadius: 14, padding: 16, alignItems: 'center' },
   btnContratarText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  btnNoMostrar: { alignItems: 'center', paddingVertical: 10 },
+  btnNoMostrarText: { color: colors.textMuted, fontSize: 12.5 },
 });

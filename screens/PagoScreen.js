@@ -63,6 +63,9 @@ export default function PagoScreen({ navigation, route }) {
     }
   };
 
+  // El Bizum no lo verificamos automáticamente (no hay integración real): el cliente
+  // dice que ya pagó y el profesional recibe un aviso para confirmar que le llegó,
+  // igual que con el efectivo.
   const confirmarBizum = async () => {
     setCargando(true);
     setError('');
@@ -126,11 +129,13 @@ export default function PagoScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
         <View style={s.centro}>
-          <Text style={s.emoji}>{metodoPago === 'efectivo' ? '💵' : '💳'}✅</Text>
-          <Text style={s.titulo}>¡Pago completado!</Text>
+          <Text style={s.emoji}>{metodoPago === 'efectivo' ? '💵' : metodoPago === 'bizum' ? '📱' : '💳'}✅</Text>
+          <Text style={s.titulo}>{metodoPago === 'tarjeta' ? '¡Pago completado!' : 'Aviso enviado'}</Text>
           <Text style={s.sub}>
             {metodoPago === 'efectivo'
-              ? 'Recuerda pagar en efectivo al profesional'
+              ? 'Recuerda pagar en efectivo al profesional. Quedará confirmado cuando él lo reciba.'
+              : metodoPago === 'bizum'
+              ? 'El profesional ha recibido un aviso para confirmar que le llegó el Bizum.'
               : 'Pago procesado correctamente'}
           </Text>
         </View>

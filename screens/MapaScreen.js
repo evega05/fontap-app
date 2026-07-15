@@ -47,7 +47,7 @@ const DRAWER_WIDTH = 288;
 const SELECTED_FLOAT_WIDTH = 250;
 const SELECTED_FLOAT_HEIGHT = 176;
 
-const CIUDADES = [
+export const CIUDADES = [
   { valor: 'Bilbao', lat: 43.2630, lon: -2.9350 },
   { valor: 'Madrid', lat: 40.4168, lon: -3.7038 },
   { valor: 'Barcelona', lat: 41.3851, lon: 2.1734 },
@@ -124,14 +124,14 @@ export default function MapaScreen({ navigation, route }) {
     if (isRefresh) setRefreshing(true);
     else setCargando(true);
     axios
-      .get(`${API}/fontaneros`, { params: { ...(filtroGremio ? { gremio: filtroGremio } : {}), ciudad } })
+      .get(`${API}/fontaneros`, { params: { ...(filtroGremio ? { gremio: filtroGremio } : {}), ciudad, ...(clienteId ? { cliente_id: clienteId } : {}) } })
       .then((res) => { setFontaneros(res.data || []); setErrorCarga(false); })
       .catch(() => { setFontaneros([]); setErrorCarga(true); })
       .finally(() => {
         setCargando(false);
         setRefreshing(false);
       });
-  }, [filtroGremio, ciudad]);
+  }, [filtroGremio, ciudad, clienteId]);
 
   const centroCiudad = CIUDADES.find((c) => c.valor === ciudad);
   const centroForzado = centroCiudad ? { latitud: centroCiudad.lat, longitud: centroCiudad.lon } : null;
@@ -692,7 +692,7 @@ export default function MapaScreen({ navigation, route }) {
         )}
 
         <View style={s.ctaRow}>
-          <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { urgente: true, clienteId })}>
+          <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { urgente: true, clienteId, ciudad })}>
             <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaUrgente}>
               <Ionicons name="flash" size={16} color={colors.text} />
               <View>
@@ -701,7 +701,7 @@ export default function MapaScreen({ navigation, route }) {
               </View>
             </LinearGradient>
           </Pressable>
-          <Pressable style={s.ctaCita} haptic onPress={() => navigation.navigate('Solicitud', { urgente: false, clienteId })}>
+          <Pressable style={s.ctaCita} haptic onPress={() => navigation.navigate('Solicitud', { urgente: false, clienteId, ciudad })}>
             <Ionicons name="calendar-outline" size={16} color={colors.text} />
             <View>
               <Text style={s.ctaCitaText}>{t('reservarCita')}</Text>
