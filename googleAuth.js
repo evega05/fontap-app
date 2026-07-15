@@ -3,10 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Reemplaza esto con tu Client ID de Google Cloud Console (tipo "Web application").
-// Ver instrucciones en README o pídeselas a Claude — sin esto el botón de Google
-// muestra un aviso en vez de abrir el flujo de login.
-export const GOOGLE_CLIENT_ID = 'TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_ID = '1037459588867-dum7jb79ef3c5lc5icnd4le4fgnicesj.apps.googleusercontent.com';
 
 export function useGoogleAuth() {
   const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
