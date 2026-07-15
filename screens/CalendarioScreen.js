@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { emojiDeServicio } from '../gremios';
+import { confirmarAccion, avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -40,24 +41,19 @@ export default function CalendarioScreen({ navigation, route }) {
       await WebBrowser.openBrowserAsync(r.data.url);
       await cargarEstadoGoogle();
     } catch (e) {
-      Alert.alert('No se pudo conectar', 'Inténtalo de nuevo en unos minutos');
+      avisar('No se pudo conectar', 'Inténtalo de nuevo en unos minutos');
     } finally {
       setConectandoGoogle(false);
     }
   };
 
   const desconectarGoogleCalendar = () => {
-    Alert.alert('Desconectar Google Calendar', '¿Seguro que quieres dejar de sincronizar tus citas?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Desconectar', style: 'destructive', onPress: async () => {
-          try {
-            await axios.delete(`${API}/fontaneros/${userId}/google-calendar`, { headers });
-            setGoogleConectado(false);
-          } catch (e) {}
-        },
-      },
-    ]);
+    confirmarAccion('Desconectar Google Calendar', '¿Seguro que quieres dejar de sincronizar tus citas?', async () => {
+      try {
+        await axios.delete(`${API}/fontaneros/${userId}/google-calendar`, { headers });
+        setGoogleConectado(false);
+      } catch (e) {}
+    }, { textoConfirmar: 'Desconectar' });
   };
 
   const cargar = useCallback(async () => {

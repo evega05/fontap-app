@@ -130,7 +130,7 @@ export default function PagoScreen({ navigation, route }) {
           <Text style={s.titulo}>¡Pago completado!</Text>
           <Text style={s.sub}>
             {metodoPago === 'efectivo'
-              ? 'Recuerda pagar en efectivo al fontanero'
+              ? 'Recuerda pagar en efectivo al profesional'
               : 'Pago procesado correctamente'}
           </Text>
         </View>
@@ -150,13 +150,13 @@ export default function PagoScreen({ navigation, route }) {
         <Text style={s.emoji}>💳</Text>
         <Text style={s.titulo}>Pagar el servicio</Text>
 
-        {/* ✅ FIX: Mostrar estado de espera si el fontanero no envió precio */}
+        {/* Mostrar estado de espera si el profesional no envió precio */}
         {esperandoPrecio ? (
           <View style={s.esperandoBox}>
             <ActivityIndicator color="#3b82f6" style={{ marginBottom: 12 }} />
-            <Text style={s.esperandoTitulo}>⏳ Esperando precio del fontanero</Text>
+            <Text style={s.esperandoTitulo}>⏳ Esperando precio del profesional</Text>
             <Text style={s.esperandoSub}>
-              El fontanero aún no ha enviado el precio final. Esta pantalla se actualizará automáticamente cuando lo haga.
+              El profesional aún no ha enviado el precio final. Esta pantalla se actualizará automáticamente cuando lo haga.
             </Text>
           </View>
         ) : (
@@ -164,10 +164,10 @@ export default function PagoScreen({ navigation, route }) {
             <View style={s.card}>
               <View style={s.fila}>
                 <Text style={s.label}>Servicio</Text>
-                <Text style={s.valor}>{servicio?.nombre || 'Fontanería'}</Text>
+                <Text style={s.valor}>{servicio?.nombre || 'Servicio'}</Text>
               </View>
               <View style={s.fila}>
-                <Text style={s.label}>Fontanero</Text>
+                <Text style={s.label}>Profesional</Text>
                 <Text style={s.valor}>{fontanero?.nombre || 'Profesional'}</Text>
               </View>
               <View style={[s.fila, { borderBottomWidth: 0 }]}>

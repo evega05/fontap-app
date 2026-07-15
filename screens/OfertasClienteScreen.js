@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { confirmarAccion, avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -28,26 +29,22 @@ export default function OfertasClienteScreen({ navigation, route }) {
   useEffect(() => { cargar(); }, [cargar]);
 
   const aceptarOferta = async (ofertaId, fontaneroNombre) => {
-    Alert.alert(
+    confirmarAccion(
       '¿Aceptar oferta?',
       `Vas a contratar a ${fontaneroNombre}. Esta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Aceptar', onPress: async () => {
-            setProcesando(ofertaId);
-            try {
-              await axios.put(`${API}/servicios/${servicioId}/ofertas/${ofertaId}/aceptar`, null, { headers });
-              Alert.alert('✅ ¡Oferta aceptada!', `${fontaneroNombre} ha sido notificado y está en camino.`);
-              navigation.navigate('Confirmacion', { servicioId, tipo: { nombre: tipoServicio } });
-            } catch (e) {
-              Alert.alert('Error', 'No se pudo aceptar la oferta');
-            } finally {
-              setProcesando(null);
-            }
-          }
+      async () => {
+        setProcesando(ofertaId);
+        try {
+          await axios.put(`${API}/servicios/${servicioId}/ofertas/${ofertaId}/aceptar`, null, { headers });
+          avisar('✅ ¡Oferta aceptada!', `${fontaneroNombre} ha sido notificado y está en camino.`);
+          navigation.navigate('Confirmacion', { servicioId, tipo: { nombre: tipoServicio } });
+        } catch (e) {
+          avisar('Error', 'No se pudo aceptar la oferta');
+        } finally {
+          setProcesando(null);
         }
-      ]
+      },
+      { textoConfirmar: 'Aceptar', destructivo: false }
     );
   };
 
@@ -57,7 +54,7 @@ export default function OfertasClienteScreen({ navigation, route }) {
       await axios.put(`${API}/servicios/${servicioId}/ofertas/${ofertaId}/rechazar`, null, { headers });
       setOfertas(prev => prev.filter(o => o.id !== ofertaId));
     } catch (e) {
-      Alert.alert('Error', 'No se pudo rechazar la oferta');
+      avisar('Error', 'No se pudo rechazar la oferta');
     } finally {
       setProcesando(null);
     }

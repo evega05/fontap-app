@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { avisar } from '../confirmar';
 import { emojiDeServicio } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -64,14 +65,14 @@ export default function OfertasScreen({ navigation }) {
         mano_obra: parseFloat(manoObraOferta) || 0,
         mensaje: mensajeOferta,
       }, { headers });
-      Alert.alert('✅ Oferta enviada', 'El cliente recibirá tu propuesta');
+      avisar('✅ Oferta enviada', 'El cliente recibirá tu propuesta');
       setOfertando(null);
       setMaterialesOferta('');
       setManoObraOferta('');
       setMensajeOferta('');
       cargar();
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.detail || 'No se pudo enviar la oferta');
+      avisar('Error', e.response?.data?.detail || 'No se pudo enviar la oferta');
     } finally {
       setEnviando(false);
     }

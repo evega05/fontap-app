@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Switch } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { GREMIOS, serviciosDe } from '../gremios';
+import { confirmarAccion, avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -50,7 +51,7 @@ export default function ServiciosRecurrentesScreen({ navigation }) {
       setFrecuencia('semanal');
       cargar();
     } catch (e) {
-      Alert.alert('Error', 'No se pudo crear el servicio recurrente');
+      avisar('Error', 'No se pudo crear el servicio recurrente');
     } finally {
       setEnviando(false);
     }
@@ -64,15 +65,10 @@ export default function ServiciosRecurrentesScreen({ navigation }) {
   };
 
   const eliminar = (r) => {
-    Alert.alert('¿Cancelar servicio recurrente?', `Ya no se creará "${r.tipo}" automáticamente.`, [
-      { text: 'Volver', style: 'cancel' },
-      {
-        text: 'Cancelar servicio', style: 'destructive', onPress: async () => {
-          setRecurrentes(prev => prev.filter(x => x.id !== r.id));
-          try { await axios.delete(`${API}/servicios-recurrentes/${r.id}`, { headers }); } catch (e) { cargar(); }
-        },
-      },
-    ]);
+    confirmarAccion('¿Cancelar servicio recurrente?', `Ya no se creará "${r.tipo}" automáticamente.`, async () => {
+      setRecurrentes(prev => prev.filter(x => x.id !== r.id));
+      try { await axios.delete(`${API}/servicios-recurrentes/${r.id}`, { headers }); } catch (e) { cargar(); }
+    }, { textoConfirmar: 'Cancelar servicio', textoCancelar: 'Volver' });
   };
 
   return (

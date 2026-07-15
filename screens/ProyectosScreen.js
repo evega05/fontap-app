@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { avisar } from '../confirmar';
 import { GREMIOS } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -46,7 +47,7 @@ export default function ProyectosScreen({ navigation }) {
       setTitulo(''); setDescripcion(''); setGremiosElegidos([]);
       cargar();
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.detail || 'No se pudo crear el proyecto');
+      avisar('Error', e.response?.data?.detail || 'No se pudo crear el proyecto');
     } finally {
       setEnviando(false);
     }

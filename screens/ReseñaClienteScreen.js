@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -37,7 +38,7 @@ export default function ReseñaClienteScreen({ navigation, route }) {
       setTimeout(() => navigation.navigate('PanelFontanero'), 2000);
     } catch (e) {
       console.log('[ResenaCliente] Error al enviar:', e.response?.status, e.response?.data);
-      Alert.alert('Error', e.response?.data?.detail || 'No se pudo enviar la reseña');
+      avisar('Error', e.response?.data?.detail || 'No se pudo enviar la reseña');
     } finally {
       setEnviando(false);
     }

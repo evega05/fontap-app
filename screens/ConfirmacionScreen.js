@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { confirmarAccion, avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const TIMEOUT_URGENTE_MS = 3 * 60 * 1000; // aviso tras 3 min sin respuesta en urgencias
@@ -62,23 +63,18 @@ export default function ConfirmacionScreen({ navigation, route }) {
 
   const cancelarServicio = () => {
     if (!servicioId) return;
-    Alert.alert('Cancelar solicitud', '¿Seguro que quieres cancelar este servicio?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Sí, cancelar', style: 'destructive', onPress: async () => {
-          setCancelando(true);
-          try {
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.put(`${API}/servicios/${servicioId}/cancelar`, null, { headers });
-            setEstado('cancelado');
-          } catch (e) {
-            Alert.alert('Error', e.response?.data?.detail || 'No se pudo cancelar el servicio');
-          } finally {
-            setCancelando(false);
-          }
-        },
-      },
-    ]);
+    confirmarAccion('Cancelar solicitud', '¿Seguro que quieres cancelar este servicio?', async () => {
+      setCancelando(true);
+      try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        await axios.put(`${API}/servicios/${servicioId}/cancelar`, null, { headers });
+        setEstado('cancelado');
+      } catch (e) {
+        avisar('Error', e.response?.data?.detail || 'No se pudo cancelar el servicio');
+      } finally {
+        setCancelando(false);
+      }
+    }, { textoConfirmar: 'Sí, cancelar', textoCancelar: 'No' });
   };
 
   const descargarRecibo = async () => {
@@ -94,10 +90,10 @@ export default function ConfirmacionScreen({ navigation, route }) {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Recibo Multiservicios Provenza' });
       } else {
-        Alert.alert('Recibo descargado', `Se guardó en: ${res.uri}`);
+        avisar('Recibo descargado', `Se guardó en: ${res.uri}`);
       }
     } catch (e) {
-      Alert.alert('Error', 'No se pudo descargar el recibo');
+      avisar('Error', 'No se pudo descargar el recibo');
     } finally {
       setDescargando(false);
     }

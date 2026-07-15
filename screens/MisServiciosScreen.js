@@ -87,7 +87,7 @@ export default function MisServiciosScreen({ navigation, route }) {
             <Text style={s.vacioTitulo}>Sin servicios aún</Text>
             <Text style={s.vacioSub}>Tus solicitudes aparecerán aquí</Text>
             <TouchableOpacity style={s.btnNuevo} onPress={() => navigation.navigate('Solicitud', { clienteId })}>
-              <Text style={s.btnNuevoText}>Solicitar fontanero →</Text>
+              <Text style={s.btnNuevoText}>Solicitar servicio →</Text>
             </TouchableOpacity>
           </View>
         ) : (

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, type, shadow } from '../theme';
+import { avisar } from '../confirmar';
 import axios from 'axios';
 import { agregarArchivo } from '../subirArchivo';
 import Pressable from '../components/Pressable';
@@ -135,7 +136,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       });
       setDocumentos(prev => [...prev.filter(d => d.id !== res.data.id), res.data]);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo subir el documento');
+      avisar('Error', 'No se pudo subir el documento');
     } finally {
       setSubiendoDoc(null);
     }
@@ -161,7 +162,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       });
       setFotoPerfil(`${API}${res.data.foto_url}`);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo subir la foto de perfil');
+      avisar('Error', 'No se pudo subir la foto de perfil');
     } finally {
       setSubiendoFotoPerfil(false);
     }
@@ -194,7 +195,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
         desc: fotoBackend.descripcion || 'Trabajo realizado',
       }]);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo subir la foto');
+      avisar('Error', 'No se pudo subir la foto');
     } finally {
       setSubiendoFoto(false);
     }
@@ -233,7 +234,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       setNuevoPrecio('');
       setNuevaDuracion('60');
     } catch (e) {
-      Alert.alert('Error', 'No se pudo añadir el servicio');
+      avisar('Error', 'No se pudo añadir el servicio');
     }
   };
 
@@ -250,7 +251,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       setGuardado(true);
       setTimeout(() => setGuardado(false), 2000);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo guardar el perfil');
+      avisar('Error', 'No se pudo guardar el perfil');
     }
   };
 

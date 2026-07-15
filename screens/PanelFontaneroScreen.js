@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -11,6 +11,7 @@ import Pressable from '../components/Pressable';
 import FadeInUp from '../components/FadeInUp';
 import GradientBg from '../components/GradientBg';
 import Glass from '../components/Glass';
+import { confirmarAccion, avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -82,7 +83,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       await WebBrowser.openBrowserAsync(res.data.onboarding_url);
       cargarCobros();
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.detail || 'No se pudo conectar con Stripe');
+      avisar('Error', e.response?.data?.detail || 'No se pudo conectar con Stripe');
     } finally {
       setConectandoStripe(false);
     }
@@ -96,10 +97,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       const verif = await axios.post(`${API}/fontaneros/${userId}/comision-pendiente/verificar`, {}, { headers });
       if (verif.data.liquidada) {
         setComisionPendiente(0);
-        Alert.alert('Listo', 'Comisión pendiente liquidada');
+        avisar('Listo', 'Comisión pendiente liquidada');
       }
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.detail || 'No se pudo procesar el pago');
+      avisar('Error', e.response?.data?.detail || 'No se pudo procesar el pago');
     } finally {
       setPagandoComision(false);
     }
@@ -179,7 +180,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       setTrabajoActivo(trabajo);
       setMostrarPrecio(true);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo aceptar la solicitud');
+      avisar('Error', 'No se pudo aceptar la solicitud');
     }
   };
 
@@ -188,7 +189,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       await axios.put(`${API}/servicios/${id}/rechazar`, null, { headers });
       setPendientes(prev => prev.filter(t => t.id !== id));
     } catch (e) {
-      Alert.alert('Error', 'No se pudo rechazar la solicitud');
+      avisar('Error', 'No se pudo rechazar la solicitud');
     }
   };
 
@@ -209,9 +210,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       setMostrarPrecio(false);
       setTrabajoActivo(null);
       setPrecioFinal('');
-      Alert.alert('Precio enviado', 'El cliente puede ver el precio y proceder al pago');
+      avisar('Precio enviado', 'El cliente puede ver el precio y proceder al pago');
     } catch (e) {
-      Alert.alert('Error', 'No se pudo enviar el precio');
+      avisar('Error', 'No se pudo enviar el precio');
     }
   };
 
@@ -221,7 +222,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       await axios.put(`${API}/servicios/${trabajoActivo.id}/en-camino`, null, { headers });
       setTrabajoActivo({ ...trabajoActivo, estado: 'en_camino' });
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.detail || 'No se pudo actualizar el estado');
+      avisar('Error', e.response?.data?.detail || 'No se pudo actualizar el estado');
     }
   };
 
@@ -240,25 +241,20 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       }, ...prev]);
       setTrabajoActivo(null);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo confirmar el cobro');
+      avisar('Error', 'No se pudo confirmar el cobro');
     }
   };
 
   const cancelarTrabajo = () => {
     if (!trabajoActivo) return;
-    Alert.alert('Cancelar trabajo', '¿Seguro que quieres cancelar este trabajo?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Sí, cancelar', style: 'destructive', onPress: async () => {
-          try {
-            await axios.put(`${API}/servicios/${trabajoActivo.id}/cancelar`, null, { headers });
-            setTrabajoActivo(null);
-          } catch (e) {
-            Alert.alert('Error', e.response?.data?.detail || 'No se pudo cancelar el trabajo');
-          }
-        },
-      },
-    ]);
+    confirmarAccion('Cancelar trabajo', '¿Seguro que quieres cancelar este trabajo?', async () => {
+      try {
+        await axios.put(`${API}/servicios/${trabajoActivo.id}/cancelar`, null, { headers });
+        setTrabajoActivo(null);
+      } catch (e) {
+        avisar('Error', e.response?.data?.detail || 'No se pudo cancelar el trabajo');
+      }
+    }, { textoConfirmar: 'Sí, cancelar', textoCancelar: 'No' });
   };
 
   return (
@@ -312,10 +308,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               <Text style={s.perfilLetra}>{nombre[0]}</Text>
             </LinearGradient>
           </Pressable>
-          <Pressable haptic onPress={() => Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => { logout(); navigation.replace('Login'); } },
-          ])}>
+          <Pressable haptic onPress={() => confirmarAccion('Cerrar sesión', '¿Seguro que quieres salir?', () => { logout(); navigation.replace('Login'); }, { textoConfirmar: 'Salir' })}>
             <Glass style={s.logoutBtn} colorTint={colors.redGlass}><Ionicons name="log-out-outline" size={18} color={colors.red} /></Glass>
           </Pressable>
         </View>

@@ -474,7 +474,7 @@ export default function MapaScreen({ navigation, route }) {
               <Ionicons name="search" size={16} color={colors.textMuted} />
               <TextInput
                 style={s.floatSearchInput}
-                placeholder="Buscar fontanero o zona..."
+                placeholder="Buscar profesional o zona..."
                 placeholderTextColor={colors.textFaint}
                 value={busqueda}
                 onChangeText={setBusqueda}
@@ -641,22 +641,18 @@ export default function MapaScreen({ navigation, route }) {
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
-          <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
-            <Ionicons name="moon" size={12} color={mostrar24h ? colors.text : colors.textMuted} />
-            <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>24h</Text>
-          </Pressable>
-          {serviciosFiltroDisponibles.length > 0 && (
+        {serviciosFiltroDisponibles.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
             <Pressable style={[s.filtro, filtroServicio === 'Todos' && s.filtroActivo]} haptic onPress={() => setFiltroServicio('Todos')}>
               <Text style={[s.filtroText, filtroServicio === 'Todos' && s.filtroTextActivo]}>{t('todos')}</Text>
             </Pressable>
-          )}
-          {serviciosFiltroDisponibles.map((sv) => (
-            <Pressable key={sv} style={[s.filtro, filtroServicio === sv && s.filtroActivo]} haptic onPress={() => setFiltroServicio(sv)}>
-              <Text style={[s.filtroText, filtroServicio === sv && s.filtroTextActivo]}>{sv}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+            {serviciosFiltroDisponibles.map((sv) => (
+              <Pressable key={sv} style={[s.filtro, filtroServicio === sv && s.filtroActivo]} haptic onPress={() => setFiltroServicio(sv)}>
+                <Text style={[s.filtroText, filtroServicio === sv && s.filtroTextActivo]}>{sv}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
           <Pressable style={s.ordenBtn} haptic onPress={() => setOrdenAbierto(!ordenAbierto)}>
@@ -665,6 +661,10 @@ export default function MapaScreen({ navigation, route }) {
               {orden === 'valoracion' ? t('mejorValorados') : orden === 'precio' ? t('precioBajo') : t('cercania')}
             </Text>
             <Ionicons name={ordenAbierto ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+          </Pressable>
+          <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
+            <Ionicons name="moon" size={12} color={mostrar24h ? colors.text : colors.textMuted} />
+            <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>24h</Text>
           </Pressable>
           {[0, 3, 4, 4.5].map((v) => (
             <Pressable key={v} style={[s.filtro, valoracionMinima === v && s.filtroActivo]} haptic onPress={() => setValoracionMinima(v)}>

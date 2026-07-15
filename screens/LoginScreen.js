@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { registrarNotificaciones } from './notifications';
 import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 import { useIdioma, IDIOMAS } from '../i18n';
+import { avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -56,7 +57,7 @@ export default function LoginScreen({ navigation, route }) {
 
   const handleGoogle = () => {
     if (!googleConfigurado()) {
-      Alert.alert('Google no configurado', `Falta el Client ID de Google en googleAuth.js.\n\nRedirect URI a registrar en Google Cloud Console:\n${googleRedirectUri}`);
+      avisar('Google no configurado', `Falta el Client ID de Google en googleAuth.js. Redirect URI a registrar en Google Cloud Console: ${googleRedirectUri}`);
       return;
     }
     googlePromptAsync();
