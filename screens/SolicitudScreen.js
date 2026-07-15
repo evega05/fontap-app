@@ -213,7 +213,7 @@ export default function SolicitudScreen({ navigation, route }) {
               <Text style={s.tipoBtnEmoji}>⚡</Text>
               <View style={{ flex: 1 }}>
                 <Text style={[s.tipoBtnTitulo, urgente && s.tipoBtnTituloActivo]}>Urgente ahora</Text>
-                <Text style={s.tipoBtnSub}>El fontanero llega en 30-60 min</Text>
+                <Text style={s.tipoBtnSub}>El profesional llega en 30-60 min</Text>
               </View>
               {urgente && <Text style={s.check}>✓</Text>}
             </TouchableOpacity>
@@ -256,7 +256,7 @@ export default function SolicitudScreen({ navigation, route }) {
               </View>
             )}
 
-            <Text style={s.subtitulo}>💬 Mensaje para el fontanero (opcional)</Text>
+            <Text style={s.subtitulo}>💬 Mensaje para el profesional (opcional)</Text>
             <TextInput
               style={s.mensajeInput}
               placeholder="Ej: Estoy en el 3ºB, hay que llamar al portero automático..."
@@ -274,7 +274,7 @@ export default function SolicitudScreen({ navigation, route }) {
                 <Text style={s.resumenValor}>{tipo?.emoji} {tipo?.nombre}</Text>
               </View>
               <View style={s.resumenFila}>
-                <Text style={s.resumenLabel}>Fontanero</Text>
+                <Text style={s.resumenLabel}>Profesional</Text>
                 <Text style={s.resumenValor}>{fontanero?.nombre || 'Más cercano'}</Text>
               </View>
               {!urgente && diaSeleccionado !== null && (

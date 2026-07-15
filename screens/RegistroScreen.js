@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
@@ -7,6 +7,7 @@ import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 import { useIdioma } from '../i18n';
 import { GREMIOS, serviciosDe } from '../gremios';
 import { Ionicons } from '@expo/vector-icons';
+import { avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -39,7 +40,7 @@ export default function RegistroScreen({ navigation }) {
 
   const handleGoogle = () => {
     if (!googleConfigurado()) {
-      Alert.alert('Google no configurado', `Falta el Client ID de Google en googleAuth.js.\n\nRedirect URI a registrar en Google Cloud Console:\n${googleRedirectUri}`);
+      avisar('Google no configurado', `Falta el Client ID de Google en googleAuth.js. Redirect URI a registrar en Google Cloud Console: ${googleRedirectUri}`);
       return;
     }
     googlePromptAsync();

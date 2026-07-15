@@ -99,7 +99,7 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
 
         <Text style={s.seccionTitulo}>Servicios y tarifas aproximadas</Text>
         {servicios.length === 0 ? (
-          <Text style={s.seccionVacia}>Este fontanero aún no publicó precios de servicios.</Text>
+          <Text style={s.seccionVacia}>Este profesional aún no publicó precios de servicios.</Text>
         ) : (
           servicios.map(sv => (
             <View key={sv.id} style={s.servicioRow}>

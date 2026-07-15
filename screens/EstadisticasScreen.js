@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Dimensions } from 'react-native';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const ANCHO = Dimensions.get('window').width;
@@ -80,10 +81,10 @@ export default function EstadisticasScreen({ navigation, route }) {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: `Resumen fiscal ${anio}` });
       } else {
-        Alert.alert('Resumen descargado', `Se guardó en: ${res.uri}`);
+        avisar('Resumen descargado', `Se guardó en: ${res.uri}`);
       }
     } catch (e) {
-      Alert.alert('Error', 'No se pudo descargar el resumen fiscal');
+      avisar('Error', 'No se pudo descargar el resumen fiscal');
     } finally {
       setDescargandoFiscal(false);
     }
