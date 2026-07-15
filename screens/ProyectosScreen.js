@@ -5,6 +5,7 @@ import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { avisar } from '../confirmar';
 import { GREMIOS } from '../gremios';
+import { CIUDADES } from './MapaScreen';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -18,6 +19,7 @@ export default function ProyectosScreen({ navigation }) {
   const [enviando, setEnviando] = useState(false);
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [ciudadElegida, setCiudadElegida] = useState(CIUDADES[0].valor);
   const [gremiosElegidos, setGremiosElegidos] = useState([]);
   const [interesadosDe, setInteresadosDe] = useState(null);
   const [interesados, setInteresados] = useState([]);
@@ -41,10 +43,10 @@ export default function ProyectosScreen({ navigation }) {
     setEnviando(true);
     try {
       await axios.post(`${API}/proyectos`, {
-        titulo: titulo.trim(), descripcion: descripcion.trim() || null, gremios: gremiosElegidos,
+        titulo: titulo.trim(), descripcion: descripcion.trim() || null, gremios: gremiosElegidos, ciudad: ciudadElegida,
       }, { headers });
       setCreando(false);
-      setTitulo(''); setDescripcion(''); setGremiosElegidos([]);
+      setTitulo(''); setDescripcion(''); setGremiosElegidos([]); setCiudadElegida(CIUDADES[0].valor);
       cargar();
     } catch (e) {
       avisar('Error', e.response?.data?.detail || 'No se pudo crear el proyecto');
@@ -88,7 +90,19 @@ export default function ProyectosScreen({ navigation }) {
               placeholderTextColor={colors.textFaint} value={titulo} onChangeText={setTitulo} />
             <TextInput style={[s.input, s.textArea]} placeholder="Descripción (opcional)" multiline
               placeholderTextColor={colors.textFaint} value={descripcion} onChangeText={setDescripcion} />
-            <Text style={s.formLabel}>Gremios que necesitas</Text>
+            <Text style={s.formLabel}>Ciudad</Text>
+            <View style={s.chipsWrap}>
+              {CIUDADES.map(c => (
+                <TouchableOpacity
+                  key={c.valor}
+                  style={[s.chip, ciudadElegida === c.valor && s.chipActivo]}
+                  onPress={() => setCiudadElegida(c.valor)}
+                >
+                  <Text style={[s.chipText, ciudadElegida === c.valor && s.chipTextActivo]}>📍 {c.valor}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[s.formLabel, { marginTop: 6 }]}>Gremios que necesitas</Text>
             <View style={s.chipsWrap}>
               {GREMIOS.map(g => (
                 <TouchableOpacity
