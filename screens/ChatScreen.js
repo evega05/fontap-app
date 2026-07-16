@@ -91,16 +91,13 @@ export default function ChatScreen({ navigation, route }) {
     try {
       const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
       const body = { contenido: msg };
-      console.log('[Chat] POST body:', JSON.stringify(body), 'servicioId:', servicioId, 'token:', !!token);
-      const res = await axios.post(
+      await axios.post(
         `${API}/servicios/${servicioId}/mensajes`,
         body,
         { headers: { ...hdrs, 'Content-Type': 'application/json' } }
       );
-      console.log('[Chat] Mensaje enviado OK:', res.status);
       await cargarMensajes();
     } catch (e) {
-      console.log('[Chat] ERROR POST:', e?.response?.status, JSON.stringify(e?.response?.data));
       setMensajes(prev => prev.map(m =>
         m.id === mensajeTemporal.id ? { ...m, error: true, pendiente: false } : m
       ));
@@ -125,7 +122,6 @@ export default function ChatScreen({ navigation, route }) {
       });
       await cargarMensajes();
     } catch (e) {
-      console.log('[Chat] ERROR foto:', e?.response?.status, JSON.stringify(e?.response?.data));
     } finally {
       setEnviandoFoto(false);
     }

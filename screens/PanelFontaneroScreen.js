@@ -31,7 +31,7 @@ const ESTADO_PILL = {
 export default function PanelFontaneroScreen({ navigation, route }) {
   const { usuario, token, logout } = useAuth();
   const nombre = usuario?.nombre || route.params?.nombre || 'Fontanero';
-  const userId = route.params?.userId || usuario?.id || 1;
+  const userId = route.params?.userId || usuario?.id;
 
   const [disponible, setDisponible] = useState(true);
   const [disponible24h, setDisponible24h] = useState(false);

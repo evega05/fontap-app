@@ -87,6 +87,11 @@ export default function ConfirmacionScreen({ navigation, route }) {
         destino,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
+      if (res.status !== 200) {
+        await FileSystem.deleteAsync(res.uri, { idempotent: true });
+        avisar('Error', 'No se pudo descargar el recibo');
+        return;
+      }
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Recibo Multiservicios Provenza' });
       } else {
