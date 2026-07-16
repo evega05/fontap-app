@@ -70,7 +70,7 @@ export default function SolicitudScreen({ navigation, route }) {
     if (paso < TOTAL_PASOS) setPaso(paso + 1);
     else {
       try {
-  const clienteId = route.params?.clienteId || usuario?.id || 1;
+  const clienteId = route.params?.clienteId || usuario?.id;
   let latitud_cliente = null;
   let longitud_cliente = null;
   try {

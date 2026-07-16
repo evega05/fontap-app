@@ -39,7 +39,7 @@ const TABS = [
 export default function PerfilFontaneroScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const nombre = route.params?.nombre || usuario?.nombre || 'Fontanero';
-  const userId = route.params?.userId || usuario?.id || 1;
+  const userId = route.params?.userId || usuario?.id;
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const [tab, setTab] = useState('perfil');
   const [subiendoFoto, setSubiendoFoto] = useState(false);

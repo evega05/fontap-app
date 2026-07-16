@@ -1,5 +1,6 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import * as Crypto from 'expo-crypto';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -15,7 +16,7 @@ export function useGoogleAuth() {
       redirectUri,
       responseType: AuthSession.ResponseType.IdToken,
       extraParams: {
-        nonce: Math.random().toString(36).substring(2, 15),
+        nonce: Crypto.randomUUID(),
       },
     },
     discovery
