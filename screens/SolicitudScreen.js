@@ -92,10 +92,8 @@ export default function SolicitudScreen({ navigation, route }) {
     latitud_cliente,
     longitud_cliente,
   };
-  console.log('[Solicitud] Enviando servicio:', JSON.stringify(body), 'cliente_id:', clienteId);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const res = await axios.post(`${API}/servicios`, body, { params: { cliente_id: clienteId }, headers });
-  console.log('[Solicitud] Servicio creado:', JSON.stringify(res.data));
 
   // ← guardar el id del servicio creado
   const servicioId = res.data?.id;

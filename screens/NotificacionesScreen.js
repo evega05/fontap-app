@@ -19,7 +19,6 @@ export default function NotificacionesScreen({ navigation }) {
     if (!usuario?.id) { setCargando(false); return; }
     try {
       const res = await axios.get(`${API}/usuarios/${usuario.id}/notificaciones`, { headers });
-      console.log('[Notif] primera notif:', JSON.stringify((res.data || [])[0]));
       setNotifs(res.data || []);
     } catch (e) {}
     finally { setCargando(false); setRefrescando(false); }
@@ -37,7 +36,6 @@ export default function NotificacionesScreen({ navigation }) {
   const abrirNotif = async (n) => {
     await marcarLeida(n.id);
     const sid = n.servicio_id || n.data?.servicio_id;
-    console.log('[Notif] tap tipo:', n.tipo, 'servicio_id:', sid, 'keys:', Object.keys(n).join(','));
     if (n.tipo === 'precio' && sid) {
       navigation.navigate('Pago', { servicioId: sid, precio: n.precio || n.data?.precio });
     } else if (n.tipo === 'precio' && !sid) {
