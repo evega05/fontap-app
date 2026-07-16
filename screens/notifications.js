@@ -14,10 +14,15 @@ Notifications.setNotificationHandler({
 
 export async function registrarNotificaciones(userId, token) {
   if (!Device.isDevice) return null;
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') return null;
-  const expoPushToken = await Notifications.getExpoPushTokenAsync();
-  const pushToken = expoPushToken.data;
+  let pushToken;
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') return null;
+    const expoPushToken = await Notifications.getExpoPushTokenAsync();
+    pushToken = expoPushToken.data;
+  } catch (e) {
+    return null;
+  }
 
   if (userId && token) {
     try {

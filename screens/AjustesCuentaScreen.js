@@ -33,6 +33,7 @@ export default function AjustesCuentaScreen({ navigation }) {
   const [aniversario, setAniversario] = useState(null);
 
   useEffect(() => {
+    if (!usuario?.id) return;
     axios.get(`${API}/usuarios/${usuario.id}/perfil`, { headers })
       .then((res) => {
         setNombre(res.data.nombre || '');
@@ -43,10 +44,11 @@ export default function AjustesCuentaScreen({ navigation }) {
     axios.get(`${API}/usuarios/${usuario.id}/aniversario`, { headers })
       .then((res) => setAniversario(res.data))
       .catch(() => {});
-  }, []);
+  }, [usuario?.id]);
 
   const guardarPerfil = async () => {
     setMsgPerfil(''); setErrPerfil('');
+    if (!usuario?.id) { setErrPerfil('No se pudieron guardar los datos'); return; }
     if (!nombre.trim()) { setErrPerfil('El nombre no puede estar vacío'); return; }
     setGuardandoPerfil(true);
     try {
@@ -64,6 +66,7 @@ export default function AjustesCuentaScreen({ navigation }) {
 
   const cambiarPassword = async () => {
     setMsgPass(''); setErrPass('');
+    if (!usuario?.id) { setErrPass('No se pudo cambiar la contraseña'); return; }
     if (!passActual || !passNueva || !passRepetir) { setErrPass('Rellena los tres campos'); return; }
     if (passNueva.length < 6) { setErrPass('La nueva contraseña debe tener al menos 6 caracteres'); return; }
     if (passNueva !== passRepetir) { setErrPass('Las contraseñas nuevas no coinciden'); return; }
@@ -82,6 +85,7 @@ export default function AjustesCuentaScreen({ navigation }) {
 
   const eliminarCuenta = async () => {
     setErrEliminar('');
+    if (!usuario?.id) { setErrEliminar('No se pudo eliminar la cuenta'); return; }
     setEliminando(true);
     try {
       await axios.delete(`${API}/usuarios/${usuario.id}`, { headers });
