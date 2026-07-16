@@ -78,10 +78,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   }, [cargarEstadisticas, cargarCobros]);
 
   useEffect(() => {
-    axios.get(`${API}/fontaneros/${userId}/checklist-perfil`)
+    axios.get(`${API}/fontaneros/${userId}/checklist-perfil`, { headers })
       .then(res => setChecklist(res.data))
       .catch(() => {});
-  }, [userId]);
+  }, [userId, token]);
 
   const conectarStripe = async () => {
     setConectandoStripe(true);
