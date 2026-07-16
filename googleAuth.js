@@ -1,4 +1,4 @@
-import * as AuthSession from 'expo-auth-session';
+import { useState, useCallback } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 
@@ -6,26 +6,43 @@ WebBrowser.maybeCompleteAuthSession();
 
 export const GOOGLE_CLIENT_ID = '1037459588867-dum7jb79ef3c5lc5icnd4le4fgnicesj.apps.googleusercontent.com';
 
+const API = 'https://fontap-backend-production.up.railway.app';
+// Google exige que el redirect_uri sea un dominio real (rechaza fontap:///),
+// así que Google vuelve primero a esta página del backend, que reenvía el
+// resultado al esquema propio de la app. Esta es la URL que hay que dar de
+// alta en Google Cloud Console, no fontap:///.
+const GOOGLE_LOGIN_CALLBACK = `${API}/auth/google/login/callback`;
+
 export function useGoogleAuth() {
-  const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
-  // "native" fija la URL que se usará en un build real (app instalada, no Expo Go):
-  // fontap:/// — esa no cambia nunca, así que solo hay que darla de alta una vez
-  // en Google Cloud Console. En Expo Go se sigue usando la URL de desarrollo
-  // (exp://...), que si cambia hay que volver a registrar aparte.
-  const redirectUri = AuthSession.makeRedirectUri({ native: 'fontap:///' });
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GOOGLE_CLIENT_ID,
-      scopes: ['openid', 'email', 'profile'],
-      redirectUri,
-      responseType: AuthSession.ResponseType.IdToken,
-      extraParams: {
-        nonce: Crypto.randomUUID(),
-      },
-    },
-    discovery
-  );
-  return { request, response, promptAsync, redirectUri };
+  const [response, setResponse] = useState(null);
+
+  const promptAsync = useCallback(async () => {
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: GOOGLE_LOGIN_CALLBACK,
+      response_type: 'id_token',
+      scope: 'openid email profile',
+      prompt: 'select_account',
+      nonce: Crypto.randomUUID(),
+    });
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    // fontap:/// solo lo captura expo-web-browser en un build real (EAS);
+    // en Expo Go esta pantalla nunca completa el login (limitación ya asumida).
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, 'fontap:///');
+    if (result.type === 'success' && result.url) {
+      const query = result.url.split('?')[1] || '';
+      setResponse({ type: 'success', params: Object.fromEntries(new URLSearchParams(query)) });
+    } else {
+      setResponse({ type: result.type });
+    }
+  }, []);
+
+  return {
+    request: googleConfigurado() ? {} : null,
+    response,
+    promptAsync,
+    redirectUri: GOOGLE_LOGIN_CALLBACK,
+  };
 }
 
 export function googleConfigurado() {
