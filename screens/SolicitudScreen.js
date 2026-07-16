@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useAuth } from '../AuthContext';
 import { agregarArchivo } from '../subirArchivo';
+import { avisar } from '../confirmar';
 import { GREMIOS, serviciosDe, OTRO_SERVICIO } from '../gremios';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -41,6 +42,7 @@ export default function SolicitudScreen({ navigation, route }) {
   const subirFotosServicio = async (servicioId) => {
     if (!fotosProblema.length || !servicioId) return;
     setSubiendoFoto(true);
+    let fallos = 0;
     for (const uri of fotosProblema) {
       try {
         const form = new FormData();
@@ -48,9 +50,16 @@ export default function SolicitudScreen({ navigation, route }) {
         await axios.post(`${API}/servicios/${servicioId}/imagenes`, form, {
           headers: { 'Content-Type': 'multipart/form-data', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
-      } catch (e) {}
+      } catch (e) {
+        fallos++;
+      }
     }
     setSubiendoFoto(false);
+    if (fallos > 0) {
+      avisar('Foto no enviada', fallos === fotosProblema.length
+        ? 'No se pudieron subir las fotos del problema. Puedes añadirlas después desde el chat.'
+        : `${fallos} foto(s) no se pudieron subir. Puedes añadirlas después desde el chat.`);
+    }
   };
 
   const enviarMensajeInicial = async (servicioId) => {
@@ -81,11 +90,18 @@ export default function SolicitudScreen({ navigation, route }) {
       longitud_cliente = pos.coords.longitude;
     }
   } catch (e) {}
+  let fechaCita = null;
+  if (diaSeleccionado !== null) {
+    fechaCita = new Date();
+    fechaCita.setDate(fechaCita.getDate() + diaSeleccionado + 1);
+    const [horaElegida, minutoElegido] = (horaSeleccionada || '09:00').split(':').map(Number);
+    fechaCita.setHours(horaElegida, minutoElegido, 0, 0);
+  }
   const body = {
     tipo: tipo.nombre,
     descripcion,
     urgente,
-    fecha: diaSeleccionado !== null ? new Date().toISOString() : null,
+    fecha: fechaCita ? fechaCita.toISOString() : null,
     fontanero_id: fontanero?.id || null,
     gremio: fontanero?.gremio || gremioElegido,
     ciudad: route.params?.ciudad || null,

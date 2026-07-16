@@ -7,6 +7,7 @@ import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
 import { agregarArchivo } from '../subirArchivo';
+import { avisar } from '../confirmar';
 import { colors } from '../theme';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -122,6 +123,7 @@ export default function ChatScreen({ navigation, route }) {
       });
       await cargarMensajes();
     } catch (e) {
+      avisar('Error', 'No se pudo enviar la foto. Inténtalo de nuevo.');
     } finally {
       setEnviandoFoto(false);
     }
