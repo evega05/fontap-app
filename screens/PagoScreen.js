@@ -16,6 +16,7 @@ export default function PagoScreen({ navigation, route }) {
 
   const [cargando, setCargando] = useState(false);
   const [pagado, setPagado] = useState(false);
+  const [yaPagadoAlEntrar, setYaPagadoAlEntrar] = useState(false);
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState('tarjeta');
   const [bizumInfo, setBizumInfo] = useState(null);
@@ -98,6 +99,17 @@ export default function PagoScreen({ navigation, route }) {
     return () => clearInterval(pollingRef.current);
   }, [servicioId]);
 
+  // Si se llega acá con el precio ya cargado por route.params (p.ej. desde una
+  // notificación vieja), el polling de arriba no corre y nunca se comprueba si el
+  // servicio ya fue pagado. Lo comprobamos una vez al entrar para no ofrecer pagar
+  // de nuevo un servicio ya cerrado.
+  useEffect(() => {
+    if (!servicioId) return;
+    axios.get(`${API}/servicios/${servicioId}`, { headers })
+      .then((res) => { if (res.data?.estado === 'pagado') setYaPagadoAlEntrar(true); })
+      .catch(() => {});
+  }, [servicioId]);
+
   const pagarEfectivo = async () => {
     setCargando(true);
     setError('');
@@ -116,6 +128,23 @@ export default function PagoScreen({ navigation, route }) {
     if (metodoPago === 'efectivo') return pagarEfectivo();
     if (metodoPago === 'bizum') return confirmarBizum();
   };
+
+  if (yaPagadoAlEntrar && !pagado) {
+    return (
+      <View style={s.container}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.navigate('Mapa')}>
+            <Text style={s.back}>← Volver</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={s.centro}>
+          <Text style={s.emoji}>✅</Text>
+          <Text style={s.titulo}>Este servicio ya está pagado</Text>
+          <Text style={s.sub}>No hace falta que pagues de nuevo.</Text>
+        </View>
+      </View>
+    );
+  }
 
   if (pagado) {
     return (
