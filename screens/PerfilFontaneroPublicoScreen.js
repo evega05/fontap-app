@@ -24,7 +24,7 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
     if (!usuarioId) { setCargando(false); return; }
     try {
       const [rPerfil, rStats, rServicios, rGaleria, rResenas] = await Promise.allSettled([
-        axios.get(`${API}/fontaneros/${usuarioId}/perfil`),
+        axios.get(`${API}/fontaneros/${usuarioId}/perfil`, { headers }),
         axios.get(`${API}/fontaneros/${usuarioId}/estadisticas`, { headers }),
         axios.get(`${API}/fontaneros/${usuarioId}/servicios`),
         axios.get(`${API}/fontaneros/${usuarioId}/galeria`),

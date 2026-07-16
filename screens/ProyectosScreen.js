@@ -149,7 +149,7 @@ export default function ProyectosScreen({ navigation }) {
                 </View>
               </View>
               {p.descripcion ? <Text style={s.cardDesc}>{p.descripcion}</Text> : null}
-              <Text style={s.cardGremios}>{p.gremios.split(',').join(' · ')}</Text>
+              <Text style={s.cardGremios}>{(p.gremios || '').split(',').filter(Boolean).join(' · ')}</Text>
               <View style={s.cardFooter}>
                 <TouchableOpacity style={s.btnAccion} onPress={() => verInteresados(p)}>
                   <Text style={s.btnAccionText}>👷 {p.num_interesados} interesado{p.num_interesados !== 1 ? 's' : ''}</Text>

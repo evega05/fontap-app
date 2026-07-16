@@ -127,9 +127,26 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       const activo = nuevas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
       setTrabajoActivo(activo || null);
       setCompletados(prev => {
-        const ids = new Set(prev.map(s => s.id));
-        const nuevosComp = nuevas.filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !ids.has(s.id));
-        return [...prev, ...nuevosComp];
+        const idsNuevas = new Set(nuevas.map(s => s.id));
+        // Si el backend ya confirmó "pagado"/"completado" para un id que teníamos como
+        // pendiente de pago (inserción optimista en enviarPrecio), hay que quitarle esa
+        // marca aquí: si no, "Pendiente pago" y el bloqueo de "Reseñar cliente" se quedan
+        // pegados para siempre aunque el cliente ya haya pagado de verdad.
+        const actualizados = prev.map(c => (idsNuevas.has(c.id) ? { ...c, pendientePago: false } : c));
+        const idsPrev = new Set(prev.map(s => s.id));
+        const nuevosComp = nuevas
+          .filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !idsPrev.has(s.id))
+          .map(s => ({
+            id: s.id,
+            cliente: s.cliente_nombre,
+            servicio: s.tipo,
+            zona: s.zona || '—',
+            precio: s.precio,
+            valoracion: 0,
+            fecha: s.fecha,
+            pendientePago: false,
+          }));
+        return [...actualizados, ...nuevosComp];
       });
     } catch (e) {}
     finally { setCargando(false); }

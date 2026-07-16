@@ -45,10 +45,10 @@ export default function CalendarioScreen({ navigation, route }) {
   const cargarEstadoGoogle = useCallback(async () => {
     if (!userId) return;
     try {
-      const r = await axios.get(`${API}/fontaneros/${userId}/perfil`);
+      const r = await axios.get(`${API}/fontaneros/${userId}/perfil`, { headers });
       setGoogleConectado(!!r.data?.google_calendar_conectado);
     } catch (e) {}
-  }, [userId]);
+  }, [userId, token]);
 
   useFocusEffect(useCallback(() => { cargarEstadoGoogle(); }, [cargarEstadoGoogle]));
 

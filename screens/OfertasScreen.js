@@ -32,7 +32,7 @@ export default function OfertasScreen({ navigation }) {
     try {
       let gremio = null;
       try {
-        const resPerfil = await axios.get(`${API}/fontaneros/${usuario?.id}/perfil`);
+        const resPerfil = await axios.get(`${API}/fontaneros/${usuario?.id}/perfil`, { headers });
         gremio = resPerfil.data?.gremio || null;
       } catch (e) {}
       const [resAbiertos, resMis, resProyectos] = await Promise.allSettled([
@@ -272,7 +272,7 @@ export default function OfertasScreen({ navigation }) {
                       </View>
                     </View>
                     {p.descripcion ? <Text style={s.cardDesc}>{p.descripcion}</Text> : null}
-                    <Text style={s.cardCupo}>{p.gremios.split(',').join(' · ')}</Text>
+                    <Text style={s.cardCupo}>{(p.gremios || '').split(',').filter(Boolean).join(' · ')}</Text>
                     <View style={s.cardFooter}>
                       <Text style={s.cardFecha}>{p.num_interesados} interesado{p.num_interesados !== 1 ? 's' : ''}</Text>
                       {yaInteresado ? (

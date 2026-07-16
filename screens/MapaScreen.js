@@ -124,14 +124,14 @@ export default function MapaScreen({ navigation, route }) {
     if (isRefresh) setRefreshing(true);
     else setCargando(true);
     axios
-      .get(`${API}/fontaneros`, { params: { ...(filtroGremio ? { gremio: filtroGremio } : {}), ciudad, ...(clienteId ? { cliente_id: clienteId } : {}) } })
+      .get(`${API}/fontaneros`, { params: { ...(filtroGremio ? { gremio: filtroGremio } : {}), ciudad, ...(clienteId ? { cliente_id: clienteId } : {}) }, headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((res) => { setFontaneros(res.data || []); setErrorCarga(false); })
       .catch(() => { setFontaneros([]); setErrorCarga(true); })
       .finally(() => {
         setCargando(false);
         setRefreshing(false);
       });
-  }, [filtroGremio, ciudad, clienteId]);
+  }, [filtroGremio, ciudad, clienteId, token]);
 
   const centroCiudad = CIUDADES.find((c) => c.valor === ciudad);
   const centroForzado = centroCiudad ? { latitud: centroCiudad.lat, longitud: centroCiudad.lon } : null;
