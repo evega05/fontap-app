@@ -27,6 +27,7 @@ export default function SolicitudScreen({ navigation, route }) {
   const [mensaje, setMensaje] = useState('');
   const [urgente, setUrgente] = useState(route.params?.urgente || false);
   const [paso, setPaso] = useState(1);
+  const [enviando, setEnviando] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [horaSeleccionada, setHoraSeleccionada] = useState(null);
   const [fotosProblema, setFotosProblema] = useState([]);
@@ -78,6 +79,8 @@ export default function SolicitudScreen({ navigation, route }) {
     if (paso === PASO_SERVICIO && !tipo) return;
     if (paso < TOTAL_PASOS) setPaso(paso + 1);
     else {
+      if (enviando) return;
+      setEnviando(true);
       try {
   const clienteId = route.params?.clienteId || usuario?.id;
   let latitud_cliente = null;
@@ -127,6 +130,8 @@ export default function SolicitudScreen({ navigation, route }) {
     fontanero, tipo, descripcion, urgente,
     diaSeleccionado, horaSeleccionada,
   });
+} finally {
+  setEnviando(false);
 }
     }
   };
@@ -324,12 +329,12 @@ export default function SolicitudScreen({ navigation, route }) {
 
       <View style={s.footer}>
         <TouchableOpacity
-          style={[s.btnContinuar, ((paso === PASO_GREMIO && !gremioElegido) || (paso === PASO_SERVICIO && !tipo)) && s.btnDesactivado]}
+          style={[s.btnContinuar, ((paso === PASO_GREMIO && !gremioElegido) || (paso === PASO_SERVICIO && !tipo) || enviando) && s.btnDesactivado]}
           onPress={continuar}
-          disabled={(paso === PASO_GREMIO && !gremioElegido) || (paso === PASO_SERVICIO && !tipo)}
+          disabled={(paso === PASO_GREMIO && !gremioElegido) || (paso === PASO_SERVICIO && !tipo) || enviando}
         >
           <Text style={s.btnContinuarText}>
-            {paso === PASO_CUANDO ? '✓ Confirmar solicitud' : 'Continuar →'}
+            {enviando ? 'Enviando...' : paso === PASO_CUANDO ? '✓ Confirmar solicitud' : 'Continuar →'}
           </Text>
         </TouchableOpacity>
       </View>

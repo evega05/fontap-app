@@ -202,14 +202,19 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   const enviarPrecio = async () => {
     if (!precioFinal || !trabajoActivo) return;
+    const precioNum = parseFloat(precioFinal);
+    if (isNaN(precioNum) || precioNum <= 0) {
+      avisar('Error', 'Introduce un precio válido');
+      return;
+    }
     try {
-      await axios.put(`${API}/servicios/${trabajoActivo.id}/precio`, { precio: parseInt(precioFinal) }, { headers });
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/precio`, { precio: precioNum }, { headers });
       setCompletados(prev => [{
         id: trabajoActivo.id,
         cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
         servicio: trabajoActivo.tipo || trabajoActivo.servicio,
         zona: trabajoActivo.zona || '—',
-        precio: parseInt(precioFinal),
+        precio: precioNum,
         valoracion: 0,
         fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }),
         pendientePago: true,

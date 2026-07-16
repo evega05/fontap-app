@@ -47,8 +47,10 @@ export default function LoginScreen({ navigation, route }) {
     } catch (e) {
       if (e.response?.status === 429 || e.response?.status === 403) {
         setError(e.response?.data?.detail || t('errorCredenciales'));
-      } else {
+      } else if (e.response?.status === 401) {
         setError(t('errorCredenciales'));
+      } else {
+        setError(t('errorConexion'));
       }
     } finally {
       setCargando(false);

@@ -22,6 +22,7 @@ const traducciones = {
     sesionCaducada: 'Tu sesión ha caducado, inicia sesión de nuevo',
     cuentaEliminada: 'Tu cuenta ha sido eliminada',
     errorCredenciales: 'Email o contraseña incorrectos',
+    errorConexion: 'No se pudo conectar. Comprueba tu conexión e inténtalo de nuevo',
     rellenaCampos: 'Rellena todos los campos',
     // Registro
     crearCuenta: 'Crear cuenta',
@@ -132,6 +133,7 @@ const traducciones = {
     sesionCaducada: 'Zure saioa iraungi da, hasi saioa berriro',
     cuentaEliminada: 'Zure kontua ezabatu da',
     errorCredenciales: 'Email edo pasahitz okerra',
+    errorConexion: 'Ezin izan da konektatu. Egiaztatu zure konexioa eta saiatu berriro',
     rellenaCampos: 'Bete eremu guztiak',
     crearCuenta: 'Sortu kontua',
     uneteGratis: 'Batu doan',
@@ -236,6 +238,7 @@ const traducciones = {
     sesionCaducada: 'Your session has expired, please sign in again',
     cuentaEliminada: 'Your account has been deleted',
     errorCredenciales: 'Wrong email or password',
+    errorConexion: "Couldn't connect. Check your connection and try again",
     rellenaCampos: 'Fill in all fields',
     crearCuenta: 'Create account',
     uneteGratis: 'Join for free',

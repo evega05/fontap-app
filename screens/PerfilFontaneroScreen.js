@@ -70,7 +70,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   const cargarDatos = async () => {
     try {
-      const res = await axios.get(`${API}/fontaneros/${userId}/perfil`);
+      const res = await axios.get(`${API}/fontaneros/${userId}/perfil`, { headers });
       const p = res.data;
       setZona(p.zona || '');
       setDescripcion(p.descripcion || '');
@@ -223,10 +223,15 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   const añadirServicio = async () => {
     if (!nuevoServicio || !nuevoPrecio) return;
+    const precioNum = parseFloat(nuevoPrecio);
+    if (isNaN(precioNum) || precioNum <= 0) {
+      avisar('Error', 'Introduce un precio válido');
+      return;
+    }
     try {
       const res = await axios.post(`${API}/fontaneros/${userId}/servicios`, {
         nombre: nuevoServicio,
-        precio: parseInt(nuevoPrecio),
+        precio: precioNum,
         duracion_minutos: parseInt(nuevaDuracion) || 60,
       }, { headers });
       setServicios(prev => [...prev, res.data]);
@@ -375,16 +380,6 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               value={descripcion}
               onChangeText={setDescripcion}
             />
-
-            <Text style={s.seccionTitulo}>Contacto</Text>
-            <View style={s.inputWrap}>
-              <Ionicons name="call-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
-              <TextInput style={s.input} placeholder="Teléfono" placeholderTextColor={colors.textFaint} keyboardType="phone-pad" />
-            </View>
-            <View style={s.inputWrap}>
-              <Ionicons name="mail-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
-              <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.textFaint} keyboardType="email-address" autoCapitalize="none" />
-            </View>
 
             <Text style={s.seccionTitulo}>Verificación de identidad</Text>
             <Text style={s.seccionSub}>Sube estos documentos para que un administrador verifique tu perfil</Text>
