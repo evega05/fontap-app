@@ -12,6 +12,7 @@ const SECCIONES = [
   {
     titulo: '2. Registro y cuenta',
     texto:
+      'Debes ser mayor de 18 años para registrarte y contratar o prestar servicios a través de Multiservicios Provenza. ' +
       'Para usar Multiservicios Provenza debes registrarte con datos reales y mantener actualizada tu información de ' +
       'contacto. Eres responsable de la actividad realizada desde tu cuenta y de la confidencialidad de ' +
       'tu contraseña. Los profesionales declaran contar con la cualificación y, en su caso, los seguros ' +
