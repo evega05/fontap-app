@@ -21,7 +21,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
         "backgroundColor": "#080812"
       },
       "package": "com.fontap.app",
@@ -47,6 +48,12 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "FonTap usa tu ubicación para mostrarte los fontaneros más cercanos y para que los clientes puedan encontrarte a ti."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Multiservicios Provenza necesita acceso a tus fotos para que puedas subir imágenes del trabajo, tu foto de perfil o adjuntar fotos en el chat."
         }
       ]
     ]
