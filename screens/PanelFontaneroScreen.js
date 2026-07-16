@@ -117,25 +117,20 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     try {
       const res = await axios.get(`${API}/fontaneros/${userId}/solicitudes`, { headers });
       const nuevas = res.data || [];
-      if (nuevas.length > 0) {
-        // Acumular: mezclar con los que ya conocemos, actualizando estado si cambió
-        setPendientes(prev => {
-          const mapaActual = Object.fromEntries(prev.map(s => [s.id, s]));
-          nuevas.forEach(s => { mapaActual[s.id] = s; });
-          // Quitar los que ya no son pendiente según el backend
-          const idsNuevas = new Set(nuevas.map(s => s.id));
-          return Object.values(mapaActual).filter(s =>
-            s.estado === 'pendiente' && (idsNuevas.has(s.id) || prev.some(p => p.id === s.id))
-          );
-        });
-        const activo = nuevas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
-        setTrabajoActivo(activo || null);
-        setCompletados(prev => {
-          const ids = new Set(prev.map(s => s.id));
-          const nuevosComp = nuevas.filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !ids.has(s.id));
-          return [...prev, ...nuevosComp];
-        });
-      }
+      // El backend devuelve siempre el conjunto completo y autoritativo (pendientes +
+      // trabajo propio activo/terminado), así que se recalcula directo de `nuevas` en
+      // vez de acumular sobre el estado previo: si no, un servicio pendiente cancelado
+      // por el cliente (o cualquier otro que deje de aparecer en la respuesta) nunca se
+      // quitaba de la lista —y si `nuevas` llegaba vacía, todo el bloque se saltaba y
+      // quedaba un "trabajo en curso" fantasma para siempre.
+      setPendientes(nuevas.filter(s => s.estado === 'pendiente'));
+      const activo = nuevas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
+      setTrabajoActivo(activo || null);
+      setCompletados(prev => {
+        const ids = new Set(prev.map(s => s.id));
+        const nuevosComp = nuevas.filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !ids.has(s.id));
+        return [...prev, ...nuevosComp];
+      });
     } catch (e) {}
     finally { setCargando(false); }
   }, [userId, token]);

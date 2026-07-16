@@ -76,6 +76,19 @@ export default function RegistroScreen({ navigation }) {
         codigo_referido: codigoReferido.trim() || null,
       });
       await guardarSesion(res.data);
+      if (tipo === 'fontanero') {
+        // El formulario deja fijar precios base por servicio, pero /registro no los
+        // acepta: se guardan aparte con el mismo endpoint que usa Mi perfil, para que
+        // no se pierdan silenciosamente.
+        const authHeaders = { Authorization: `Bearer ${res.data.access_token}` };
+        const conPrecio = serviciosRegistro.filter(sv => sv.precio && parseFloat(sv.precio) > 0);
+        await Promise.all(conPrecio.map(sv =>
+          axios.post(`${API}/fontaneros/${res.data.id}/servicios`, {
+            nombre: sv.nombre,
+            precio: parseFloat(sv.precio),
+          }, { headers: authHeaders }).catch(() => {})
+        ));
+      }
       const destino = tipo === 'fontanero' ? 'PanelFontanero' : tipo === 'administrador_fincas' ? 'Proyectos' : 'Mapa';
       const destinoParams = tipo === 'fontanero'
         ? { nombre: res.data.nombre || nombre, userId: res.data.id }

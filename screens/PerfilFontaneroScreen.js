@@ -208,6 +208,12 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     } catch (e) {}
   };
 
+  const guardarDescFoto = async (id, desc) => {
+    try {
+      await axios.put(`${API}/fontaneros/${userId}/galeria/${id}`, { descripcion: desc }, { headers });
+    } catch (e) {}
+  };
+
   const toggleDia = (index) => {
     const nuevo = [...horario];
     nuevo[index].activo = !nuevo[index].activo;
@@ -553,6 +559,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                       style={s.fotoDescInput}
                       value={f.desc}
                       onChangeText={t => setFotosTrabajos(prev => prev.map(foto => foto.id === f.id ? { ...foto, desc: t } : foto))}
+                      onBlur={() => guardarDescFoto(f.id, f.desc)}
                       placeholder="Descripción..."
                       placeholderTextColor={colors.textFaint}
                     />
