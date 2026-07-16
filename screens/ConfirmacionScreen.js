@@ -13,9 +13,12 @@ const TIMEOUT_URGENTE_MS = 3 * 60 * 1000; // aviso tras 3 min sin respuesta en u
 const ESTADOS = {
   pendiente: { emoji: '🔍', titulo: 'Buscando profesional...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
   aceptado: { emoji: '✅', titulo: '¡Profesional en camino!', sub: 'El profesional ha aceptado tu solicitud', color: '#05A357', paso: 2 },
+  en_camino: { emoji: '🚗', titulo: '¡Profesional en camino!', sub: 'El profesional va camino a tu domicilio', color: '#276EF1', paso: 2 },
   precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'El profesional ha terminado el trabajo', color: '#276EF1', paso: 3 },
+  pago_pendiente: { emoji: '💵', titulo: 'Pago en confirmación', sub: 'Esperando que el profesional confirme el cobro', color: '#7356BF', paso: 3 },
   pagado: { emoji: '🎉', titulo: '¡Servicio completado!', sub: 'Gracias por usar Multiservicios Provenza', color: '#05A357', paso: 4 },
   cancelado: { emoji: '✕', titulo: 'Servicio cancelado', sub: 'Esta solicitud ya no está activa', color: '#ef4444', paso: 0 },
+  rechazado: { emoji: '❌', titulo: 'Solicitud rechazada', sub: 'El profesional no pudo atender esta solicitud', color: '#E11900', paso: 0 },
 };
 
 export default function ConfirmacionScreen({ navigation, route }) {
@@ -232,7 +235,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
             </TouchableOpacity>
           </>
         )}
-        {estado === 'aceptado' && servicioId && (
+        {(estado === 'aceptado' || estado === 'en_camino' || estado === 'pago_pendiente') && servicioId && (
           <TouchableOpacity
             style={[s.btnPrimario, { marginBottom: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.blue }]}
             onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Profesional' })}
@@ -240,14 +243,14 @@ export default function ConfirmacionScreen({ navigation, route }) {
             <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el profesional</Text>
           </TouchableOpacity>
         )}
-        {(estado === 'pendiente' || estado === 'aceptado') && servicioId && (
+        {(estado === 'pendiente' || estado === 'aceptado' || estado === 'en_camino') && servicioId && (
           <TouchableOpacity style={s.btnRechazar} onPress={cancelarServicio} disabled={cancelando}>
             {cancelando
               ? <ActivityIndicator size="small" color="#ef4444" />
               : <Text style={s.btnRechazarText}>✕ Cancelar solicitud</Text>}
           </TouchableOpacity>
         )}
-        {(estado === 'pendiente' || estado === 'aceptado' || estado === 'cancelado') && (
+        {(estado === 'pendiente' || estado === 'aceptado' || estado === 'cancelado' || estado === 'rechazado') && (
           <TouchableOpacity style={s.btnPrimario} onPress={() => navigation.navigate('Mapa')}>
             <Text style={s.btnPrimarioText}>Volver al inicio</Text>
           </TouchableOpacity>
