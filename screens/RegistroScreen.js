@@ -50,7 +50,7 @@ export default function RegistroScreen({ navigation }) {
     if (googleResponse?.type === 'success' && googleResponse.params?.id_token) {
       setError('');
       setCargando(true);
-      axios.post(`${API}/auth/google`, { id_token: googleResponse.params.id_token, tipo })
+      axios.post(`${API}/auth/google`, { id_token: googleResponse.params.id_token, tipo, nonce: googleResponse.nonce })
         .then((res) => entrarConGoogle(res.data))
         .catch(() => setError('No se pudo continuar con Google'))
         .finally(() => setCargando(false));

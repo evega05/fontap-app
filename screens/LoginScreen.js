@@ -69,7 +69,7 @@ export default function LoginScreen({ navigation, route }) {
     if (googleResponse?.type === 'success' && googleResponse.params?.id_token) {
       setError('');
       setCargando(true);
-      axios.post(`${API}/auth/google`, { id_token: googleResponse.params.id_token })
+      axios.post(`${API}/auth/google`, { id_token: googleResponse.params.id_token, nonce: googleResponse.nonce })
         .then((res) => entrarConToken(res.data, true))
         .catch(() => setError('No se pudo iniciar sesión con Google'))
         .finally(() => setCargando(false));
