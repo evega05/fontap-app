@@ -7,7 +7,11 @@ export const GOOGLE_CLIENT_ID = '1037459588867-dum7jb79ef3c5lc5icnd4le4fgnicesj.
 
 export function useGoogleAuth() {
   const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
-  const redirectUri = AuthSession.makeRedirectUri();
+  // "native" fija la URL que se usará en un build real (app instalada, no Expo Go):
+  // fontap:/// — esa no cambia nunca, así que solo hay que darla de alta una vez
+  // en Google Cloud Console. En Expo Go se sigue usando la URL de desarrollo
+  // (exp://...), que si cambia hay que volver a registrar aparte.
+  const redirectUri = AuthSession.makeRedirectUri({ native: 'fontap:///' });
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: GOOGLE_CLIENT_ID,
