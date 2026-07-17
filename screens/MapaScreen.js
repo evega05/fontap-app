@@ -261,8 +261,8 @@ export default function MapaScreen({ navigation, route }) {
       setFavoritos((prev) => [...prev, f.id]);
       axios
         .post(
-          `${API}/clientes/${clienteId}/favoritos`,
-          { fontanero_id: f.id },
+          `${API}/clientes/${clienteId}/favoritos/${f.id}`,
+          null,
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         )
         .catch(() => {});
