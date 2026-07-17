@@ -95,9 +95,12 @@ export default function RegistroScreen({ navigation }) {
         : tipo === 'administrador_fincas' ? {} : { clienteId: res.data.id };
       navigation.replace('VerificarEmail', { email: res.data.email, destino, destinoParams });
     } catch (e) {
-      if (e.response?.status === 400) {
+      const detalle = e.response?.data?.detail;
+      if (e.response?.status === 400 && detalle === 'Email ya registrado') {
         setError('Este email ya está registrado');
         setEmailYaRegistrado(true);
+      } else if (e.response?.status === 400 && detalle) {
+        setError(detalle);
       } else {
         setError('No se pudo crear la cuenta, inténtalo de nuevo');
       }
