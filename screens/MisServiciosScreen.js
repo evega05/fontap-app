@@ -48,7 +48,7 @@ export default function MisServiciosScreen({ navigation, route }) {
 
   const irAServicio = (sv) => {
     if (sv.estado === 'precio_enviado') {
-      navigation.navigate('Pago', { servicio: { nombre: sv.tipo }, precio: sv.precio, servicioId: sv.id });
+      navigation.navigate('Pago', { servicio: { nombre: sv.tipo }, precio: sv.precio, servicioId: sv.id, fontanero: sv.fontanero_id ? { nombre: sv.fontanero_nombre, id: sv.fontanero_id } : null });
     } else {
       navigation.navigate('Confirmacion', { tipo: { nombre: sv.tipo }, urgente: sv.urgente, servicioId: sv.id, fontanero: sv.fontanero_id ? { nombre: sv.fontanero_nombre, id: sv.fontanero_id } : null });
     }
