@@ -69,7 +69,16 @@ function SplashScreen({ onFinish }) {
 }
 
 function NavegadorPrincipal() {
-  const { logout, usuario } = useAuth();
+  const { logout, usuario, token } = useAuth();
+
+  // Si ya hay una sesión guardada (token restaurado por AuthContext al arrancar),
+  // hay que abrir directo en la pantalla que le toca, no siempre en Login: si no,
+  // cualquier recarga de página (web) o reapertura de la app tira la sesión guardada
+  // a la basura y obliga a volver a iniciar sesión aunque el token siga siendo válido.
+  const rutaInicial = !token ? 'Login'
+    : usuario?.tipo === 'fontanero' ? 'PanelFontanero'
+    : usuario?.tipo === 'administrador_fincas' ? 'Proyectos'
+    : 'Mapa';
 
   // Deep-link de notificaciones push: al tocar una notificación (app en primer/segundo
   // plano, o cerrada del todo) navega a la pantalla relevante en vez de dejar al usuario
@@ -116,7 +125,7 @@ function NavegadorPrincipal() {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="Login" screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#070B14' } }}>
+      <Stack.Navigator initialRouteName={rutaInicial} screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#070B14' } }}>
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Registro" component={RegistroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Mapa" component={MapaScreen} options={{ headerShown: false }} />
