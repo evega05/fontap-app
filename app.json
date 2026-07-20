@@ -23,7 +23,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png",
-        "backgroundColor": "#080812"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.fontap.app",
       "config": {
