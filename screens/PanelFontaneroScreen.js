@@ -45,9 +45,15 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [stats, setStats] = useState(null);
   const [stripeEstado, setStripeEstado] = useState(null);
   const [comisionPendiente, setComisionPendiente] = useState(0);
+  const [comisionNumServicios, setComisionNumServicios] = useState(0);
+  const [comisionLimite, setComisionLimite] = useState(10);
   const [conectandoStripe, setConectandoStripe] = useState(false);
   const [checklist, setChecklist] = useState(null);
   const [pagandoComision, setPagandoComision] = useState(false);
+  const [mostrarPagoComision, setMostrarPagoComision] = useState(false);
+  const [metodoComisionElegido, setMetodoComisionElegido] = useState(null);
+  const [instruccionesComision, setInstruccionesComision] = useState(null);
+  const [cargandoInstrucciones, setCargandoInstrucciones] = useState(false);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -67,6 +73,8 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       ]);
       setStripeEstado(resEstado.data);
       setComisionPendiente(resComision.data.total || 0);
+      setComisionNumServicios(resComision.data.num_servicios || 0);
+      setComisionLimite(resComision.data.limite_servicios || 10);
     } catch (e) {}
   }, [userId, token]);
 
@@ -110,6 +118,30 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       avisar('Error', e.response?.data?.detail || 'No se pudo procesar el pago');
     } finally {
       setPagandoComision(false);
+    }
+  };
+
+  const cerrarModalComision = () => {
+    setMostrarPagoComision(false);
+    setMetodoComisionElegido(null);
+    setInstruccionesComision(null);
+  };
+
+  const elegirMetodoComision = async (metodo) => {
+    if (metodo === 'tarjeta') {
+      cerrarModalComision();
+      pagarComisionPendiente();
+      return;
+    }
+    setMetodoComisionElegido(metodo);
+    setCargandoInstrucciones(true);
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/comision-pendiente/${metodo}`, { headers });
+      setInstruccionesComision(res.data);
+    } catch (e) {
+      avisar('Error', e.response?.data?.detail || 'No se pudieron cargar las instrucciones');
+    } finally {
+      setCargandoInstrucciones(false);
     }
   };
 
@@ -436,11 +468,64 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           <View style={{ flex: 1 }}>
             <Text style={s.cobrosTitulo}>Comisión pendiente: {comisionPendiente}€</Text>
             <Text style={s.cobrosSub}>De trabajos cobrados en efectivo/Bizum, fuera de la app</Text>
+            {comisionNumServicios >= comisionLimite - 2 && (
+              <Text style={s.cobrosAviso}>
+                {comisionNumServicios >= comisionLimite
+                  ? `Has llegado a ${comisionNumServicios}/${comisionLimite} trabajos sin liquidar: no podrás aceptar más hasta que pagues.`
+                  : `${comisionNumServicios}/${comisionLimite} trabajos sin liquidar. A partir de ${comisionLimite} no podrás aceptar más.`}
+              </Text>
+            )}
           </View>
-          <Pressable style={s.cobrosBtn} haptic onPress={pagarComisionPendiente} disabled={pagandoComision}>
+          <Pressable style={s.cobrosBtn} haptic onPress={() => setMostrarPagoComision(true)} disabled={pagandoComision}>
             <Text style={s.cobrosBtnText}>{pagandoComision ? '...' : 'Pagar'}</Text>
           </Pressable>
         </Glass>
+      )}
+
+      {mostrarPagoComision && (
+        <View style={s.modalOverlay}>
+          <Glass strong style={s.modal}>
+            <View style={s.modalIconWrap}>
+              <Ionicons name="cash-outline" size={22} color={colors.accent2} />
+            </View>
+            <Text style={s.modalTitulo}>Pagar comisión pendiente</Text>
+            <Text style={s.modalSub}>Total: {comisionPendiente}€</Text>
+
+            {!metodoComisionElegido && (
+              <View style={{ gap: 10, width: '100%', marginTop: 8 }}>
+                <Pressable haptic onPress={() => elegirMetodoComision('tarjeta')}>
+                  <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalBtn}>
+                    <Text style={s.modalBtnText}>💳 Pagar con tarjeta</Text>
+                  </LinearGradient>
+                </Pressable>
+                <Pressable style={s.metodoComisionBtn} haptic onPress={() => elegirMetodoComision('bizum')}>
+                  <Text style={s.metodoComisionBtnText}>📱 Pagar por Bizum</Text>
+                </Pressable>
+                <Pressable style={s.metodoComisionBtn} haptic onPress={() => elegirMetodoComision('transferencia')}>
+                  <Text style={s.metodoComisionBtnText}>🏦 Pagar por transferencia</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {metodoComisionElegido && metodoComisionElegido !== 'tarjeta' && (
+              <View style={{ width: '100%', marginTop: 8 }}>
+                {cargandoInstrucciones ? (
+                  <Text style={s.modalSub}>Cargando instrucciones…</Text>
+                ) : instruccionesComision ? (
+                  <View style={s.instruccionesBox}>
+                    {instruccionesComision.instrucciones.map((linea, i) => (
+                      <Text key={i} style={s.instruccionesTexto}>{linea}</Text>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            <TouchableOpacity onPress={cerrarModalComision} style={s.modalCancelar}>
+              <Text style={s.modalCancelarText}>Cerrar</Text>
+            </TouchableOpacity>
+          </Glass>
+        </View>
       )}
 
       {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'en_camino' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
@@ -711,6 +796,11 @@ const s = StyleSheet.create({
   cobrosSub: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   cobrosBtn: { backgroundColor: colors.glass, borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   cobrosBtnText: { color: colors.accent2, fontWeight: '700', fontSize: 12 },
+  cobrosAviso: { color: colors.amber, fontSize: 11, fontWeight: '700', marginTop: 4 },
+  metodoComisionBtn: { borderWidth: 1.5, borderColor: colors.border2, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+  metodoComisionBtnText: { color: colors.text, fontWeight: '600', fontSize: 14 },
+  instruccionesBox: { backgroundColor: colors.bgCard2, borderRadius: radius.md, padding: spacing.md, gap: 6 },
+  instruccionesTexto: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold' },
   statLabel: { color: colors.textMuted, fontSize: 11 },
   tabs: { flexDirection: 'row', paddingHorizontal: spacing.xl, marginBottom: spacing.md, gap: spacing.sm },
