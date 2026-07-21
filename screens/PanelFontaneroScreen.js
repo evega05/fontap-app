@@ -414,6 +414,21 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           trackColor={{ false: colors.glassStrong, true: colors.purple }} thumbColor={disponible24h ? '#fff' : colors.textFaint} />
       </Glass>
 
+      {checklist && checklist.email_verificado === false && (
+        <Pressable haptic onPress={() => navigation.navigate('VerificarEmail', { email: usuario?.email, destino: 'PanelFontanero' })}>
+          <Glass style={s.cobrosCard} colorTint={colors.amberGlass}>
+            <Ionicons name="mail-unread-outline" size={18} color={colors.amber} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.cobrosTitulo}>Verifica tu email</Text>
+              <Text style={s.cobrosSub}>No podrás recibir ni aceptar trabajos hasta confirmarlo</Text>
+            </View>
+            <View style={s.cobrosBtn}>
+              <Text style={s.cobrosBtnText}>Verificar</Text>
+            </View>
+          </Glass>
+        </Pressable>
+      )}
+
       {checklist && checklist.porcentaje < 100 && (
         <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
           <Glass style={s.checklistCard}>
