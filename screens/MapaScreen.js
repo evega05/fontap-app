@@ -597,19 +597,6 @@ export default function MapaScreen({ navigation, route }) {
               <Text style={s.gremioFiltroBtnText} numberOfLines={1}>📍 {ciudad}</Text>
               <Ionicons name={ciudadAbierta ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
             </Pressable>
-
-            {ciudadAbierta && (
-              <View style={s.dropdownOverlay}>
-                <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
-                  {CIUDADES.map((c) => (
-                    <Pressable key={c.valor} style={[s.gremioFiltroOpcion, ciudad === c.valor && s.gremioFiltroOpcionActiva]} haptic
-                      onPress={() => { setCiudad(c.valor); setCiudadAbierta(false); }}>
-                      <Text style={[s.gremioFiltroOpcionText, ciudad === c.valor && s.gremioFiltroOpcionTextActiva]}>📍 {c.valor}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
           </View>
 
           <View style={s.filtroDropdownWrap}>
@@ -621,25 +608,41 @@ export default function MapaScreen({ navigation, route }) {
               </Text>
               <Ionicons name={gremioFiltroAbierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
             </Pressable>
-
-            {gremioFiltroAbierto && (
-              <View style={s.dropdownOverlay}>
-                <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
-                  <Pressable style={[s.gremioFiltroOpcion, !filtroGremio && s.gremioFiltroOpcionActiva]} haptic
-                    onPress={() => { setFiltroGremio(''); setGremioFiltroAbierto(false); }}>
-                    <Text style={[s.gremioFiltroOpcionText, !filtroGremio && s.gremioFiltroOpcionTextActiva]}>🛠️ {t('todos')}</Text>
-                  </Pressable>
-                  {GREMIOS.map((g) => (
-                    <Pressable key={g.valor} style={[s.gremioFiltroOpcion, filtroGremio === g.valor && s.gremioFiltroOpcionActiva]} haptic
-                      onPress={() => { setFiltroGremio(g.valor); setGremioFiltroAbierto(false); }}>
-                      <Text style={[s.gremioFiltroOpcionText, filtroGremio === g.valor && s.gremioFiltroOpcionTextActiva]}>{g.emoji} {t(g.clave)}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
           </View>
         </View>
+
+        {/* Las listas van en el flujo normal (no en overlay absoluto): en Android los
+            toques fuera de los límites del contenedor padre no se registran, así que
+            un overlay colgando bajo el botón se ve pero no se puede tocar ni deslizar. */}
+        {ciudadAbierta && (
+          <View style={s.dropdownInline}>
+            <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
+              {CIUDADES.map((c) => (
+                <Pressable key={c.valor} style={[s.gremioFiltroOpcion, ciudad === c.valor && s.gremioFiltroOpcionActiva]} haptic
+                  onPress={() => { setCiudad(c.valor); setCiudadAbierta(false); }}>
+                  <Text style={[s.gremioFiltroOpcionText, ciudad === c.valor && s.gremioFiltroOpcionTextActiva]}>📍 {c.valor}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {gremioFiltroAbierto && (
+          <View style={s.dropdownInline}>
+            <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
+              <Pressable style={[s.gremioFiltroOpcion, !filtroGremio && s.gremioFiltroOpcionActiva]} haptic
+                onPress={() => { setFiltroGremio(''); setGremioFiltroAbierto(false); }}>
+                <Text style={[s.gremioFiltroOpcionText, !filtroGremio && s.gremioFiltroOpcionTextActiva]}>🛠️ {t('todos')}</Text>
+              </Pressable>
+              {GREMIOS.map((g) => (
+                <Pressable key={g.valor} style={[s.gremioFiltroOpcion, filtroGremio === g.valor && s.gremioFiltroOpcionActiva]} haptic
+                  onPress={() => { setFiltroGremio(g.valor); setGremioFiltroAbierto(false); }}>
+                  <Text style={[s.gremioFiltroOpcionText, filtroGremio === g.valor && s.gremioFiltroOpcionTextActiva]}>{g.emoji} {t(g.clave)}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {serviciosFiltroDisponibles.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
@@ -832,7 +835,7 @@ const s = StyleSheet.create({
 
   filtrosRow: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.lg, marginBottom: spacing.sm, zIndex: 20 },
   filtroDropdownWrap: { flex: 1, position: 'relative', zIndex: 20 },
-  dropdownOverlay: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, zIndex: 30 },
+  dropdownInline: { marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   gremioFiltroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 11, borderWidth: 1, borderColor: colors.glassBorder },
   ordenBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
   ordenBtnText: { color: colors.textMuted, ...type.caption },

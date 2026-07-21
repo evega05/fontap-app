@@ -93,7 +93,10 @@ export default function RegistroScreen({ navigation }) {
       const destinoParams = tipo === 'fontanero'
         ? { nombre: res.data.nombre || nombre, userId: res.data.id }
         : tipo === 'administrador_fincas' ? {} : { clienteId: res.data.id };
-      navigation.replace('VerificarEmail', { email: res.data.email, destino, destinoParams });
+      // Entra directo a la app: la verificación del email no bloquea el registro.
+      // Los profesionales ven el aviso "Verifica tu email" en su panel, con acceso
+      // a la pantalla de verificación desde ahí.
+      navigation.replace(destino, destinoParams);
     } catch (e) {
       const detalle = e.response?.data?.detail;
       if (e.response?.status === 400 && detalle === 'Email ya registrado') {
@@ -120,21 +123,23 @@ export default function RegistroScreen({ navigation }) {
       <Text style={s.titulo}>{t('crearCuenta')}</Text>
       <Text style={s.sub}>{t('uneteGratis')}</Text>
 
+      {/* maxFontSizeMultiplier limita el escalado del ajuste de fuente del sistema:
+          con 3 tarjetas en fila, un texto muy ampliado desborda y se ve gigante. */}
       <View style={s.tipoRow}>
         <TouchableOpacity style={[s.tipoBtn, tipo === 'cliente' && s.tipoBtnActivo]} onPress={() => setTipo('cliente')}>
-          <Text style={s.tipoEmoji}>👤</Text>
-          <Text style={[s.tipoTitulo, tipo === 'cliente' && s.tipoTituloActivo]}>{t('soyCliente')}</Text>
-          <Text style={s.tipoSub}>{t('necesitoProfesional')}</Text>
+          <Text style={s.tipoEmoji} maxFontSizeMultiplier={1.1}>👤</Text>
+          <Text style={[s.tipoTitulo, tipo === 'cliente' && s.tipoTituloActivo]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1}>{t('soyCliente')}</Text>
+          <Text style={s.tipoSub} numberOfLines={2} maxFontSizeMultiplier={1.1}>{t('necesitoProfesional')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.tipoBtn, tipo === 'fontanero' && s.tipoBtnActivo]} onPress={() => setTipo('fontanero')}>
-          <Text style={s.tipoEmoji}>🛠️</Text>
-          <Text style={[s.tipoTitulo, tipo === 'fontanero' && s.tipoTituloActivo]}>{t('soyProfesional')}</Text>
-          <Text style={s.tipoSub}>{t('quieroTrabajos')}</Text>
+          <Text style={s.tipoEmoji} maxFontSizeMultiplier={1.1}>🛠️</Text>
+          <Text style={[s.tipoTitulo, tipo === 'fontanero' && s.tipoTituloActivo]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1}>{t('soyProfesional')}</Text>
+          <Text style={s.tipoSub} numberOfLines={2} maxFontSizeMultiplier={1.1}>{t('quieroTrabajos')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.tipoBtn, tipo === 'administrador_fincas' && s.tipoBtnActivo]} onPress={() => setTipo('administrador_fincas')}>
-          <Text style={s.tipoEmoji}>🏢</Text>
-          <Text style={[s.tipoTitulo, tipo === 'administrador_fincas' && s.tipoTituloActivo]}>Administrador</Text>
-          <Text style={s.tipoSub}>Publico proyectos</Text>
+          <Text style={s.tipoEmoji} maxFontSizeMultiplier={1.1}>🏢</Text>
+          <Text style={[s.tipoTitulo, tipo === 'administrador_fincas' && s.tipoTituloActivo]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1}>Administrador</Text>
+          <Text style={s.tipoSub} numberOfLines={2} maxFontSizeMultiplier={1.1}>Publico proyectos</Text>
         </TouchableOpacity>
       </View>
 
