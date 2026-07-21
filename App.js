@@ -1,3 +1,4 @@
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import axios from 'axios';
@@ -164,18 +165,22 @@ export default function App() {
 
   if (!splashListo) {
     return (
-      <SplashScreen onFinish={() => setSplashListo(true)} />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SplashScreen onFinish={() => setSplashListo(true)} />
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <StripeWrapper>
-      <AuthProvider>
-        <IdiomaProvider>
-          <NavegadorPrincipal />
-        </IdiomaProvider>
-      </AuthProvider>
-    </StripeWrapper>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <StripeWrapper>
+        <AuthProvider>
+          <IdiomaProvider>
+            <NavegadorPrincipal />
+          </IdiomaProvider>
+        </AuthProvider>
+      </StripeWrapper>
+    </GestureHandlerRootView>
   );
 }
 
