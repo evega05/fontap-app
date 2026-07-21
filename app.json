@@ -30,7 +30,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyA7ySPuuzWVj_rMIQU35VJk_XiVM-FSgAA"
         }
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -56,6 +61,12 @@
           "photosPermission": "Multiservicios Provenza necesita acceso a tus fotos para que puedas subir imágenes del trabajo, tu foto de perfil o adjuntar fotos en el chat."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "68eb608b-5bbc-457d-8146-6cd021aa6a58"
+      }
+    },
+    "owner": "mathiasvegas-organization"
   }
 }
