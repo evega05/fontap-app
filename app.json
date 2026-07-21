@@ -60,6 +60,13 @@
         {
           "photosPermission": "Multiservicios Provenza necesita acceso a tus fotos para que puedas subir imágenes del trabajo, tu foto de perfil o adjuntar fotos en el chat."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0057D8"
+        }
       ]
     ],
     "extra": {
