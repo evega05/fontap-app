@@ -253,7 +253,7 @@ export default function MapaScreen({ navigation, route }) {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.post(
         `${API}/servicios`,
-        { tipo: 'Consulta', urgente: false, fontanero_id: f.id },
+        { tipo: 'Consulta', urgente: false, fontanero_id: f.id, es_consulta: true },
         { params: { cliente_id: clienteId }, headers }
       );
       navigation.navigate('Chat', { servicioId: res.data.id, otroNombre: f.nombre });

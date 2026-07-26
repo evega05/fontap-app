@@ -25,9 +25,11 @@ function getSaludo() {
 }
 
 const ESTADO_PILL = {
-  precio_enviado: { icon: 'cash-outline', label: 'Precio enviado' },
+  aceptado: { icon: 'cash-outline', label: 'Falta enviar precio' },
+  precio_enviado: { icon: 'hourglass-outline', label: 'Esperando que acepte el precio' },
+  precio_aceptado: { icon: 'checkmark-circle-outline', label: 'Precio aceptado' },
+  en_camino: { icon: 'car-sport-outline', label: 'En camino' },
   pago_pendiente: { icon: 'hourglass-outline', label: 'Esperando pago' },
-  aceptado: { icon: 'car-outline', label: 'En camino' },
 };
 
 export default function PanelFontaneroScreen({ navigation, route }) {
@@ -158,15 +160,15 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       // quitaba de la lista —y si `nuevas` llegaba vacía, todo el bloque se saltaba y
       // quedaba un "trabajo en curso" fantasma para siempre.
       setPendientes(nuevas.filter(s => s.estado === 'pendiente'));
-      const activo = nuevas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
+      const activo = nuevas.find(s => ['aceptado', 'precio_enviado', 'precio_aceptado', 'en_camino', 'pago_pendiente'].includes(s.estado));
       setTrabajoActivo(activo || null);
       setCompletados(prev => {
-        const idsNuevas = new Set(nuevas.map(s => s.id));
-        // Si el backend ya confirmó "pagado"/"completado" para un id que teníamos como
-        // pendiente de pago (inserción optimista en enviarPrecio), hay que quitarle esa
-        // marca aquí: si no, "Pendiente pago" y el bloqueo de "Reseñar cliente" se quedan
-        // pegados para siempre aunque el cliente ya haya pagado de verdad.
-        const actualizados = prev.map(c => (idsNuevas.has(c.id) ? { ...c, pendientePago: false } : c));
+        // Si el backend ya confirmó "pagado" para un id que teníamos marcado como
+        // pendiente de pago (tras marcarlo terminado), hay que quitarle esa marca aquí:
+        // si no, "Pendiente pago" y el bloqueo de "Reseñar cliente" se quedan pegados
+        // para siempre aunque el cliente ya haya pagado de verdad.
+        const idsPagados = new Set(nuevas.filter(s => s.estado === 'pagado').map(s => s.id));
+        const actualizados = prev.map(c => (idsPagados.has(c.id) ? { ...c, pendientePago: false } : c));
         const idsPrev = new Set(prev.map(s => s.id));
         const nuevosComp = nuevas
           .filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !idsPrev.has(s.id))
@@ -178,7 +180,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             precio: s.precio,
             valoracion: 0,
             fecha: s.fecha,
-            pendientePago: false,
+            pendientePago: s.estado === 'completado',
           }));
         return [...actualizados, ...nuevosComp];
       });
@@ -268,22 +270,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
     try {
       await axios.put(`${API}/servicios/${trabajoActivo.id}/precio`, { precio: precioNum }, { headers });
-      setCompletados(prev => [{
-        id: trabajoActivo.id,
-        cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
-        servicio: trabajoActivo.tipo || trabajoActivo.servicio,
-        zona: trabajoActivo.zona || '—',
-        precio: precioNum,
-        valoracion: 0,
-        fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-        pendientePago: true,
-      }, ...prev]);
+      setTrabajoActivo({ ...trabajoActivo, estado: 'precio_enviado', precio: precioNum });
       setMostrarPrecio(false);
-      setTrabajoActivo(null);
       setPrecioFinal('');
-      avisar('Precio enviado', 'El cliente puede ver el precio y proceder al pago');
+      avisar('Precio enviado', 'El cliente debe aceptarlo para que puedas ir a hacer el trabajo');
     } catch (e) {
-      avisar('Error', 'No se pudo enviar el precio');
+      avisar('Error', mensajeError(e, 'No se pudo enviar el precio'));
     }
   };
 
@@ -295,6 +287,28 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     } catch (e) {
       avisar('Error', mensajeError(e, 'No se pudo actualizar el estado'));
     }
+  };
+
+  const marcarTerminado = () => {
+    if (!trabajoActivo) return;
+    confirmarAccion('Marcar como terminado', '¿Confirmas que el trabajo ya está terminado? El cliente podrá pagar a partir de ahora.', async () => {
+      try {
+        await axios.put(`${API}/servicios/${trabajoActivo.id}/completar`, null, { headers });
+        setCompletados(prev => [{
+          id: trabajoActivo.id,
+          cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
+          servicio: trabajoActivo.tipo || trabajoActivo.servicio,
+          zona: trabajoActivo.zona || '—',
+          precio: trabajoActivo.precio,
+          valoracion: 0,
+          fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+          pendientePago: true,
+        }, ...prev]);
+        setTrabajoActivo(null);
+      } catch (e) {
+        avisar('Error', mensajeError(e, 'No se pudo marcar como terminado'));
+      }
+    }, { textoConfirmar: 'Sí, terminado' });
   };
 
   const confirmarCobroDirecto = async () => {
@@ -558,7 +572,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </View>
       )}
 
-      {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'en_camino' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
+      {trabajoActivo && ['aceptado', 'precio_enviado', 'precio_aceptado', 'en_camino', 'pago_pendiente'].includes(trabajoActivo.estado) && (
         <Glass style={s.enCursoCard}>
           <View style={s.enCursoHeader}>
             <View style={s.enCursoTituloRow}>
@@ -579,7 +593,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </LinearGradient>
             </Pressable>
           )}
-          {(trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado') && (
+          {trabajoActivo.estado === 'precio_aceptado' && (
             <Pressable style={s.enCaminoBtn} haptic onPress={marcarEnCamino}>
               <Ionicons name="car-sport" size={16} color={colors.blue} />
               <Text style={s.enCaminoBtnText}>Voy en camino</Text>
@@ -591,6 +605,14 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               <Text style={s.enCaminoActivoText}>Marcado en camino · el cliente puede seguirte</Text>
             </View>
           )}
+          {(trabajoActivo.estado === 'precio_aceptado' || trabajoActivo.estado === 'en_camino') && (
+            <Pressable haptic onPress={marcarTerminado}>
+              <LinearGradient colors={[colors.green, colors.green]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
+                <Text style={s.enCursoBtnText}>Marcar trabajo terminado</Text>
+                <Ionicons name="checkmark-done" size={15} color={colors.text} />
+              </LinearGradient>
+            </Pressable>
+          )}
           {trabajoActivo.estado === 'pago_pendiente' && (
             <Pressable haptic onPress={confirmarCobroDirecto}>
               <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
@@ -601,12 +623,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </LinearGradient>
             </Pressable>
           )}
-          {trabajoActivo.estado === 'aceptado' && (
-            <Pressable style={s.enCursoChatBtn} haptic onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
-              <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
-              <Text style={s.enCursoChatText}>Chat con cliente</Text>
-            </Pressable>
-          )}
+          <Pressable style={s.enCursoChatBtn} haptic onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
+            <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
+            <Text style={s.enCursoChatText}>Chat con cliente</Text>
+          </Pressable>
           <Pressable style={s.enCursoCancelarBtn} haptic onPress={cancelarTrabajo}>
             <Text style={s.enCursoCancelarText}>Cancelar trabajo</Text>
           </Pressable>

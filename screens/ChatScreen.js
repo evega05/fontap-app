@@ -7,7 +7,7 @@ import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
 import { agregarArchivo } from '../subirArchivo';
-import { avisar } from '../confirmar';
+import { avisar, confirmarAccion } from '../confirmar';
 import { colors } from '../theme';
 import { mensajeError } from '../errores';
 
@@ -28,6 +28,10 @@ export default function ChatScreen({ navigation, route }) {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [servicio, setServicio] = useState(null);
+  const [mostrarProponerPrecio, setMostrarProponerPrecio] = useState(false);
+  const [precioInput, setPrecioInput] = useState('');
+  const [procesandoEstado, setProcesandoEstado] = useState(false);
   const flatListRef = useRef(null);
   const pollingRef = useRef(null);
   const ultimoIdRef = useRef(0);
@@ -59,15 +63,102 @@ export default function ChatScreen({ navigation, route }) {
     } catch (_) {}
   }, [servicioId, token]);
 
+  const cargarServicio = useCallback(async () => {
+    if (!token || !servicioId) return;
+    try {
+      const res = await axios.get(`${API}/servicios/${servicioId}`, { headers: { Authorization: `Bearer ${token}` } });
+      setServicio(res.data);
+    } catch (e) {}
+  }, [servicioId, token]);
+
   useEffect(() => {
     cargarMensajes();
     marcarLeidos();
+    cargarServicio();
     pollingRef.current = setInterval(() => {
       cargarMensajes();
       marcarLeidos();
+      cargarServicio();
     }, 4000);
     return () => clearInterval(pollingRef.current);
-  }, [cargarMensajes, marcarLeidos]);
+  }, [cargarMensajes, marcarLeidos, cargarServicio]);
+
+  const proponerPrecio = async () => {
+    const precioNum = parseFloat(precioInput);
+    if (isNaN(precioNum) || precioNum <= 0) { avisar('Error', 'Introduce un precio válido'); return; }
+    setProcesandoEstado(true);
+    try {
+      await axios.put(`${API}/servicios/${servicioId}/precio`, { precio: precioNum }, { headers });
+      setServicio(prev => ({ ...prev, precio: precioNum, estado: 'precio_enviado' }));
+      setMostrarProponerPrecio(false);
+      setPrecioInput('');
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo enviar el precio'));
+    } finally {
+      setProcesandoEstado(false);
+    }
+  };
+
+  const aceptarPrecio = async () => {
+    setProcesandoEstado(true);
+    try {
+      await axios.put(`${API}/servicios/${servicioId}/precio/aceptar`, null, { headers });
+      setServicio(prev => ({ ...prev, estado: 'precio_aceptado' }));
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo aceptar el precio'));
+    } finally {
+      setProcesandoEstado(false);
+    }
+  };
+
+  const rechazarPrecio = () => {
+    confirmarAccion('Rechazar precio', '¿Seguro que quieres rechazar este precio? El profesional podrá proponerte uno nuevo.', async () => {
+      setProcesandoEstado(true);
+      try {
+        await axios.put(`${API}/servicios/${servicioId}/precio/rechazar`, null, { headers });
+        setServicio(prev => ({ ...prev, precio: null, estado: prev.es_consulta ? 'pendiente' : 'aceptado' }));
+      } catch (e) {
+        avisar('Error', mensajeError(e, 'No se pudo rechazar el precio'));
+      } finally {
+        setProcesandoEstado(false);
+      }
+    }, { textoConfirmar: 'Sí, rechazar', textoCancelar: 'No' });
+  };
+
+  const irEnCamino = async () => {
+    setProcesandoEstado(true);
+    try {
+      await axios.put(`${API}/servicios/${servicioId}/en-camino`, null, { headers });
+      setServicio(prev => ({ ...prev, estado: 'en_camino' }));
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo actualizar el estado'));
+    } finally {
+      setProcesandoEstado(false);
+    }
+  };
+
+  const marcarTerminado = () => {
+    confirmarAccion('Marcar como terminado', '¿Confirmas que el trabajo ya está terminado? El cliente podrá pagar a partir de ahora.', async () => {
+      setProcesandoEstado(true);
+      try {
+        await axios.put(`${API}/servicios/${servicioId}/completar`, null, { headers });
+        setServicio(prev => ({ ...prev, estado: 'completado' }));
+      } catch (e) {
+        avisar('Error', mensajeError(e, 'No se pudo marcar como terminado'));
+      } finally {
+        setProcesandoEstado(false);
+      }
+    }, { textoConfirmar: 'Sí, terminado' });
+  };
+
+  const irAPagar = () => {
+    navigation.navigate('Pago', {
+      servicioId,
+      precio: servicio?.precio,
+      servicio: { nombre: servicio?.tipo },
+      fontanero: { nombre: otroNombre },
+    });
+  };
 
   useEffect(() => {
     if (mensajes.length > 0) {
@@ -174,6 +265,79 @@ export default function ChatScreen({ navigation, route }) {
         </View>
       </View>
 
+      {servicio && (
+        <View style={s.estadoWrap}>
+          {usuario?.tipo === 'fontanero' && !servicio.precio && !['cancelado', 'rechazado'].includes(servicio.estado) && (
+            mostrarProponerPrecio ? (
+              <View style={s.precioInputRow}>
+                <TextInput
+                  style={s.precioInput}
+                  placeholder="Precio en €"
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType="numeric"
+                  value={precioInput}
+                  onChangeText={setPrecioInput}
+                  autoFocus
+                />
+                <TouchableOpacity style={s.precioEnviarBtn} onPress={proponerPrecio} disabled={procesandoEstado}>
+                  {procesandoEstado ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.precioEnviarText}>Enviar</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity style={s.precioCancelarBtn} onPress={() => { setMostrarProponerPrecio(false); setPrecioInput(''); }}>
+                  <Text style={s.precioCancelarText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={s.estadoBtn} onPress={() => setMostrarProponerPrecio(true)}>
+                <Text style={s.estadoBtnText}>💰 Proponer precio</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {usuario?.tipo === 'cliente' && servicio.estado === 'precio_enviado' && (
+            <View style={s.precioPropuestoBox}>
+              <Text style={s.precioPropuestoTexto}>💰 Precio propuesto: {servicio.precio}€</Text>
+              <View style={s.precioAccionesRow}>
+                <TouchableOpacity style={s.btnRechazarPrecio} onPress={rechazarPrecio} disabled={procesandoEstado}>
+                  <Text style={s.btnRechazarPrecioText}>Rechazar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.btnAceptarPrecio} onPress={aceptarPrecio} disabled={procesandoEstado}>
+                  {procesandoEstado ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.btnAceptarPrecioText}>Aceptar {servicio.precio}€</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {usuario?.tipo === 'fontanero' && (servicio.estado === 'precio_aceptado' || servicio.estado === 'en_camino') && (
+            <View style={s.accionesTrabajoRow}>
+              {servicio.estado === 'precio_aceptado' && (
+                <TouchableOpacity style={s.estadoBtn} onPress={irEnCamino} disabled={procesandoEstado}>
+                  <Text style={s.estadoBtnText}>🚗 Voy en camino</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={s.estadoBtnVerde} onPress={marcarTerminado} disabled={procesandoEstado}>
+                <Text style={s.estadoBtnVerdeText}>✅ Marcar terminado</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {usuario?.tipo === 'cliente' && servicio.estado === 'completado' && (
+            <TouchableOpacity style={s.estadoBtnVerde} onPress={irAPagar}>
+              <Text style={s.estadoBtnVerdeText}>💳 Pagar {servicio.precio}€</Text>
+            </TouchableOpacity>
+          )}
+
+          {usuario?.tipo === 'cliente' && (servicio.estado === 'precio_aceptado' || servicio.estado === 'en_camino') && (
+            <View style={s.infoBanner}>
+              <Text style={s.infoBannerText}>
+                {servicio.estado === 'en_camino'
+                  ? '🚗 El profesional va en camino'
+                  : `✅ Precio aceptado (${servicio.precio}€) · esperando a que el profesional vaya y termine el trabajo`}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {cargando ? (
         <View style={s.cargando}>
           <ActivityIndicator color={colors.blue} size="large" />
@@ -267,6 +431,27 @@ const s = StyleSheet.create({
   headerAvatarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   headerNombre: { color: colors.text, fontWeight: '600', fontSize: 15 },
   headerSub: { color: colors.textMuted, fontSize: 12 },
+  estadoWrap: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 2, backgroundColor: colors.bgCard, borderBottomWidth: 1, borderBottomColor: colors.border },
+  estadoBtn: { backgroundColor: colors.blueLight, borderWidth: 1, borderColor: colors.blue, borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginBottom: 8 },
+  estadoBtnText: { color: colors.blue, fontWeight: '700', fontSize: 13.5 },
+  estadoBtnVerde: { flex: 1, backgroundColor: colors.green, borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
+  estadoBtnVerdeText: { color: '#fff', fontWeight: '700', fontSize: 13.5 },
+  accionesTrabajoRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  precioInputRow: { flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'center' },
+  precioInput: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: 12, borderWidth: 1, borderColor: colors.border2, paddingHorizontal: 12, paddingVertical: 9, color: colors.text, fontSize: 14 },
+  precioEnviarBtn: { backgroundColor: colors.blue, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, justifyContent: 'center', alignItems: 'center' },
+  precioEnviarText: { color: '#fff', fontWeight: '700', fontSize: 13.5 },
+  precioCancelarBtn: { paddingHorizontal: 8, paddingVertical: 10 },
+  precioCancelarText: { color: colors.textMuted, fontSize: 16 },
+  precioPropuestoBox: { backgroundColor: colors.blueLight, borderWidth: 1, borderColor: colors.blue, borderRadius: 12, padding: 12, marginBottom: 8 },
+  precioPropuestoTexto: { color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 8, textAlign: 'center' },
+  precioAccionesRow: { flexDirection: 'row', gap: 8 },
+  btnRechazarPrecio: { flex: 1, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2, borderRadius: 10, paddingVertical: 9, alignItems: 'center' },
+  btnRechazarPrecioText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
+  btnAceptarPrecio: { flex: 1.4, backgroundColor: colors.green, borderRadius: 10, paddingVertical: 9, alignItems: 'center' },
+  btnAceptarPrecioText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  infoBanner: { backgroundColor: colors.bgCard2, borderRadius: 12, borderWidth: 1, borderColor: colors.border2, padding: 10, marginBottom: 8 },
+  infoBannerText: { color: colors.textMuted, fontSize: 12.5, textAlign: 'center' },
   cargando: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   lista: { paddingHorizontal: 16, paddingVertical: 12, flexGrow: 1, justifyContent: 'flex-end' },
   msgRow: { marginBottom: 8, flexDirection: 'row' },
