@@ -6,6 +6,7 @@ import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { confirmarAccion, avisar } from '../confirmar';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const TIMEOUT_URGENTE_MS = 3 * 60 * 1000; // aviso tras 3 min sin respuesta en urgencias
@@ -73,7 +74,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
         await axios.put(`${API}/servicios/${servicioId}/cancelar`, null, { headers });
         setEstado('cancelado');
       } catch (e) {
-        avisar('Error', e.response?.data?.detail || 'No se pudo cancelar el servicio');
+        avisar('Error', mensajeError(e, 'No se pudo cancelar el servicio'));
       } finally {
         setCancelando(false);
       }

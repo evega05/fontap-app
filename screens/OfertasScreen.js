@@ -6,6 +6,7 @@ import { colors } from '../theme';
 import { avisar } from '../confirmar';
 import { emojiDeServicio } from '../gremios';
 import { CIUDADES } from './MapaScreen';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const CUPO_MAXIMO_OFERTAS = 4; // igual que CUPO_MAXIMO_OFERTAS en el backend (estilo Habitissimo)
@@ -74,7 +75,7 @@ export default function OfertasScreen({ navigation }) {
       setMensajeOferta('');
       cargar();
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudo enviar la oferta');
+      avisar('Error', mensajeError(e, 'No se pudo enviar la oferta'));
     } finally {
       setEnviando(false);
     }

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
+import { mensajeError } from '../errores';
 import { avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
@@ -38,7 +39,7 @@ export default function ReseñaClienteScreen({ navigation, route }) {
       setTimeout(() => navigation.navigate('PanelFontanero'), 2000);
     } catch (e) {
       console.log('[ResenaCliente] Error al enviar:', e.response?.status, e.response?.data);
-      avisar('Error', e.response?.data?.detail || 'No se pudo enviar la reseña');
+      avisar('Error', mensajeError(e, 'No se pudo enviar la reseña'));
     } finally {
       setEnviando(false);
     }

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { avisar } from '../confirmar';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -52,7 +53,7 @@ export default function ReseñaScreen({ navigation, route }) {
       setTimeout(() => navigation.navigate('Mapa'), 2000);
     } catch (e) {
       console.log('[Resena] Error al enviar:', e.response?.status, e.response?.data);
-      avisar('Error', e.response?.data?.detail || 'No se pudo enviar la reseña');
+      avisar('Error', mensajeError(e, 'No se pudo enviar la reseña'));
     } finally {
       setEnviando(false);
     }

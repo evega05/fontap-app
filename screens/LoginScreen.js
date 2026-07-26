@@ -7,6 +7,7 @@ import { registrarNotificaciones } from './notifications';
 import { useGoogleAuth, googleConfigurado } from '../googleAuth';
 import { useIdioma, IDIOMAS } from '../i18n';
 import { avisar } from '../confirmar';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -46,7 +47,7 @@ export default function LoginScreen({ navigation, route }) {
       await entrarConToken(res.data, false);
     } catch (e) {
       if (e.response?.status === 429 || e.response?.status === 403) {
-        setError(e.response?.data?.detail || t('errorCredenciales'));
+        setError(mensajeError(e, t('errorCredenciales')));
       } else if (e.response?.status === 401) {
         setError(t('errorCredenciales'));
       } else {
