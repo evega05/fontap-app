@@ -389,6 +389,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Text style={s.nombre} numberOfLines={1}>{nombre}</Text>
             <Text style={s.idText}>ID: {userId}</Text>
           </View>
+          <Pressable haptic onPress={() => navigation.navigate('Notificaciones')}>
+            <Glass style={s.logoutBtn}><Ionicons name="notifications-outline" size={18} color={colors.text} /></Glass>
+          </Pressable>
           <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
             <LinearGradient colors={[colors.accent, colors.accent2]} style={s.perfilBtn}>
               <Text style={s.perfilLetra}>{nombre[0]}</Text>
@@ -398,23 +401,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Glass style={s.logoutBtn} colorTint={colors.redGlass}><Ionicons name="log-out-outline" size={18} color={colors.red} /></Glass>
           </Pressable>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.headerActions}>
-          <Pressable haptic onPress={() => navigation.navigate('Notificaciones')}>
-            <Glass style={s.iconBtn}><Ionicons name="notifications-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('Calendario', { userId })}>
-            <Glass style={s.iconBtn}><Ionicons name="calendar-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('Ofertas')}>
-            <Glass style={s.iconBtn}><Ionicons name="briefcase-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('ChatsRecientes')}>
-            <Glass style={s.iconBtn}><Ionicons name="chatbubbles-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('Estadisticas', { userId })}>
-            <Glass style={s.iconBtn}><Ionicons name="stats-chart-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-        </ScrollView>
       </View>
 
       <Glass style={s.disponibilidadCard}>
@@ -647,7 +633,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </Pressable>
       </View>
 
-      <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 100 }}>
         {tab === 'pendientes' ? (
           cargando ? (
             <View style={s.vacio}>
@@ -776,6 +762,31 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           )
         )}
       </ScrollView>
+
+      <View style={s.tabBar}>
+        <View style={s.tabBarItem}>
+          <View style={s.tabBarIconWrapActivo}>
+            <Ionicons name="home" size={20} color={colors.text} />
+          </View>
+          <Text style={s.tabBarLabelActivo}>Inicio</Text>
+        </View>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('Calendario', { userId })}>
+          <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Agenda</Text>
+        </Pressable>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('Ofertas')}>
+          <Ionicons name="briefcase-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Mercado</Text>
+        </Pressable>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('ChatsRecientes')}>
+          <Ionicons name="chatbubbles-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Chats</Text>
+        </Pressable>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('Estadisticas', { userId })}>
+          <Ionicons name="stats-chart-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Estadísticas</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -816,8 +827,17 @@ const s = StyleSheet.create({
   modalCancelarText: { color: colors.textMuted, fontSize: 14 },
   header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingRight: spacing.xl },
-  iconBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', ...shadow.sm },
+  tabBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', backgroundColor: colors.bg,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    paddingTop: spacing.sm, paddingBottom: 26, paddingHorizontal: spacing.sm,
+    ...shadow.sm,
+  },
+  tabBarItem: { flex: 1, alignItems: 'center', gap: 3 },
+  tabBarIconWrapActivo: { width: 34, height: 34, borderRadius: radius.full, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center', marginBottom: 1 },
+  tabBarLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  tabBarLabelActivo: { color: colors.text, fontSize: 11, fontWeight: '700' },
   saludo: { color: colors.textMuted, fontSize: 13, marginBottom: 2 },
   nombre: { color: colors.text, ...type.h1 },
   idText: { color: colors.blue, fontSize: 11, marginTop: 2 },
