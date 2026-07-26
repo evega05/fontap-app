@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -58,6 +58,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [metodoComisionElegido, setMetodoComisionElegido] = useState(null);
   const [instruccionesComision, setInstruccionesComision] = useState(null);
   const [cargandoInstrucciones, setCargandoInstrucciones] = useState(false);
+  const [yaLlegue, setYaLlegue] = useState(false);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -227,6 +228,8 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     return () => { detenerSeguimientoUbicacion(); };
   }, [trabajoActivo?.estado]);
 
+  useEffect(() => { setYaLlegue(false); }, [trabajoActivo?.id]);
+
   const toggleDisponible = async (valor) => {
     setDisponible(valor);
     try {
@@ -284,9 +287,29 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     try {
       await axios.put(`${API}/servicios/${trabajoActivo.id}/en-camino`, null, { headers });
       setTrabajoActivo({ ...trabajoActivo, estado: 'en_camino' });
+      setYaLlegue(false);
     } catch (e) {
       avisar('Error', mensajeError(e, 'No se pudo actualizar el estado'));
     }
+  };
+
+  const heLlegado = async () => {
+    if (!trabajoActivo) return;
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/llegue`, null, { headers });
+      setYaLlegue(true);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo avisar la llegada'));
+    }
+  };
+
+  const abrirEnMaps = () => {
+    if (!trabajoActivo?.latitud_cliente || !trabajoActivo?.longitud_cliente) {
+      avisar('Sin ubicación', 'No tenemos la ubicación exacta del cliente para esta solicitud');
+      return;
+    }
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${trabajoActivo.latitud_cliente},${trabajoActivo.longitud_cliente}`;
+    Linking.openURL(url).catch(() => {});
   };
 
   const marcarTerminado = () => {
@@ -586,9 +609,30 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             </Pressable>
           )}
           {trabajoActivo.estado === 'en_camino' && (
-            <View style={s.enCaminoActivo}>
-              <Ionicons name="navigate" size={15} color={colors.green} />
-              <Text style={s.enCaminoActivoText}>Marcado en camino · el cliente puede seguirte</Text>
+            <View style={s.enCaminoBanner}>
+              <View style={s.enCaminoBannerHeader}>
+                <Ionicons name="navigate" size={16} color={colors.green} />
+                <Text style={s.enCaminoBannerTitulo}>
+                  {trabajoActivo.eta_minutos ? `Llegas en ~${trabajoActivo.eta_minutos} min` : 'Vas en camino'}
+                </Text>
+              </View>
+              <View style={s.enCaminoBannerRow}>
+                <Pressable
+                  style={[s.enCaminoBannerBtn, yaLlegue && s.enCaminoBannerBtnHecho]}
+                  haptic
+                  onPress={heLlegado}
+                  disabled={yaLlegue}
+                >
+                  <Ionicons name={yaLlegue ? 'checkmark-circle' : 'flag'} size={15} color={yaLlegue ? colors.green : colors.text} />
+                  <Text style={[s.enCaminoBannerBtnText, yaLlegue && { color: colors.green }]}>
+                    {yaLlegue ? 'Avisado' : 'He llegado'}
+                  </Text>
+                </Pressable>
+                <Pressable style={s.enCaminoBannerBtn} haptic onPress={abrirEnMaps}>
+                  <Ionicons name="map" size={15} color={colors.text} />
+                  <Text style={s.enCaminoBannerBtnText}>Abrir ruta</Text>
+                </Pressable>
+              </View>
             </View>
           )}
           {(trabajoActivo.estado === 'precio_aceptado' || trabajoActivo.estado === 'en_camino') && (
@@ -808,8 +852,13 @@ const s = StyleSheet.create({
   enCursoCancelarText: { color: colors.red, fontSize: 12.5, fontWeight: '600' },
   enCaminoBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.blueLight, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, borderWidth: 1, borderColor: colors.blue },
   enCaminoBtnText: { color: colors.blue, fontWeight: '700', fontSize: 14 },
-  enCaminoActivo: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, paddingVertical: 8 },
-  enCaminoActivoText: { color: colors.green, fontSize: 12.5, fontWeight: '600' },
+  enCaminoBanner: { backgroundColor: 'rgba(0,196,140,0.10)', borderRadius: radius.md, borderWidth: 1, borderColor: colors.green, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  enCaminoBannerHeader: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  enCaminoBannerTitulo: { color: colors.green, fontSize: 15, fontWeight: '800' },
+  enCaminoBannerRow: { flexDirection: 'row', gap: 8 },
+  enCaminoBannerBtn: { flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, paddingVertical: 9, borderWidth: 1, borderColor: colors.border2 },
+  enCaminoBannerBtnHecho: { backgroundColor: colors.greenLight, borderColor: colors.green },
+  enCaminoBannerBtnText: { color: colors.text, fontSize: 12.5, fontWeight: '700' },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
   modal: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, margin: spacing.xl, width: '90%', ...shadow.lg },
   modalIconWrap: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: spacing.md },
