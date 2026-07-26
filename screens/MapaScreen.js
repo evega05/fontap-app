@@ -26,7 +26,6 @@ import FadeInUp from '../components/FadeInUp';
 import GradientBg from '../components/GradientBg';
 import Glass from '../components/Glass';
 import { useIdioma } from '../i18n';
-import { GREMIOS, serviciosDe } from '../gremios';
 
 function distanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -60,11 +59,8 @@ export default function MapaScreen({ navigation, route }) {
   const { t } = useIdioma();
   const clienteId = route.params?.clienteId || usuario?.id || null;
   const [ciudad, setCiudad] = useState('Bilbao');
-  const [ciudadAbierta, setCiudadAbierta] = useState(false);
   const [filtroGremio, setFiltroGremio] = useState('');
-  const [gremioFiltroAbierto, setGremioFiltroAbierto] = useState(false);
   const [orden, setOrden] = useState('cercania'); // cercania | valoracion | precio
-  const [ordenAbierto, setOrdenAbierto] = useState(false);
   const [valoracionMinima, setValoracionMinima] = useState(0); // 0 = sin filtro
 
   // --- State ---
@@ -83,8 +79,6 @@ export default function MapaScreen({ navigation, route }) {
   const [drawerAbierto, setDrawerAbierto] = useState(false);
   const [miUbicacion, setMiUbicacion] = useState(null);
   const [ubicacionDenegada, setUbicacionDenegada] = useState(false);
-  const [gremiosEnEspera, setGremiosEnEspera] = useState([]);
-  const [procesandoEspera, setProcesandoEspera] = useState(false);
   const [errorCarga, setErrorCarga] = useState(false);
 
   useEffect(() => {
@@ -99,6 +93,20 @@ export default function MapaScreen({ navigation, route }) {
       }
     })();
   }, []);
+
+  // La pantalla de "Profesionales cercanos" tiene sus propios controles de filtro (más
+  // espacio ahí que en esta hoja); al volver, manda los valores elegidos aquí para que
+  // el mapa muestre los mismos pines filtrados.
+  useEffect(() => {
+    const f = route.params?.filtrosActualizados;
+    if (!f) return;
+    if (f.ciudad !== undefined) setCiudad(f.ciudad);
+    if (f.filtroGremio !== undefined) setFiltroGremio(f.filtroGremio);
+    if (f.orden !== undefined) setOrden(f.orden);
+    if (f.mostrar24h !== undefined) setMostrar24h(f.mostrar24h);
+    if (f.valoracionMinima !== undefined) setValoracionMinima(f.valoracionMinima);
+    navigation.setParams({ filtrosActualizados: undefined });
+  }, [route.params?.filtrosActualizados]);
 
   // --- Drawer animation ---
   const drawerX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -145,8 +153,6 @@ export default function MapaScreen({ navigation, route }) {
     setFiltroServicio('Todos');
   }, [filtroGremio]);
 
-  const serviciosFiltroDisponibles = filtroGremio ? serviciosDe(filtroGremio).map((sv) => sv.nombre) : [];
-
   // --- Load notifications + favorites ---
   const cargarNotifs = useCallback(() => {
     const hds = token ? { Authorization: `Bearer ${token}` } : {};
@@ -164,37 +170,6 @@ export default function MapaScreen({ navigation, route }) {
   useEffect(() => {
     cargarNotifs();
   }, [cargarNotifs]);
-
-  // --- Lista de espera de disponibilidad por gremio ---
-  const cargarListaEspera = useCallback(() => {
-    if (!token) return;
-    axios
-      .get(`${API}/lista-espera`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setGremiosEnEspera((res.data || []).map((e) => e.gremio)))
-      .catch(() => {});
-  }, [token]);
-
-  useEffect(() => {
-    cargarListaEspera();
-  }, [cargarListaEspera]);
-
-  const enListaEspera = filtroGremio && gremiosEnEspera.includes(filtroGremio);
-
-  const toggleListaEspera = async () => {
-    if (!filtroGremio || procesandoEspera) return;
-    setProcesandoEspera(true);
-    const headers = { Authorization: `Bearer ${token}` };
-    try {
-      if (enListaEspera) {
-        await axios.delete(`${API}/lista-espera/${filtroGremio}`, { headers });
-        setGremiosEnEspera((prev) => prev.filter((g) => g !== filtroGremio));
-      } else {
-        await axios.post(`${API}/lista-espera`, { gremio: filtroGremio }, { headers });
-        setGremiosEnEspera((prev) => [...prev, filtroGremio]);
-      }
-    } catch (e) {}
-    finally { setProcesandoEspera(false); }
-  };
 
   useFocusEffect(useCallback(() => {
     cargarNotifs();
@@ -296,96 +271,6 @@ export default function MapaScreen({ navigation, route }) {
       logout();
       navigation.replace('Login');
     }, 300);
-  };
-
-  // --- Fontanero card ---
-  const renderTarjetaFontanero = (f, index) => {
-    const esVerificado = !!f.verificado;
-    const isSelected = seleccionado?.id === f.id;
-
-    return (
-      <FadeInUp key={f.id} index={index}>
-        <Pressable
-          style={[s.card, !f.disponible && s.cardInactivo]}
-          haptic
-          onPress={() => {
-            if (!f.disponible) return;
-            setSeleccionado(isSelected ? null : f);
-          }}
-        >
-          <Glass style={[StyleSheet.absoluteFill, { borderRadius: radius.lg }]} />
-          <View style={s.cardInner}>
-            <View style={s.cardHeader}>
-              <View style={s.avatarWrap}>
-                {f.foto_url ? (
-                  <Image source={{ uri: `${API}${f.foto_url}` }} style={[s.avatar, !f.disponible && s.avatarInactivo]} />
-                ) : (
-                  <View style={[s.avatar, !f.disponible && s.avatarInactivo]}>
-                    <Text style={s.avatarText}>{f.nombre?.[0] || '?'}</Text>
-                  </View>
-                )}
-                {f.disponible && <View style={s.avatarDot} />}
-              </View>
-
-              <View style={s.cardInfo}>
-                <View style={s.cardNombreRow}>
-                  <Text style={s.cardNombre}>{f.nombre}</Text>
-                  {esVerificado && <Ionicons name="checkmark-circle" size={14} color={colors.accent2} />}
-                  {f.certificado_pro && <Text style={s.badgePro}>🏅 Pro</Text>}
-                </View>
-                <View style={s.cardZonaRow}>
-                  <Ionicons name="location" size={11} color={colors.textMuted} />
-                  <Text style={s.cardZona}>{f.zona}</Text>
-                  <Text style={s.cardStatDot}>·</Text>
-                  <Text style={s.cardZona}>{f.distancia}</Text>
-                </View>
-                {f.valoracion ? (
-                  <View style={s.ratingRow}>
-                    <Ionicons name="star" size={12} color={colors.amber} />
-                    <Text style={s.ratingVal}>{f.valoracion}</Text>
-                  </View>
-                ) : (
-                  <View style={s.nuevoPill}>
-                    <Ionicons name="sparkles" size={10} color={colors.accent2} />
-                    <Text style={s.nuevoPillText}>Nuevo</Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={s.cardRight}>
-                <View style={[s.estadoBadge, f.disponible ? s.estadoVerde : s.estadoGris]}>
-                  <Text style={[s.estadoText, f.disponible ? s.estadoTextVerde : s.estadoTextGris]}>
-                    {f.disponible ? 'Libre' : `Hasta ${f.ocupadoHasta || '—'}`}
-                  </Text>
-                </View>
-                {clienteId && (
-                  <Pressable style={s.favBtn} haptic onPress={() => toggleFavorito(f)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name={favoritos.includes(f.id) ? 'heart' : 'heart-outline'} size={19} color={favoritos.includes(f.id) ? colors.red : colors.textMuted} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-
-            {isSelected && f.disponible && (
-              <View style={s.accionesRow}>
-                <Pressable style={s.btnVerPerfil} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: f })}>
-                  <Text style={s.btnVerPerfilText}>Ver perfil</Text>
-                </Pressable>
-                <Pressable style={s.btnMensaje} haptic onPress={() => iniciarChat(f)}>
-                  <Ionicons name="chatbubble-outline" size={17} color={colors.text} />
-                </Pressable>
-                <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { fontanero: f, clienteId })}>
-                  <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnContratar}>
-                    <Text style={s.btnContratarText}>Contratar a {f.nombre?.split(' ')[0]}</Text>
-                    <Ionicons name="arrow-forward" size={15} color={colors.text} />
-                  </LinearGradient>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        </Pressable>
-      </FadeInUp>
-    );
   };
 
   const DRAWER_ITEMS = [
@@ -587,112 +472,10 @@ export default function MapaScreen({ navigation, route }) {
         )}
       </View>
 
-      {/* HOJA — filtros + acciones + lista */}
+      {/* HOJA — acciones rápidas; los filtros y la lista de profesionales viven en su
+          propia pantalla con más espacio (ver ListaProfesionalesScreen) */}
       <Glass strong style={s.sheet}>
         <View style={s.handle} />
-
-        <View style={s.filtrosRow}>
-          <View style={s.filtroDropdownWrap}>
-            <Pressable style={s.gremioFiltroBtn} haptic onPress={() => { setCiudadAbierta(!ciudadAbierta); setGremioFiltroAbierto(false); }}>
-              <Text style={s.gremioFiltroBtnText} numberOfLines={1}>📍 {ciudad}</Text>
-              <Ionicons name={ciudadAbierta ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-            </Pressable>
-          </View>
-
-          <View style={s.filtroDropdownWrap}>
-            <Pressable style={s.gremioFiltroBtn} haptic onPress={() => { setGremioFiltroAbierto(!gremioFiltroAbierto); setCiudadAbierta(false); }}>
-              <Text style={s.gremioFiltroBtnText} numberOfLines={1}>
-                {filtroGremio
-                  ? `${GREMIOS.find((g) => g.valor === filtroGremio)?.emoji} ${t(GREMIOS.find((g) => g.valor === filtroGremio)?.clave)}`
-                  : `🛠️ ${t('todos')}`}
-              </Text>
-              <Ionicons name={gremioFiltroAbierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Las listas van en el flujo normal (no en overlay absoluto): en Android los
-            toques fuera de los límites del contenedor padre no se registran, así que
-            un overlay colgando bajo el botón se ve pero no se puede tocar ni deslizar. */}
-        {ciudadAbierta && (
-          <View style={s.dropdownInline}>
-            <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
-              {CIUDADES.map((c) => (
-                <Pressable key={c.valor} style={[s.gremioFiltroOpcion, ciudad === c.valor && s.gremioFiltroOpcionActiva]} haptic
-                  onPress={() => { setCiudad(c.valor); setCiudadAbierta(false); }}>
-                  <Text style={[s.gremioFiltroOpcionText, ciudad === c.valor && s.gremioFiltroOpcionTextActiva]}>📍 {c.valor}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {gremioFiltroAbierto && (
-          <View style={s.dropdownInline}>
-            <ScrollView style={s.gremioFiltroLista} nestedScrollEnabled>
-              <Pressable style={[s.gremioFiltroOpcion, !filtroGremio && s.gremioFiltroOpcionActiva]} haptic
-                onPress={() => { setFiltroGremio(''); setGremioFiltroAbierto(false); }}>
-                <Text style={[s.gremioFiltroOpcionText, !filtroGremio && s.gremioFiltroOpcionTextActiva]}>🛠️ {t('todos')}</Text>
-              </Pressable>
-              {GREMIOS.map((g) => (
-                <Pressable key={g.valor} style={[s.gremioFiltroOpcion, filtroGremio === g.valor && s.gremioFiltroOpcionActiva]} haptic
-                  onPress={() => { setFiltroGremio(g.valor); setGremioFiltroAbierto(false); }}>
-                  <Text style={[s.gremioFiltroOpcionText, filtroGremio === g.valor && s.gremioFiltroOpcionTextActiva]}>{g.emoji} {t(g.clave)}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {serviciosFiltroDisponibles.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
-            <Pressable style={[s.filtro, filtroServicio === 'Todos' && s.filtroActivo]} haptic onPress={() => setFiltroServicio('Todos')}>
-              <Text style={[s.filtroText, filtroServicio === 'Todos' && s.filtroTextActivo]}>{t('todos')}</Text>
-            </Pressable>
-            {serviciosFiltroDisponibles.map((sv) => (
-              <Pressable key={sv} style={[s.filtro, filtroServicio === sv && s.filtroActivo]} haptic onPress={() => setFiltroServicio(sv)}>
-                <Text style={[s.filtroText, filtroServicio === sv && s.filtroTextActivo]}>{sv}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtrosScroll} contentContainerStyle={s.filtrosContent}>
-          <Pressable style={s.ordenBtn} haptic onPress={() => setOrdenAbierto(!ordenAbierto)}>
-            <Ionicons name="swap-vertical" size={13} color={colors.textMuted} />
-            <Text style={s.ordenBtnText}>
-              {orden === 'valoracion' ? t('mejorValorados') : orden === 'precio' ? t('precioBajo') : t('cercania')}
-            </Text>
-            <Ionicons name={ordenAbierto ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
-          </Pressable>
-          <Pressable style={[s.filtro24h, mostrar24h && s.filtro24hActivo]} haptic onPress={() => setMostrar24h(!mostrar24h)}>
-            <Ionicons name="moon" size={12} color={mostrar24h ? colors.text : colors.textMuted} />
-            <Text style={[s.filtro24hText, mostrar24h && s.filtro24hTextActivo]}>24h</Text>
-          </Pressable>
-          {[0, 3, 4, 4.5].map((v) => (
-            <Pressable key={v} style={[s.filtro, valoracionMinima === v && s.filtroActivo]} haptic onPress={() => setValoracionMinima(v)}>
-              <Text style={[s.filtroText, valoracionMinima === v && s.filtroTextActivo]}>
-                {v === 0 ? t('todos') : `★ ${v}+`}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {ordenAbierto && (
-          <View style={s.gremioFiltroLista}>
-            {[
-              { valor: 'cercania', clave: 'cercania', icon: 'navigate-outline' },
-              { valor: 'valoracion', clave: 'mejorValorados', icon: 'star-outline' },
-              { valor: 'precio', clave: 'precioBajo', icon: 'cash-outline' },
-            ].map((o) => (
-              <Pressable key={o.valor} style={[s.gremioFiltroOpcion, orden === o.valor && s.gremioFiltroOpcionActiva]} haptic
-                onPress={() => { setOrden(o.valor); setOrdenAbierto(false); }}>
-                <Ionicons name={o.icon} size={15} color={orden === o.valor ? colors.blue : colors.textMuted} />
-                <Text style={[s.gremioFiltroOpcionText, orden === o.valor && s.gremioFiltroOpcionTextActiva, { marginLeft: 8 }]}>{t(o.clave)}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         <View style={s.ctaRow}>
           <Pressable style={{ flex: 1 }} haptic onPress={() => navigation.navigate('Solicitud', { urgente: true, clienteId, ciudad })}>
@@ -713,52 +496,24 @@ export default function MapaScreen({ navigation, route }) {
           </Pressable>
         </View>
 
-        {cargando ? (
-          <View style={s.loadingWrap}>
-            <ActivityIndicator size="large" color={colors.accent2} />
-            <Text style={s.loadingText}>Buscando profesionales...</Text>
+        <Pressable
+          style={s.verListaBtn}
+          haptic
+          onPress={() => navigation.navigate('ListaProfesionales', {
+            ciudad, filtroGremio, orden, mostrar24h, valoracionMinima, clienteId, miUbicacion,
+          })}
+        >
+          <View style={s.verListaIconWrap}>
+            <Ionicons name="people" size={18} color={colors.accent2} />
           </View>
-        ) : (
-          <ScrollView
-            style={s.lista}
-            contentContainerStyle={{ paddingBottom: 40 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={() => cargarFontaneros(true)} tintColor={colors.accent2} colors={[colors.accent2]} progressBackgroundColor={colors.bg} />
-            }
-          >
-            <Text style={s.listaLabel}>{t('profesionalesCercanos')}</Text>
-            {fontanerosFiltrados.length === 0 ? (
-              <View style={s.vacio}>
-                <View style={s.vacioIconWrap}>
-                  <Ionicons name={errorCarga ? 'cloud-offline-outline' : 'water-outline'} size={34} color={colors.textMuted} />
-                </View>
-                <Text style={s.vacioTitulo}>{errorCarga ? 'No se pudo conectar' : 'Sin profesionales disponibles'}</Text>
-                <Text style={s.vacioSub}>
-                  {errorCarga
-                    ? 'No se pudo cargar la lista de profesionales. Revisa tu conexión y desliza para reintentar.'
-                    : 'Prueba cambiando los filtros o desliza para actualizar.'}
-                </Text>
-                <Pressable style={s.vacioBtn} haptic onPress={() => { setFiltroServicio('Todos'); setBusqueda(''); setMostrar24h(false); }}>
-                  <Text style={s.vacioBtnText}>Limpiar filtros</Text>
-                </Pressable>
-                {!!filtroGremio && (
-                  <Pressable
-                    style={[s.vacioBtn, s.vacioBtnEspera, enListaEspera && s.vacioBtnEsperaActivo]}
-                    haptic
-                    onPress={toggleListaEspera}
-                    disabled={procesandoEspera}
-                  >
-                    <Text style={[s.vacioBtnText, enListaEspera && s.vacioBtnEsperaActivoText]}>
-                      {enListaEspera ? '✓ Te avisaremos cuando haya alguien libre' : '🔔 Avísame cuando haya alguien libre'}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            ) : (
-              fontanerosFiltrados.map((f, i) => renderTarjetaFontanero(f, i))
-            )}
-          </ScrollView>
-        )}
+          <View style={{ flex: 1 }}>
+            <Text style={s.verListaTitulo}>{t('profesionalesCercanos')}</Text>
+            <Text style={s.verListaSub}>
+              {cargando ? 'Buscando...' : `${fontanerosFiltrados.length} disponible${fontanerosFiltrados.length === 1 ? '' : 's'} en ${ciudad}`}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
       </Glass>
 
       {renderDrawer()}
@@ -769,7 +524,7 @@ export default function MapaScreen({ navigation, route }) {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
-  mapArea: { height: '55%', position: 'relative' },
+  mapArea: { height: '72%', position: 'relative' },
   floatRow: {
     position: 'absolute', top: 52, left: spacing.lg, right: spacing.lg,
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -827,34 +582,11 @@ const s = StyleSheet.create({
   },
 
   sheet: {
-    flex: 1, borderRadius: 0, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    borderRadius: 0, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
     marginTop: -22, borderWidth: 0, borderTopWidth: 1, borderColor: colors.glassBorder,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.sm, paddingBottom: spacing.xl,
   },
   handle: { width: 36, height: 4, borderRadius: 3, backgroundColor: colors.glassBorderStrong, alignSelf: 'center', marginBottom: spacing.md },
-
-  filtrosRow: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.lg, marginBottom: spacing.sm, zIndex: 20 },
-  filtroDropdownWrap: { flex: 1, position: 'relative', zIndex: 20 },
-  dropdownInline: { marginHorizontal: spacing.lg, marginBottom: spacing.sm },
-  gremioFiltroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 11, borderWidth: 1, borderColor: colors.glassBorder },
-  ordenBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
-  ordenBtnText: { color: colors.textMuted, ...type.caption },
-  gremioFiltroBtnText: { flex: 1, color: colors.text, fontSize: 13.5, fontWeight: '600' },
-  gremioFiltroLista: { maxHeight: 240, backgroundColor: colors.glassStrong, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, ...shadow.md },
-  gremioFiltroOpcion: { paddingHorizontal: spacing.lg, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  gremioFiltroOpcionActiva: { backgroundColor: colors.blueLight },
-  gremioFiltroOpcionText: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
-  gremioFiltroOpcionTextActiva: { color: colors.blue, fontWeight: '700' },
-  filtrosScroll: { maxHeight: 42, marginBottom: spacing.md },
-  filtrosContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
-  filtro: { backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
-  filtroActivo: { backgroundColor: colors.accent2, borderColor: colors.accent2 },
-  filtroText: { color: colors.textMuted, ...type.caption },
-  filtroTextActivo: { color: colors.text, fontWeight: '700' },
-  filtro24h: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
-  filtro24hActivo: { backgroundColor: colors.purple, borderColor: colors.purple },
-  filtro24hText: { color: colors.textMuted, ...type.caption },
-  filtro24hTextActivo: { color: colors.text, fontWeight: '700' },
 
   ctaRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   ctaUrgente: { borderRadius: radius.md, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, ...shadow.glow(colors.accent2) },
@@ -864,56 +596,18 @@ const s = StyleSheet.create({
   ctaCitaText: { color: colors.text, fontWeight: '700', fontSize: 13 },
   ctaCitaSub: { color: colors.textMuted, fontSize: 10 },
 
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14 },
-  loadingText: { color: colors.textMuted, fontSize: 14 },
-
-  lista: { flex: 1, paddingHorizontal: spacing.lg },
-  listaLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: spacing.md },
-
-  vacio: { alignItems: 'center', paddingTop: 30, paddingHorizontal: spacing.xl },
-  vacioIconWrap: { width: 76, height: 76, borderRadius: radius.full, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.lg },
-  vacioTitulo: { color: colors.text, ...type.h2, marginBottom: spacing.sm, textAlign: 'center' },
-  vacioSub: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: spacing.xl },
-  vacioBtn: { backgroundColor: colors.glass, borderRadius: radius.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.glassBorder },
-  vacioBtnEspera: { marginTop: spacing.sm },
-  vacioBtnEsperaActivo: { backgroundColor: colors.greenGlass, borderColor: colors.green },
-  vacioBtnEsperaActivoText: { color: colors.green },
-  vacioBtnText: { color: colors.accent2, fontWeight: '700', fontSize: 14 },
-
-  card: { borderRadius: radius.lg, marginBottom: spacing.md, position: 'relative' },
-  cardInner: { padding: spacing.lg },
-  cardInactivo: { opacity: 0.45 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
-  avatarWrap: { position: 'relative', marginRight: spacing.md },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
-  avatarInactivo: { backgroundColor: colors.glassStrong },
-  avatarText: { color: colors.text, fontWeight: 'bold', fontSize: 19 },
-  avatarDot: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.green, borderWidth: 2, borderColor: colors.bg },
-  cardInfo: { flex: 1 },
-  cardNombreRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  cardNombre: { color: colors.text, ...type.h3 },
-  badgePro: { color: colors.amber, fontSize: 10, fontWeight: '700', backgroundColor: '#1a1400', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
-  cardZonaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  cardZona: { color: colors.textMuted, fontSize: 12 },
-  cardStatDot: { color: colors.textFaint, fontSize: 12 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  ratingVal: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  nuevoPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.purpleGlass, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
-  nuevoPillText: { color: colors.accent2, fontSize: 11, fontWeight: '700' },
-  cardRight: { alignItems: 'flex-end', gap: spacing.sm, marginLeft: spacing.sm },
-  estadoBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.full },
-  estadoVerde: { backgroundColor: colors.greenGlass },
-  estadoGris: { backgroundColor: colors.glass },
-  estadoText: { fontSize: 11, fontWeight: '700' },
-  estadoTextVerde: { color: colors.green },
-  estadoTextGris: { color: colors.textMuted },
-  favBtn: { padding: 2 },
-  accionesRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
-  btnVerPerfil: { backgroundColor: colors.glass, borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
-  btnVerPerfilText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
-  btnMensaje: { backgroundColor: colors.glass, borderRadius: radius.md, width: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
-  btnContratar: { flexDirection: 'row', borderRadius: radius.md, padding: 13, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  btnContratarText: { color: colors.text, fontWeight: 'bold', fontSize: 14 },
+  verListaBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    marginHorizontal: spacing.lg, marginBottom: spacing.xl,
+    backgroundColor: colors.glass, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.glassBorder,
+  },
+  verListaIconWrap: {
+    width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.purpleGlass,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  verListaTitulo: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  verListaSub: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
 
   drawerWrap: { position: 'absolute', top: 0, left: 0, bottom: 0, width: DRAWER_WIDTH, zIndex: 100 },
   drawer: { flex: 1, borderRadius: 0, borderTopRightRadius: radius.xl, borderBottomRightRadius: radius.xl, borderWidth: 0, borderRightWidth: 1, borderColor: colors.glassBorder, paddingTop: 60, paddingBottom: 32, ...shadow.lg },

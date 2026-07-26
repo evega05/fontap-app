@@ -11,6 +11,7 @@ import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import LoginScreen from './screens/LoginScreen';
 import RegistroScreen from './screens/RegistroScreen';
 import MapaScreen from './screens/MapaScreen';
+import ListaProfesionalesScreen from './screens/ListaProfesionalesScreen';
 import SolicitudScreen from './screens/SolicitudScreen';
 import ConfirmacionScreen from './screens/ConfirmacionScreen';
 import PanelFontaneroScreen from './screens/PanelFontaneroScreen';
@@ -130,6 +131,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Registro" component={RegistroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Mapa" component={MapaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ListaProfesionales" component={ListaProfesionalesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Solicitud" component={SolicitudScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Confirmacion" component={ConfirmacionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PanelFontanero" component={PanelFontaneroScreen} options={{ headerShown: false }} />
