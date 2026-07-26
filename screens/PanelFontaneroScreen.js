@@ -231,7 +231,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       setTrabajoActivo(trabajo);
       setMostrarPrecio(true);
     } catch (e) {
-      avisar('Error', 'No se pudo aceptar la solicitud');
+      avisar('Error', e.response?.data?.detail || 'No se pudo aceptar la solicitud');
     }
   };
 

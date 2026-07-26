@@ -102,6 +102,7 @@ export default function ChatScreen({ navigation, route }) {
       setMensajes(prev => prev.map(m =>
         m.id === mensajeTemporal.id ? { ...m, error: true, pendiente: false } : m
       ));
+      avisar('No se pudo enviar', e.response?.data?.detail || 'Inténtalo de nuevo.');
     } finally {
       setEnviando(false);
     }
@@ -123,7 +124,7 @@ export default function ChatScreen({ navigation, route }) {
       });
       await cargarMensajes();
     } catch (e) {
-      avisar('Error', 'No se pudo enviar la foto. Inténtalo de nuevo.');
+      avisar('No se pudo enviar', e.response?.data?.detail || 'No se pudo enviar la foto. Inténtalo de nuevo.');
     } finally {
       setEnviandoFoto(false);
     }
