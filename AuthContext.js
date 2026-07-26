@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
 
   const login = async (data) => {
     const tok = data.access_token;
-    const usr = { tipo: data.tipo_usuario, nombre: data.nombre, id: data.id };
+    const usr = { tipo: data.tipo_usuario, nombre: data.nombre, id: data.id, email: data.email };
     setToken(tok);
     setUsuario(usr);
     await Promise.all([guardarToken(tok), AsyncStorage.setItem('usuario', JSON.stringify(usr))]);

@@ -57,7 +57,7 @@ export default function AjustesCuentaScreen({ navigation }) {
         { nombre: nombre.trim(), telefono: telefono.trim() }, { headers });
       setMsgPerfil('Datos guardados');
       // Refresca el nombre guardado en la sesión local para que se vea al instante
-      await login({ access_token: token, tipo_usuario: usuario.tipo, nombre: res.data.nombre, id: usuario.id });
+      await login({ access_token: token, tipo_usuario: usuario.tipo, nombre: res.data.nombre, id: usuario.id, email: usuario.email });
     } catch (e) {
       setErrPerfil(mensajeError(e, 'No se pudieron guardar los datos'));
     } finally {
