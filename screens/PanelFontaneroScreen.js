@@ -12,8 +12,9 @@ import FadeInUp from '../components/FadeInUp';
 import GradientBg from '../components/GradientBg';
 import Glass from '../components/Glass';
 import { confirmarAccion, avisar } from '../confirmar';
+import { iniciarSeguimientoUbicacion, detenerSeguimientoUbicacion } from '../ubicacionSeguimiento';
 
-const API = 'https://fontap-backend-production.up.railway.app';
+const API = 'http://127.0.0.1:8903';
 
 function getSaludo() {
   const hora = new Date().getHours();
@@ -209,6 +210,19 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     ubicacionRef.current = setInterval(compartirUbicacion, 60000);
     return () => clearInterval(ubicacionRef.current);
   }, [disponible, compartirUbicacion]);
+
+  // Mientras el trabajo está "en camino", la ubicación se sigue mandando aunque el
+  // profesional cambie de pantalla o bloquee el celular, para que el cliente pueda
+  // seguirlo en el mapa como en Uber. Se apaga en cuanto deja de ir en camino
+  // (precio enviado, cancelado, etc.) para no gastar batería de más.
+  useEffect(() => {
+    if (trabajoActivo?.estado === 'en_camino') {
+      iniciarSeguimientoUbicacion();
+    } else {
+      detenerSeguimientoUbicacion();
+    }
+    return () => { detenerSeguimientoUbicacion(); };
+  }, [trabajoActivo?.estado]);
 
   const toggleDisponible = async (valor) => {
     setDisponible(valor);
