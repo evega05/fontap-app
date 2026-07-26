@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import axios from 'axios';
 
-const API = 'http://127.0.0.1:8903';
+const API = 'https://fontap-backend-production.up.railway.app';
 const TAREA_UBICACION = 'seguimiento-ubicacion-profesional';
 
 // Definida a nivel de módulo (no dentro de un componente) porque el sistema operativo

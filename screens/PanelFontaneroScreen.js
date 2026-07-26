@@ -14,7 +14,7 @@ import Glass from '../components/Glass';
 import { confirmarAccion, avisar } from '../confirmar';
 import { iniciarSeguimientoUbicacion, detenerSeguimientoUbicacion } from '../ubicacionSeguimiento';
 
-const API = 'http://127.0.0.1:8903';
+const API = 'https://fontap-backend-production.up.railway.app';
 
 function getSaludo() {
   const hora = new Date().getHours();
