@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { colors } from '../theme';
 import { LEAFLET_CSS } from './leafletCss';
@@ -40,13 +40,22 @@ function crearIconoYo() {
   });
 }
 
+function crearIconoDestino() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:26px;height:26px;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:center;border:1.5px solid ${colors.accent};box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:13px;line-height:1;">🏠</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+}
+
 function EventosMapa({ onMove }) {
   useMapEvents({ move: onMove, zoom: onMove });
   return null;
 }
 
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
-export default function MapComponentWeb({ fontaneros, miUbicacion, centroForzado, seleccionado, onSelect, onPinPosition }) {
+export default function MapComponentWeb({ fontaneros, miUbicacion, centroForzado, seleccionado, onSelect, onPinPosition, destino }) {
   const mapRef = useRef(null);
   useEffect(() => { asegurarCssLeaflet(); }, []);
 
@@ -54,6 +63,17 @@ export default function MapComponentWeb({ fontaneros, miUbicacion, centroForzado
     ? [centroForzado.latitud, centroForzado.longitud]
     : miUbicacion ? [miUbicacion.latitud, miUbicacion.longitud] : BILBAO;
   const conUbicacion = fontaneros.filter(f => f.disponible && f.latitud != null && f.longitud != null);
+  const tieneDestino = destino && destino.latitud != null && destino.longitud != null;
+  const origenRuta = conUbicacion[0];
+
+  useEffect(() => {
+    if (tieneDestino && origenRuta && mapRef.current) {
+      mapRef.current.fitBounds([
+        [origenRuta.latitud, origenRuta.longitud],
+        [destino.latitud, destino.longitud],
+      ], { padding: [60, 60] });
+    }
+  }, [tieneDestino, origenRuta?.latitud, origenRuta?.longitud, destino?.latitud, destino?.longitud]);
 
   const actualizarPosicionPin = () => {
     if (!onPinPosition) return;
@@ -91,6 +111,13 @@ export default function MapComponentWeb({ fontaneros, miUbicacion, centroForzado
       />
       <EventosMapa onMove={actualizarPosicionPin} />
       {miUbicacion && <Marker position={centro} icon={crearIconoYo()} />}
+      {tieneDestino && origenRuta && (
+        <Polyline
+          positions={[[origenRuta.latitud, origenRuta.longitud], [destino.latitud, destino.longitud]]}
+          pathOptions={{ color: colors.accent, weight: 4, opacity: 0.8, dashArray: '8, 8' }}
+        />
+      )}
+      {tieneDestino && <Marker position={[destino.latitud, destino.longitud]} icon={crearIconoDestino()} />}
       {conUbicacion.map(f => (
         <Marker
           key={f.id}
