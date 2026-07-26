@@ -13,7 +13,8 @@ export default function PagoScreen({ navigation, route }) {
 
   // ✅ FIX: precio viene del backend, no de params (empieza en null = no enviado aún)
   const [precio, setPrecio] = useState(route.params?.precio || null);
-  const [esperandoPrecio, setEsperandoPrecio] = useState(!route.params?.precio);
+  const [estadoServicio, setEstadoServicio] = useState(null);
+  const [esperandoPrecio, setEsperandoPrecio] = useState(true);
 
   const [cargando, setCargando] = useState(false);
   const [pagado, setPagado] = useState(false);
@@ -80,35 +81,28 @@ export default function PagoScreen({ navigation, route }) {
     }
   };
 
-  // ✅ FIX: Polling para detectar cuando el fontanero envía el precio
+  // El pago solo se habilita cuando el profesional marcó el trabajo como terminado
+  // ("completado"): no basta con que exista un precio, porque el precio se puede
+  // fijar mucho antes de que el trabajo esté realmente hecho.
   useEffect(() => {
-    if (!servicioId || precio !== null) return;
+    if (!servicioId) return;
 
-    const verificarPrecio = async () => {
+    const verificarEstado = async () => {
       try {
         const res = await axios.get(`${API}/servicios/${servicioId}`, { headers });
-        if (res.data?.precio && res.data.precio > 0) {
-          setPrecio(res.data.precio);
+        if (res.data?.estado === 'pagado') setYaPagadoAlEntrar(true);
+        if (res.data?.precio) setPrecio(res.data.precio);
+        if (res.data?.estado) setEstadoServicio(res.data.estado);
+        if (res.data?.precio > 0 && res.data?.estado === 'completado') {
           setEsperandoPrecio(false);
           clearInterval(pollingRef.current);
         }
       } catch (e) {}
     };
 
-    verificarPrecio();
-    pollingRef.current = setInterval(verificarPrecio, 4000);
+    verificarEstado();
+    pollingRef.current = setInterval(verificarEstado, 4000);
     return () => clearInterval(pollingRef.current);
-  }, [servicioId]);
-
-  // Si se llega acá con el precio ya cargado por route.params (p.ej. desde una
-  // notificación vieja), el polling de arriba no corre y nunca se comprueba si el
-  // servicio ya fue pagado. Lo comprobamos una vez al entrar para no ofrecer pagar
-  // de nuevo un servicio ya cerrado.
-  useEffect(() => {
-    if (!servicioId) return;
-    axios.get(`${API}/servicios/${servicioId}`, { headers })
-      .then((res) => { if (res.data?.estado === 'pagado') setYaPagadoAlEntrar(true); })
-      .catch(() => {});
   }, [servicioId]);
 
   const pagarEfectivo = async () => {
@@ -189,9 +183,11 @@ export default function PagoScreen({ navigation, route }) {
         {esperandoPrecio ? (
           <View style={s.esperandoBox}>
             <ActivityIndicator color="#3b82f6" style={{ marginBottom: 12 }} />
-            <Text style={s.esperandoTitulo}>⏳ Esperando precio del profesional</Text>
+            <Text style={s.esperandoTitulo}>⏳ Esperando al profesional</Text>
             <Text style={s.esperandoSub}>
-              El profesional aún no ha enviado el precio final. Esta pantalla se actualizará automáticamente cuando lo haga.
+              {!precio
+                ? 'El profesional aún no ha enviado el precio. Esta pantalla se actualizará automáticamente cuando lo haga.'
+                : 'El profesional aún no ha marcado el trabajo como terminado. Esta pantalla se actualizará automáticamente cuando lo haga.'}
             </Text>
           </View>
         ) : (

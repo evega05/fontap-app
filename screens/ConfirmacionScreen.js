@@ -13,10 +13,12 @@ const TIMEOUT_URGENTE_MS = 3 * 60 * 1000; // aviso tras 3 min sin respuesta en u
 
 const ESTADOS = {
   pendiente: { emoji: '🔍', titulo: 'Buscando profesional...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
-  aceptado: { emoji: '✅', titulo: '¡Profesional en camino!', sub: 'El profesional ha aceptado tu solicitud', color: '#05A357', paso: 2 },
-  en_camino: { emoji: '🚗', titulo: '¡Profesional en camino!', sub: 'El profesional va camino a tu domicilio', color: '#276EF1', paso: 2 },
-  precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'El profesional ha terminado el trabajo', color: '#276EF1', paso: 3 },
-  pago_pendiente: { emoji: '💵', titulo: 'Pago en confirmación', sub: 'Esperando que el profesional confirme el cobro', color: '#7356BF', paso: 3 },
+  aceptado: { emoji: '👷', titulo: 'Profesional asignado', sub: 'Pronto recibirás un precio', color: '#05A357', paso: 1 },
+  precio_enviado: { emoji: '💰', titulo: 'Precio recibido', sub: 'Revisa el precio y acéptalo para continuar', color: '#276EF1', paso: 2 },
+  precio_aceptado: { emoji: '✅', titulo: 'Precio aceptado', sub: 'El profesional se pondrá en camino', color: '#276EF1', paso: 2 },
+  en_camino: { emoji: '🚗', titulo: '¡Profesional en camino!', sub: 'El profesional va camino a tu domicilio', color: '#276EF1', paso: 3 },
+  completado: { emoji: '🏁', titulo: 'Trabajo terminado', sub: 'Ya puedes pagar el servicio', color: '#05A357', paso: 4 },
+  pago_pendiente: { emoji: '💵', titulo: 'Pago en confirmación', sub: 'Esperando que el profesional confirme el cobro', color: '#7356BF', paso: 4 },
   pagado: { emoji: '🎉', titulo: '¡Servicio completado!', sub: 'Gracias por usar Multiservicios Provenza', color: '#05A357', paso: 4 },
   cancelado: { emoji: '✕', titulo: 'Servicio cancelado', sub: 'Esta solicitud ya no está activa', color: '#ef4444', paso: 0 },
   rechazado: { emoji: '❌', titulo: 'Solicitud rechazada', sub: 'El profesional no pudo atender esta solicitud', color: '#E11900', paso: 0 },
@@ -31,6 +33,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
   const [cancelando, setCancelando] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const [sinRespuesta, setSinRespuesta] = useState(false);
+  const [aceptando, setAceptando] = useState(false);
   const desdeRef = useRef(Date.now());
 
   const consultar = useCallback(async () => {
@@ -79,6 +82,37 @@ export default function ConfirmacionScreen({ navigation, route }) {
         setCancelando(false);
       }
     }, { textoConfirmar: 'Sí, cancelar', textoCancelar: 'No' });
+  };
+
+  const aceptarPrecio = async () => {
+    if (!servicioId) return;
+    setAceptando(true);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    try {
+      await axios.put(`${API}/servicios/${servicioId}/precio/aceptar`, null, { headers });
+      await consultar();
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo aceptar el precio'));
+    } finally {
+      setAceptando(false);
+    }
+  };
+
+  const rechazarPrecio = () => {
+    if (!servicioId) return;
+    confirmarAccion('Rechazar precio', '¿Seguro que quieres rechazar este precio? El profesional podrá proponerte uno nuevo.', async () => {
+      setAceptando(true);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      try {
+        await axios.put(`${API}/servicios/${servicioId}/precio/rechazar`, null, { headers });
+        setPrecio(null);
+        await consultar();
+      } catch (e) {
+        avisar('Error', mensajeError(e, 'No se pudo rechazar el precio'));
+      } finally {
+        setAceptando(false);
+      }
+    }, { textoConfirmar: 'Sí, rechazar', textoCancelar: 'No' });
   };
 
   const descargarRecibo = async () => {
@@ -188,8 +222,8 @@ export default function ConfirmacionScreen({ navigation, route }) {
           <Text style={s.pasosTitulo}>¿Qué pasa ahora?</Text>
           {[
             { num: 1, texto: 'El profesional recibe tu solicitud', activo: estadoActual.paso >= 1 },
-            { num: 2, texto: 'Acepta y va a tu domicilio', activo: estadoActual.paso >= 2 },
-            { num: 3, texto: 'Repara y te envía el precio', activo: estadoActual.paso >= 3 },
+            { num: 2, texto: 'Te envía un precio y lo aceptas', activo: estadoActual.paso >= 2 },
+            { num: 3, texto: 'Va a tu domicilio y hace el trabajo', activo: estadoActual.paso >= 3 },
             { num: 4, texto: 'Pagas y dejas una reseña', activo: estadoActual.paso >= 4 },
           ].map(p => (
             <View key={p.num} style={s.paso}>
@@ -206,17 +240,35 @@ export default function ConfirmacionScreen({ navigation, route }) {
         {estado === 'precio_enviado' && precio && (
           <>
             <View style={s.precioCard}>
-              <Text style={s.precioCardTitulo}>💰 Precio del profesional</Text>
+              <Text style={s.precioCardTitulo}>💰 Precio propuesto por el profesional</Text>
+              <Text style={s.precioCardValor}>{precio}€</Text>
+            </View>
+            <TouchableOpacity style={s.btnPago} onPress={aceptarPrecio} disabled={aceptando}>
+              {aceptando
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={s.btnPagoText}>✅ Aceptar precio</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={s.btnRechazar} onPress={rechazarPrecio} disabled={aceptando}>
+              <Text style={s.btnRechazarText}>✕ Rechazar precio</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {estado === 'precio_aceptado' && (
+          <View style={s.precioCard}>
+            <Text style={s.precioCardTitulo}>✅ Precio aceptado</Text>
+            <Text style={s.precioCardValor}>{precio}€</Text>
+            <Text style={s.precioCardSub}>Esperando a que el profesional vaya y termine el trabajo</Text>
+          </View>
+        )}
+        {estado === 'completado' && precio && (
+          <>
+            <View style={s.precioCard}>
+              <Text style={s.precioCardTitulo}>🏁 Trabajo terminado</Text>
               <Text style={s.precioCardValor}>{precio}€</Text>
             </View>
             <TouchableOpacity style={s.btnPago}
               onPress={() => navigation.navigate('Pago', { fontanero, servicio: tipo, precio, servicioId })}>
-              <Text style={s.btnPagoText}>💳 Aceptar y pagar {precio}€</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.btnRechazar} onPress={cancelarServicio} disabled={cancelando}>
-              {cancelando
-                ? <ActivityIndicator size="small" color="#ef4444" />
-                : <Text style={s.btnRechazarText}>✕ Rechazar y cancelar</Text>}
+              <Text style={s.btnPagoText}>💳 Pagar {precio}€</Text>
             </TouchableOpacity>
           </>
         )}
@@ -236,7 +288,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
             </TouchableOpacity>
           </>
         )}
-        {(estado === 'aceptado' || estado === 'en_camino' || estado === 'pago_pendiente') && servicioId && (
+        {['aceptado', 'precio_enviado', 'precio_aceptado', 'en_camino', 'completado', 'pago_pendiente'].includes(estado) && servicioId && (
           <TouchableOpacity
             style={[s.btnPrimario, { marginBottom: 10, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.blue }]}
             onPress={() => navigation.navigate('Chat', { servicioId, otroNombre: fontanero?.nombre || 'Profesional' })}
@@ -244,7 +296,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
             <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el profesional</Text>
           </TouchableOpacity>
         )}
-        {(estado === 'pendiente' || estado === 'aceptado' || estado === 'en_camino') && servicioId && (
+        {['pendiente', 'aceptado', 'precio_aceptado', 'en_camino'].includes(estado) && servicioId && (
           <TouchableOpacity style={s.btnRechazar} onPress={cancelarServicio} disabled={cancelando}>
             {cancelando
               ? <ActivityIndicator size="small" color="#ef4444" />
@@ -302,6 +354,7 @@ const s = StyleSheet.create({
   precioCard: { backgroundColor: colors.greenLight, borderRadius: 14, padding: 16, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.green },
   precioCardTitulo: { color: colors.green, fontSize: 13, fontWeight: '600', marginBottom: 4 },
   precioCardValor: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
+  precioCardSub: { color: colors.textMuted, fontSize: 12, marginTop: 8, textAlign: 'center' },
   btnPago: { backgroundColor: colors.green, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 },
   btnPagoText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   btnRechazar: { backgroundColor: colors.redLight, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.red },

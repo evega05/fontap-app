@@ -7,16 +7,18 @@ import { colors } from '../theme';
 const API = 'https://fontap-backend-production.up.railway.app';
 
 const ESTADOS = {
-  pendiente:      { label: 'Buscando profesional',            color: '#FFC043', emoji: '🔍' },
-  aceptado:       { label: 'Profesional asignado',            color: '#05A357', emoji: '👷' },
-  en_camino:      { label: 'Profesional en camino',           color: '#276EF1', emoji: '🚗' },
-  precio_enviado: { label: 'Precio recibido — toca para pagar', color: '#276EF1', emoji: '💰' },
-  pago_pendiente: { label: 'Pendiente confirmar efectivo',    color: '#7356BF', emoji: '💵' },
-  pagado:         { label: 'Completado',                      color: '#05A357', emoji: '✅' },
-  rechazado:      { label: 'Rechazado',                       color: '#E11900', emoji: '❌' },
+  pendiente:       { label: 'Buscando profesional',              color: '#FFC043', emoji: '🔍' },
+  aceptado:        { label: 'Profesional asignado',              color: '#05A357', emoji: '👷' },
+  precio_enviado:  { label: 'Precio recibido — revisa y acepta', color: '#276EF1', emoji: '💰' },
+  precio_aceptado: { label: 'Precio aceptado',                   color: '#276EF1', emoji: '✅' },
+  en_camino:       { label: 'Profesional en camino',             color: '#276EF1', emoji: '🚗' },
+  completado:      { label: 'Terminado — toca para pagar',       color: '#05A357', emoji: '🏁' },
+  pago_pendiente:  { label: 'Pendiente confirmar efectivo',      color: '#7356BF', emoji: '💵' },
+  pagado:          { label: 'Completado',                        color: '#05A357', emoji: '✅' },
+  rechazado:       { label: 'Rechazado',                         color: '#E11900', emoji: '❌' },
 };
 
-const ACTIVOS = new Set(['pendiente', 'aceptado', 'en_camino', 'precio_enviado', 'pago_pendiente']);
+const ACTIVOS = new Set(['pendiente', 'aceptado', 'precio_enviado', 'precio_aceptado', 'en_camino', 'completado', 'pago_pendiente']);
 const COMPLETADOS_RESEÑA = new Set(['pagado']);
 
 export default function MisServiciosScreen({ navigation, route }) {
@@ -47,7 +49,7 @@ export default function MisServiciosScreen({ navigation, route }) {
   const onRefresh = () => { setRefrescando(true); cargar(); };
 
   const irAServicio = (sv) => {
-    if (sv.estado === 'precio_enviado') {
+    if (sv.estado === 'completado') {
       navigation.navigate('Pago', { servicio: { nombre: sv.tipo }, precio: sv.precio, servicioId: sv.id, fontanero: sv.fontanero_id ? { nombre: sv.fontanero_nombre, id: sv.fontanero_id } : null });
     } else {
       navigation.navigate('Confirmacion', { tipo: { nombre: sv.tipo }, urgente: sv.urgente, servicioId: sv.id, fontanero: sv.fontanero_id ? { nombre: sv.fontanero_nombre, id: sv.fontanero_id } : null });
@@ -127,6 +129,11 @@ export default function MisServiciosScreen({ navigation, route }) {
                   )}
 
                   {sv.estado === 'precio_enviado' && (
+                    <View style={s.btnPagarWrap}>
+                      <Text style={s.btnPagarText}>💰 Revisar y aceptar precio →</Text>
+                    </View>
+                  )}
+                  {sv.estado === 'completado' && (
                     <View style={s.btnPagarWrap}>
                       <Text style={s.btnPagarText}>💳 Tocar para pagar {sv.precio}€ →</Text>
                     </View>

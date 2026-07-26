@@ -162,7 +162,7 @@ export default function ListaProfesionalesScreen({ navigation, route }) {
     try {
       const res = await axios.post(
         `${API}/servicios`,
-        { tipo: 'Consulta', urgente: false, fontanero_id: f.id },
+        { tipo: 'Consulta', urgente: false, fontanero_id: f.id, es_consulta: true },
         { params: { cliente_id: clienteId }, headers }
       );
       navigation.navigate('Chat', { servicioId: res.data.id, otroNombre: f.nombre });

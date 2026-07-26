@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -25,9 +25,11 @@ function getSaludo() {
 }
 
 const ESTADO_PILL = {
-  precio_enviado: { icon: 'cash-outline', label: 'Precio enviado' },
+  aceptado: { icon: 'cash-outline', label: 'Falta enviar precio' },
+  precio_enviado: { icon: 'hourglass-outline', label: 'Esperando que acepte el precio' },
+  precio_aceptado: { icon: 'checkmark-circle-outline', label: 'Precio aceptado' },
+  en_camino: { icon: 'car-sport-outline', label: 'En camino' },
   pago_pendiente: { icon: 'hourglass-outline', label: 'Esperando pago' },
-  aceptado: { icon: 'car-outline', label: 'En camino' },
 };
 
 export default function PanelFontaneroScreen({ navigation, route }) {
@@ -56,6 +58,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [metodoComisionElegido, setMetodoComisionElegido] = useState(null);
   const [instruccionesComision, setInstruccionesComision] = useState(null);
   const [cargandoInstrucciones, setCargandoInstrucciones] = useState(false);
+  const [yaLlegue, setYaLlegue] = useState(false);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -158,15 +161,15 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       // quitaba de la lista —y si `nuevas` llegaba vacía, todo el bloque se saltaba y
       // quedaba un "trabajo en curso" fantasma para siempre.
       setPendientes(nuevas.filter(s => s.estado === 'pendiente'));
-      const activo = nuevas.find(s => s.estado === 'aceptado' || s.estado === 'precio_enviado' || s.estado === 'pago_pendiente');
+      const activo = nuevas.find(s => ['aceptado', 'precio_enviado', 'precio_aceptado', 'en_camino', 'pago_pendiente'].includes(s.estado));
       setTrabajoActivo(activo || null);
       setCompletados(prev => {
-        const idsNuevas = new Set(nuevas.map(s => s.id));
-        // Si el backend ya confirmó "pagado"/"completado" para un id que teníamos como
-        // pendiente de pago (inserción optimista en enviarPrecio), hay que quitarle esa
-        // marca aquí: si no, "Pendiente pago" y el bloqueo de "Reseñar cliente" se quedan
-        // pegados para siempre aunque el cliente ya haya pagado de verdad.
-        const actualizados = prev.map(c => (idsNuevas.has(c.id) ? { ...c, pendientePago: false } : c));
+        // Si el backend ya confirmó "pagado" para un id que teníamos marcado como
+        // pendiente de pago (tras marcarlo terminado), hay que quitarle esa marca aquí:
+        // si no, "Pendiente pago" y el bloqueo de "Reseñar cliente" se quedan pegados
+        // para siempre aunque el cliente ya haya pagado de verdad.
+        const idsPagados = new Set(nuevas.filter(s => s.estado === 'pagado').map(s => s.id));
+        const actualizados = prev.map(c => (idsPagados.has(c.id) ? { ...c, pendientePago: false } : c));
         const idsPrev = new Set(prev.map(s => s.id));
         const nuevosComp = nuevas
           .filter(s => (s.estado === 'completado' || s.estado === 'pagado') && !idsPrev.has(s.id))
@@ -178,7 +181,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             precio: s.precio,
             valoracion: 0,
             fecha: s.fecha,
-            pendientePago: false,
+            pendientePago: s.estado === 'completado',
           }));
         return [...actualizados, ...nuevosComp];
       });
@@ -225,6 +228,8 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     return () => { detenerSeguimientoUbicacion(); };
   }, [trabajoActivo?.estado]);
 
+  useEffect(() => { setYaLlegue(false); }, [trabajoActivo?.id]);
+
   const toggleDisponible = async (valor) => {
     setDisponible(valor);
     try {
@@ -268,22 +273,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
     try {
       await axios.put(`${API}/servicios/${trabajoActivo.id}/precio`, { precio: precioNum }, { headers });
-      setCompletados(prev => [{
-        id: trabajoActivo.id,
-        cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
-        servicio: trabajoActivo.tipo || trabajoActivo.servicio,
-        zona: trabajoActivo.zona || '—',
-        precio: precioNum,
-        valoracion: 0,
-        fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-        pendientePago: true,
-      }, ...prev]);
+      setTrabajoActivo({ ...trabajoActivo, estado: 'precio_enviado', precio: precioNum });
       setMostrarPrecio(false);
-      setTrabajoActivo(null);
       setPrecioFinal('');
-      avisar('Precio enviado', 'El cliente puede ver el precio y proceder al pago');
+      avisar('Precio enviado', 'El cliente debe aceptarlo para que puedas ir a hacer el trabajo');
     } catch (e) {
-      avisar('Error', 'No se pudo enviar el precio');
+      avisar('Error', mensajeError(e, 'No se pudo enviar el precio'));
     }
   };
 
@@ -292,9 +287,51 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     try {
       await axios.put(`${API}/servicios/${trabajoActivo.id}/en-camino`, null, { headers });
       setTrabajoActivo({ ...trabajoActivo, estado: 'en_camino' });
+      setYaLlegue(false);
     } catch (e) {
       avisar('Error', mensajeError(e, 'No se pudo actualizar el estado'));
     }
+  };
+
+  const heLlegado = async () => {
+    if (!trabajoActivo) return;
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/llegue`, null, { headers });
+      setYaLlegue(true);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo avisar la llegada'));
+    }
+  };
+
+  const abrirEnMaps = () => {
+    if (!trabajoActivo?.latitud_cliente || !trabajoActivo?.longitud_cliente) {
+      avisar('Sin ubicación', 'No tenemos la ubicación exacta del cliente para esta solicitud');
+      return;
+    }
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${trabajoActivo.latitud_cliente},${trabajoActivo.longitud_cliente}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const marcarTerminado = () => {
+    if (!trabajoActivo) return;
+    confirmarAccion('Marcar como terminado', '¿Confirmas que el trabajo ya está terminado? El cliente podrá pagar a partir de ahora.', async () => {
+      try {
+        await axios.put(`${API}/servicios/${trabajoActivo.id}/completar`, null, { headers });
+        setCompletados(prev => [{
+          id: trabajoActivo.id,
+          cliente: trabajoActivo.cliente_nombre || trabajoActivo.cliente,
+          servicio: trabajoActivo.tipo || trabajoActivo.servicio,
+          zona: trabajoActivo.zona || '—',
+          precio: trabajoActivo.precio,
+          valoracion: 0,
+          fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+          pendientePago: true,
+        }, ...prev]);
+        setTrabajoActivo(null);
+      } catch (e) {
+        avisar('Error', mensajeError(e, 'No se pudo marcar como terminado'));
+      }
+    }, { textoConfirmar: 'Sí, terminado' });
   };
 
   const confirmarCobroDirecto = async () => {
@@ -375,6 +412,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Text style={s.nombre} numberOfLines={1}>{nombre}</Text>
             <Text style={s.idText}>ID: {userId}</Text>
           </View>
+          <Pressable haptic onPress={() => navigation.navigate('Notificaciones')}>
+            <Glass style={s.logoutBtn}><Ionicons name="notifications-outline" size={18} color={colors.text} /></Glass>
+          </Pressable>
           <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
             <LinearGradient colors={[colors.accent, colors.accent2]} style={s.perfilBtn}>
               <Text style={s.perfilLetra}>{nombre[0]}</Text>
@@ -384,23 +424,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Glass style={s.logoutBtn} colorTint={colors.redGlass}><Ionicons name="log-out-outline" size={18} color={colors.red} /></Glass>
           </Pressable>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.headerActions}>
-          <Pressable haptic onPress={() => navigation.navigate('Notificaciones')}>
-            <Glass style={s.iconBtn}><Ionicons name="notifications-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('Calendario', { userId })}>
-            <Glass style={s.iconBtn}><Ionicons name="calendar-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('Ofertas')}>
-            <Glass style={s.iconBtn}><Ionicons name="briefcase-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('ChatsRecientes')}>
-            <Glass style={s.iconBtn}><Ionicons name="chatbubbles-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-          <Pressable haptic onPress={() => navigation.navigate('Estadisticas', { userId })}>
-            <Glass style={s.iconBtn}><Ionicons name="stats-chart-outline" size={18} color={colors.text} /></Glass>
-          </Pressable>
-        </ScrollView>
       </View>
 
       <Glass style={s.disponibilidadCard}>
@@ -558,7 +581,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </View>
       )}
 
-      {trabajoActivo && (trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'en_camino' || trabajoActivo.estado === 'precio_enviado' || trabajoActivo.estado === 'pago_pendiente') && (
+      {trabajoActivo && ['aceptado', 'precio_enviado', 'precio_aceptado', 'en_camino', 'pago_pendiente'].includes(trabajoActivo.estado) && (
         <Glass style={s.enCursoCard}>
           <View style={s.enCursoHeader}>
             <View style={s.enCursoTituloRow}>
@@ -579,17 +602,46 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </LinearGradient>
             </Pressable>
           )}
-          {(trabajoActivo.estado === 'aceptado' || trabajoActivo.estado === 'precio_enviado') && (
+          {trabajoActivo.estado === 'precio_aceptado' && (
             <Pressable style={s.enCaminoBtn} haptic onPress={marcarEnCamino}>
               <Ionicons name="car-sport" size={16} color={colors.blue} />
               <Text style={s.enCaminoBtnText}>Voy en camino</Text>
             </Pressable>
           )}
           {trabajoActivo.estado === 'en_camino' && (
-            <View style={s.enCaminoActivo}>
-              <Ionicons name="navigate" size={15} color={colors.green} />
-              <Text style={s.enCaminoActivoText}>Marcado en camino · el cliente puede seguirte</Text>
+            <View style={s.enCaminoBanner}>
+              <View style={s.enCaminoBannerHeader}>
+                <Ionicons name="navigate" size={16} color={colors.green} />
+                <Text style={s.enCaminoBannerTitulo}>
+                  {trabajoActivo.eta_minutos ? `Llegas en ~${trabajoActivo.eta_minutos} min` : 'Vas en camino'}
+                </Text>
+              </View>
+              <View style={s.enCaminoBannerRow}>
+                <Pressable
+                  style={[s.enCaminoBannerBtn, yaLlegue && s.enCaminoBannerBtnHecho]}
+                  haptic
+                  onPress={heLlegado}
+                  disabled={yaLlegue}
+                >
+                  <Ionicons name={yaLlegue ? 'checkmark-circle' : 'flag'} size={15} color={yaLlegue ? colors.green : colors.text} />
+                  <Text style={[s.enCaminoBannerBtnText, yaLlegue && { color: colors.green }]}>
+                    {yaLlegue ? 'Avisado' : 'He llegado'}
+                  </Text>
+                </Pressable>
+                <Pressable style={s.enCaminoBannerBtn} haptic onPress={abrirEnMaps}>
+                  <Ionicons name="map" size={15} color={colors.text} />
+                  <Text style={s.enCaminoBannerBtnText}>Abrir ruta</Text>
+                </Pressable>
+              </View>
             </View>
+          )}
+          {(trabajoActivo.estado === 'precio_aceptado' || trabajoActivo.estado === 'en_camino') && (
+            <Pressable haptic onPress={marcarTerminado}>
+              <LinearGradient colors={[colors.green, colors.green]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.enCursoBtn}>
+                <Text style={s.enCursoBtnText}>Marcar trabajo terminado</Text>
+                <Ionicons name="checkmark-done" size={15} color={colors.text} />
+              </LinearGradient>
+            </Pressable>
           )}
           {trabajoActivo.estado === 'pago_pendiente' && (
             <Pressable haptic onPress={confirmarCobroDirecto}>
@@ -601,12 +653,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </LinearGradient>
             </Pressable>
           )}
-          {trabajoActivo.estado === 'aceptado' && (
-            <Pressable style={s.enCursoChatBtn} haptic onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
-              <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
-              <Text style={s.enCursoChatText}>Chat con cliente</Text>
-            </Pressable>
-          )}
+          <Pressable style={s.enCursoChatBtn} haptic onPress={() => navigation.navigate('Chat', { servicioId: trabajoActivo.id, otroNombre: trabajoActivo.cliente_nombre || 'Cliente' })}>
+            <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
+            <Text style={s.enCursoChatText}>Chat con cliente</Text>
+          </Pressable>
           <Pressable style={s.enCursoCancelarBtn} haptic onPress={cancelarTrabajo}>
             <Text style={s.enCursoCancelarText}>Cancelar trabajo</Text>
           </Pressable>
@@ -627,7 +677,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </Pressable>
       </View>
 
-      <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 100 }}>
         {tab === 'pendientes' ? (
           cargando ? (
             <View style={s.vacio}>
@@ -756,6 +806,31 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           )
         )}
       </ScrollView>
+
+      <View style={s.tabBar}>
+        <View style={s.tabBarItem}>
+          <View style={s.tabBarIconWrapActivo}>
+            <Ionicons name="home" size={20} color={colors.text} />
+          </View>
+          <Text style={s.tabBarLabelActivo}>Inicio</Text>
+        </View>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('Calendario', { userId })}>
+          <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Agenda</Text>
+        </Pressable>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('Ofertas')}>
+          <Ionicons name="briefcase-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Mercado</Text>
+        </Pressable>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('ChatsRecientes')}>
+          <Ionicons name="chatbubbles-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Chats</Text>
+        </Pressable>
+        <Pressable haptic style={s.tabBarItem} onPress={() => navigation.navigate('Estadisticas', { userId })}>
+          <Ionicons name="stats-chart-outline" size={20} color={colors.textMuted} />
+          <Text style={s.tabBarLabel}>Estadísticas</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -777,8 +852,13 @@ const s = StyleSheet.create({
   enCursoCancelarText: { color: colors.red, fontSize: 12.5, fontWeight: '600' },
   enCaminoBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.blueLight, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, borderWidth: 1, borderColor: colors.blue },
   enCaminoBtnText: { color: colors.blue, fontWeight: '700', fontSize: 14 },
-  enCaminoActivo: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, paddingVertical: 8 },
-  enCaminoActivoText: { color: colors.green, fontSize: 12.5, fontWeight: '600' },
+  enCaminoBanner: { backgroundColor: 'rgba(0,196,140,0.10)', borderRadius: radius.md, borderWidth: 1, borderColor: colors.green, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  enCaminoBannerHeader: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  enCaminoBannerTitulo: { color: colors.green, fontSize: 15, fontWeight: '800' },
+  enCaminoBannerRow: { flexDirection: 'row', gap: 8 },
+  enCaminoBannerBtn: { flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, paddingVertical: 9, borderWidth: 1, borderColor: colors.border2 },
+  enCaminoBannerBtnHecho: { backgroundColor: colors.greenLight, borderColor: colors.green },
+  enCaminoBannerBtnText: { color: colors.text, fontSize: 12.5, fontWeight: '700' },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
   modal: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, margin: spacing.xl, width: '90%', ...shadow.lg },
   modalIconWrap: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: spacing.md },
@@ -796,8 +876,17 @@ const s = StyleSheet.create({
   modalCancelarText: { color: colors.textMuted, fontSize: 14 },
   header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingRight: spacing.xl },
-  iconBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', ...shadow.sm },
+  tabBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', backgroundColor: colors.bg,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    paddingTop: spacing.sm, paddingBottom: 26, paddingHorizontal: spacing.sm,
+    ...shadow.sm,
+  },
+  tabBarItem: { flex: 1, alignItems: 'center', gap: 3 },
+  tabBarIconWrapActivo: { width: 34, height: 34, borderRadius: radius.full, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center', marginBottom: 1 },
+  tabBarLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  tabBarLabelActivo: { color: colors.text, fontSize: 11, fontWeight: '700' },
   saludo: { color: colors.textMuted, fontSize: 13, marginBottom: 2 },
   nombre: { color: colors.text, ...type.h1 },
   idText: { color: colors.blue, fontSize: 11, marginTop: 2 },
