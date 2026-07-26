@@ -28,10 +28,19 @@ export default function PagoScreen({ navigation, route }) {
   const redireccionRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
+  // El pago con tarjeta queda confirmado al instante (Stripe ya verificó el cargo),
+  // así que ahí sí se puede ir directo a la reseña. Efectivo y Bizum solo quedan
+  // "declarados" por el cliente: el backend exige estado "pagado" para reseñar, y ese
+  // estado solo llega cuando el profesional confirma la recepción, así que llevamos
+  // al cliente a Mis Servicios en vez de a una reseña que el backend rechazaría.
   const marcarPagado = () => {
     setCargando(false);
     setPagado(true);
-    redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
+    if (metodoPago === 'tarjeta') {
+      redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
+    } else {
+      redireccionRef.current = setTimeout(() => navigation.navigate('MisServicios'), 2500);
+    }
   };
 
   const pagarConTarjeta = async () => {
@@ -162,6 +171,11 @@ export default function PagoScreen({ navigation, route }) {
               ? 'El profesional ha recibido un aviso para confirmar que le llegó el Bizum.'
               : 'Pago procesado correctamente'}
           </Text>
+          {metodoPago !== 'tarjeta' && (
+            <Text style={[s.sub, { marginTop: -20 }]}>
+              Podrás dejar tu reseña desde "Mis servicios" en cuanto el profesional confirme el pago.
+            </Text>
+          )}
         </View>
       </View>
     );
