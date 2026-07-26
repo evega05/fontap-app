@@ -46,7 +46,30 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
   };
 
   const [ocultado, setOcultado] = useState(false);
+  const [bioExpandida, setBioExpandida] = useState(false);
   const esCliente = usuario?.tipo === 'cliente';
+
+  const promedios = { puntualidad: 0, calidad: 0, precio_justo: 0, trato: 0, general: 0 };
+  if (resenas.length > 0) {
+    const suma = resenas.reduce((acc, r) => ({
+      puntualidad: acc.puntualidad + (r.puntualidad || 0),
+      calidad: acc.calidad + (r.calidad || 0),
+      precio_justo: acc.precio_justo + (r.precio_justo || 0),
+      trato: acc.trato + (r.trato || 0),
+    }), { puntualidad: 0, calidad: 0, precio_justo: 0, trato: 0 });
+    promedios.puntualidad = suma.puntualidad / resenas.length;
+    promedios.calidad = suma.calidad / resenas.length;
+    promedios.precio_justo = suma.precio_justo / resenas.length;
+    promedios.trato = suma.trato / resenas.length;
+    promedios.general = (promedios.puntualidad + promedios.calidad + promedios.precio_justo + promedios.trato) / 4;
+  }
+  const etiquetaValoracion = (n) => {
+    if (n >= 4.5) return 'Excepcional';
+    if (n >= 4) return 'Muy bueno';
+    if (n >= 3) return 'Bueno';
+    if (n >= 2) return 'Regular';
+    return 'Bajo';
+  };
 
   const noMostrarMas = () => {
     confirmarAccion(
@@ -102,7 +125,16 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
           <Text style={s.certificadoPro}>🏅 Certificado Provenza Pro</Text>
         )}
 
-        {perfil.descripcion ? <Text style={s.descripcion}>{perfil.descripcion}</Text> : null}
+        {perfil.descripcion ? (
+          <View>
+            <Text style={s.descripcion} numberOfLines={bioExpandida ? undefined : 3}>{perfil.descripcion}</Text>
+            {perfil.descripcion.length > 100 && (
+              <TouchableOpacity onPress={() => setBioExpandida(v => !v)}>
+                <Text style={s.verMas}>{bioExpandida ? 'Ver menos' : '+ Ver más'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
 
         <View style={s.statsRow}>
           <View style={s.statCard}>
@@ -146,6 +178,33 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
         {resenas.length === 0 ? (
           <Text style={s.seccionVacia}>Aún no tiene reseñas.</Text>
         ) : (
+          <>
+            <View style={s.resumenResenas}>
+              <View style={s.resumenCabecera}>
+                <Text style={s.resumenNota}>{promedios.general.toFixed(1)} ⭐</Text>
+                <View>
+                  <Text style={s.resumenEtiqueta}>{etiquetaValoracion(promedios.general)}</Text>
+                  <Text style={s.resumenTotal}>({resenas.length} valoraciones)</Text>
+                </View>
+              </View>
+              {[
+                ['Puntualidad', promedios.puntualidad],
+                ['Calidad', promedios.calidad],
+                ['Precio justo', promedios.precio_justo],
+                ['Trato', promedios.trato],
+              ].map(([etiqueta, valor]) => (
+                <View key={etiqueta} style={s.barraFila}>
+                  <Text style={s.barraEtiqueta}>{etiqueta}</Text>
+                  <View style={s.barraTrack}>
+                    <View style={[s.barraRelleno, { width: `${Math.min(100, (valor / 5) * 100)}%` }]} />
+                  </View>
+                  <Text style={s.barraValor}>{valor.toFixed(1)}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+        {resenas.length > 0 && (
           resenas.map(r => {
             const media = (r.puntualidad + r.calidad + r.precio_justo + r.trato) / 4;
             return (
@@ -192,6 +251,17 @@ const s = StyleSheet.create({
   certificadoPro: { color: colors.amber, fontSize: 13, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   noVerificado: { color: colors.amber, fontSize: 13, textAlign: 'center', marginTop: 8 },
   descripcion: { color: colors.text, fontSize: 14, textAlign: 'center', marginTop: 14, lineHeight: 20 },
+  verMas: { color: colors.blue, fontSize: 13, fontWeight: '600', textAlign: 'center', marginTop: 6 },
+  resumenResenas: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  resumenCabecera: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  resumenNota: { color: colors.text, fontSize: 28, fontWeight: 'bold' },
+  resumenEtiqueta: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  resumenTotal: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  barraFila: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  barraEtiqueta: { color: colors.textMuted, fontSize: 12, width: 90 },
+  barraTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
+  barraRelleno: { height: 6, borderRadius: 3, backgroundColor: colors.amber },
+  barraValor: { color: colors.text, fontSize: 12, fontWeight: '600', width: 26, textAlign: 'right' },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 22, marginBottom: 8 },
   statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 2 },
