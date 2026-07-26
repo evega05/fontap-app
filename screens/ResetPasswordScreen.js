@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import axios from 'axios';
 import { colors } from '../theme';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -23,7 +24,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
       setHecho(true);
       setTimeout(() => navigation.navigate('Login'), 2000);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Código inválido o caducado');
+      setError(mensajeError(e, 'Código inválido o caducado'));
     } finally {
       setCargando(false);
     }

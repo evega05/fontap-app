@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from '
 import axios from 'axios';
 import { colors } from '../theme';
 import { useIdioma } from '../i18n';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -20,13 +21,14 @@ export default function VerificarEmailScreen({ navigation, route }) {
   const verificar = async () => {
     setError(''); setInfo('');
     if (!codigo) { setError(t('rellenaCampos')); return; }
+    if (!email) { setError('No se encontró tu email, vuelve a intentarlo desde el panel'); return; }
     setCargando(true);
     try {
       await axios.post(`${API}/auth/verificar-email`, { email, token: codigo });
       setInfo(t('emailVerificado'));
       setTimeout(continuar, 1200);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Código inválido o caducado');
+      setError(mensajeError(e, 'Código inválido o caducado'));
     } finally {
       setCargando(false);
     }
@@ -39,7 +41,7 @@ export default function VerificarEmailScreen({ navigation, route }) {
       await axios.post(`${API}/auth/reenviar-verificacion`, { email });
       setInfo(t('smsEnviado'));
     } catch (e) {
-      setError('No se pudo reenviar el código');
+      setError(mensajeError(e, 'No se pudo reenviar el código'));
     } finally {
       setReenviando(false);
     }

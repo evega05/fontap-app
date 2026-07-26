@@ -13,6 +13,7 @@ import GradientBg from '../components/GradientBg';
 import Glass from '../components/Glass';
 import { confirmarAccion, avisar } from '../confirmar';
 import { iniciarSeguimientoUbicacion, detenerSeguimientoUbicacion } from '../ubicacionSeguimiento';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -99,7 +100,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       await WebBrowser.openBrowserAsync(res.data.onboarding_url);
       cargarCobros();
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudo conectar con Stripe');
+      avisar('Error', mensajeError(e, 'No se pudo conectar con Stripe'));
     } finally {
       setConectandoStripe(false);
     }
@@ -116,7 +117,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         avisar('Listo', 'Comisión pendiente liquidada');
       }
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudo procesar el pago');
+      avisar('Error', mensajeError(e, 'No se pudo procesar el pago'));
     } finally {
       setPagandoComision(false);
     }
@@ -140,7 +141,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       const res = await axios.get(`${API}/fontaneros/${userId}/comision-pendiente/${metodo}`, { headers });
       setInstruccionesComision(res.data);
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudieron cargar las instrucciones');
+      avisar('Error', mensajeError(e, 'No se pudieron cargar las instrucciones'));
     } finally {
       setCargandoInstrucciones(false);
     }
@@ -245,7 +246,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       setTrabajoActivo(trabajo);
       setMostrarPrecio(true);
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudo aceptar la solicitud');
+      avisar('Error', mensajeError(e, 'No se pudo aceptar la solicitud'));
     }
   };
 
@@ -292,7 +293,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       await axios.put(`${API}/servicios/${trabajoActivo.id}/en-camino`, null, { headers });
       setTrabajoActivo({ ...trabajoActivo, estado: 'en_camino' });
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudo actualizar el estado');
+      avisar('Error', mensajeError(e, 'No se pudo actualizar el estado'));
     }
   };
 
@@ -323,7 +324,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         await axios.put(`${API}/servicios/${trabajoActivo.id}/cancelar`, null, { headers });
         setTrabajoActivo(null);
       } catch (e) {
-        avisar('Error', e.response?.data?.detail || 'No se pudo cancelar el trabajo');
+        avisar('Error', mensajeError(e, 'No se pudo cancelar el trabajo'));
       }
     }, { textoConfirmar: 'Sí, cancelar', textoCancelar: 'No' });
   };

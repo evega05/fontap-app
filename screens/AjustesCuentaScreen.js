@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { useIdioma, IDIOMAS } from '../i18n';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -58,7 +59,7 @@ export default function AjustesCuentaScreen({ navigation }) {
       // Refresca el nombre guardado en la sesión local para que se vea al instante
       await login({ access_token: token, tipo_usuario: usuario.tipo, nombre: res.data.nombre, id: usuario.id });
     } catch (e) {
-      setErrPerfil(e.response?.data?.detail || 'No se pudieron guardar los datos');
+      setErrPerfil(mensajeError(e, 'No se pudieron guardar los datos'));
     } finally {
       setGuardandoPerfil(false);
     }
@@ -77,7 +78,7 @@ export default function AjustesCuentaScreen({ navigation }) {
       setMsgPass('Contraseña actualizada');
       setPassActual(''); setPassNueva(''); setPassRepetir('');
     } catch (e) {
-      setErrPass(e.response?.data?.detail || 'No se pudo cambiar la contraseña');
+      setErrPass(mensajeError(e, 'No se pudo cambiar la contraseña'));
     } finally {
       setGuardandoPass(false);
     }
@@ -92,7 +93,7 @@ export default function AjustesCuentaScreen({ navigation }) {
       await logout();
       navigation.reset({ index: 0, routes: [{ name: 'Login', params: { cuentaEliminada: true } }] });
     } catch (e) {
-      setErrEliminar(e.response?.data?.detail || 'No se pudo eliminar la cuenta');
+      setErrEliminar(mensajeError(e, 'No se pudo eliminar la cuenta'));
       setEliminando(false);
     }
   };

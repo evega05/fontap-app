@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import axios from 'axios';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../AuthContext';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -48,7 +49,7 @@ export default function PagoScreen({ navigation, route }) {
       }
     } catch (e) {
       setCargando(false);
-      setError(e.response?.data?.detail || 'Error al procesar el pago. Inténtalo de nuevo.');
+      setError(mensajeError(e, 'Error al procesar el pago. Inténtalo de nuevo.'));
     }
   };
 

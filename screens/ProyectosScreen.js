@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { avisar } from '../confirmar';
+import { mensajeError } from '../errores';
 import { GREMIOS } from '../gremios';
 import { CIUDADES } from './MapaScreen';
 
@@ -49,7 +50,7 @@ export default function ProyectosScreen({ navigation }) {
       setTitulo(''); setDescripcion(''); setGremiosElegidos([]); setCiudadElegida(CIUDADES[0].valor);
       cargar();
     } catch (e) {
-      avisar('Error', e.response?.data?.detail || 'No se pudo crear el proyecto');
+      avisar('Error', mensajeError(e, 'No se pudo crear el proyecto'));
     } finally {
       setEnviando(false);
     }

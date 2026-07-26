@@ -8,6 +8,7 @@ import { useIdioma } from '../i18n';
 import { GREMIOS, serviciosDe } from '../gremios';
 import { Ionicons } from '@expo/vector-icons';
 import { avisar } from '../confirmar';
+import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -102,10 +103,10 @@ export default function RegistroScreen({ navigation }) {
       if (e.response?.status === 400 && detalle === 'Email ya registrado') {
         setError('Este email ya está registrado');
         setEmailYaRegistrado(true);
-      } else if (e.response?.status === 400 && detalle) {
+      } else if (e.response?.status === 400 && typeof detalle === 'string') {
         setError(detalle);
       } else {
-        setError('No se pudo crear la cuenta, inténtalo de nuevo');
+        setError(mensajeError(e, 'No se pudo crear la cuenta, inténtalo de nuevo'));
       }
     } finally {
       setCargando(false);
