@@ -33,6 +33,14 @@ export default function FavoritosScreen({ navigation }) {
     }
   };
 
+  const toggleConfianza = async (fontanero) => {
+    const nuevoValor = !fontanero.favorito_preferente;
+    try {
+      await axios.put(`${API}/clientes/${usuario.id}/favoritos/${fontanero.id}/preferente`, { preferente: nuevoValor }, { headers });
+      await cargar();
+    } catch (e) {}
+  };
+
   return (
     <View style={s.container}>
       <View style={s.header}>
@@ -68,7 +76,14 @@ export default function FavoritosScreen({ navigation }) {
                     <Text style={s.avatarText}>{(f.nombre || '?')[0].toUpperCase()}</Text>
                   </View>
                   <View style={s.cardInfo}>
-                    <Text style={s.cardNombre}>{f.nombre}</Text>
+                    <View style={s.cardNombreRow}>
+                      <Text style={s.cardNombre}>{f.nombre}</Text>
+                      {f.favorito_preferente && (
+                        <View style={s.confianzaPill}>
+                          <Text style={s.confianzaPillText}>⭐ De confianza</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={s.cardZona}>📍 {f.zona || '—'}</Text>
                     <View style={s.cardStats}>
                       <Text style={s.stat}>⭐ {f.valoracion ?? '—'}</Text>
@@ -83,6 +98,12 @@ export default function FavoritosScreen({ navigation }) {
                     onPress={() => navigation.navigate('Solicitud', { fontanero: f, clienteId: usuario?.id })}
                   >
                     <Text style={s.btnContratarText}>Contratar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.btnConfianza, f.favorito_preferente && s.btnConfianzaActivo]}
+                    onPress={() => toggleConfianza(f)}
+                  >
+                    <Text style={s.btnConfianzaText}>{f.favorito_preferente ? '⭐' : '☆'}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.btnEliminar} onPress={() => eliminar(f.id)}>
                     <Text style={s.btnEliminarText}>🗑</Text>
@@ -115,7 +136,10 @@ const s = StyleSheet.create({
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
   cardInfo: { flex: 1 },
-  cardNombre: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 2 },
+  cardNombreRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' },
+  cardNombre: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  confianzaPill: { backgroundColor: '#3A2E12', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: '#FFC043' },
+  confianzaPillText: { color: '#FFC043', fontSize: 10, fontWeight: '700' },
   cardZona: { color: colors.textMuted, fontSize: 12, marginBottom: 4 },
   cardStats: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stat: { color: colors.textMuted, fontSize: 12 },
@@ -123,6 +147,9 @@ const s = StyleSheet.create({
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnContratar: { backgroundColor: colors.blue, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   btnContratarText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  btnConfianza: { backgroundColor: colors.bgCard2, borderRadius: 10, width: 36, height: 36, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
+  btnConfianzaActivo: { backgroundColor: '#3A2E12', borderColor: '#FFC043' },
+  btnConfianzaText: { fontSize: 16 },
   btnEliminar: { backgroundColor: colors.redLight, borderRadius: 10, width: 36, height: 36, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.red },
   btnEliminarText: { fontSize: 16 },
 });
