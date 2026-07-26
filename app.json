@@ -34,6 +34,9 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -52,7 +55,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "FonTap usa tu ubicación para mostrarte los fontaneros más cercanos y para que los clientes puedan encontrarte a ti."
+          "locationWhenInUsePermission": "Multiservicios Provenza usa tu ubicación para mostrarte los profesionales más cercanos y para que los clientes puedan encontrarte a ti.",
+          "locationAlwaysAndWhenInUsePermission": "Cuando vas de camino a un trabajo, Multiservicios Provenza comparte tu ubicación en segundo plano para que el cliente pueda seguirte en el mapa, igual con la pantalla apagada.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

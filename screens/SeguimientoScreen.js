@@ -37,6 +37,9 @@ export default function SeguimientoScreen({ navigation, route }) {
     id: 1, nombre: datos.fontanero_nombre || 'Profesional',
     latitud: datos.latitud, longitud: datos.longitud, disponible: true,
   }] : [];
+  const destino = (datos && datos.latitud_cliente != null && datos.longitud_cliente != null)
+    ? { latitud: datos.latitud_cliente, longitud: datos.longitud_cliente }
+    : null;
 
   const minutosDesde = (iso) => {
     if (!iso) return null;
@@ -55,6 +58,7 @@ export default function SeguimientoScreen({ navigation, route }) {
             seleccionado={profesionalMarcador[0]}
             onSelect={() => {}}
             miUbicacion={null}
+            destino={destino}
           />
         ) : (
           <View style={s.sinMapa}>

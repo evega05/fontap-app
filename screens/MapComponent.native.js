@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors } from '../theme';
 import { GREMIOS } from '../gremios';
 
@@ -25,12 +25,23 @@ const mapStyle = [
 ];
 
 // Mapa "puro": solo pines. La selección y las acciones viven en la hoja de MapaScreen.
-export default function MapComponentNative({ fontaneros, miUbicacion, centroForzado, seleccionado, onSelect, onPinPosition }) {
+export default function MapComponentNative({ fontaneros, miUbicacion, centroForzado, seleccionado, onSelect, onPinPosition, destino }) {
   const mapRef = useRef(null);
   const centro = centroForzado
     ? { latitude: centroForzado.latitud, longitude: centroForzado.longitud }
     : miUbicacion ? { latitude: miUbicacion.latitud, longitude: miUbicacion.longitud } : BILBAO;
   const conUbicacion = fontaneros.filter(f => f.disponible && f.latitud != null && f.longitud != null);
+  const tieneDestino = destino && destino.latitud != null && destino.longitud != null;
+  const origenRuta = conUbicacion[0];
+
+  useEffect(() => {
+    if (tieneDestino && origenRuta && mapRef.current) {
+      mapRef.current.fitToCoordinates([
+        { latitude: origenRuta.latitud, longitude: origenRuta.longitud },
+        { latitude: destino.latitud, longitude: destino.longitud },
+      ], { edgePadding: { top: 80, right: 80, bottom: 80, left: 80 }, animated: true });
+    }
+  }, [tieneDestino, origenRuta?.latitud, origenRuta?.longitud, destino?.latitud, destino?.longitud]);
 
   const actualizarPosicionPin = () => {
     if (!onPinPosition) return;
@@ -62,6 +73,24 @@ export default function MapComponentNative({ fontaneros, miUbicacion, centroForz
       showsUserLocation={!!miUbicacion}
       onRegionChangeComplete={actualizarPosicionPin}
     >
+      {tieneDestino && origenRuta && (
+        <Polyline
+          coordinates={[
+            { latitude: origenRuta.latitud, longitude: origenRuta.longitud },
+            { latitude: destino.latitud, longitude: destino.longitud },
+          ]}
+          strokeColor={colors.accent}
+          strokeWidth={4}
+          lineDashPattern={[8, 8]}
+        />
+      )}
+      {tieneDestino && (
+        <Marker coordinate={{ latitude: destino.latitud, longitude: destino.longitud }}>
+          <View style={s.marcadorDestino}>
+            <Text style={s.marcadorEmoji}>🏠</Text>
+          </View>
+        </Marker>
+      )}
       {conUbicacion.map(f => (
         <Marker
           key={f.id}
@@ -88,4 +117,11 @@ const s = StyleSheet.create({
   },
   marcadorActivo: { backgroundColor: colors.accent2, borderColor: '#fff' },
   marcadorEmoji: { fontSize: 14, lineHeight: 16 },
+  marcadorDestino: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: colors.accent,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 4,
+  },
 });
