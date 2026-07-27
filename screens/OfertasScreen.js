@@ -34,6 +34,8 @@ export default function OfertasScreen({ navigation }) {
   const [tituloEmpleo, setTituloEmpleo] = useState('');
   const [descripcionEmpleo, setDescripcionEmpleo] = useState('');
   const [zonaEmpleo, setZonaEmpleo] = useState('');
+  const [tipoPagoEmpleo, setTipoPagoEmpleo] = useState('servicio');
+  const [tarifaEmpleo, setTarifaEmpleo] = useState('');
   const [enviandoEmpleo, setEnviandoEmpleo] = useState(false);
   const [postulantesDe, setPostulantesDe] = useState(null);
   const [postulantesEmpleo, setPostulantesEmpleo] = useState([]);
@@ -77,9 +79,10 @@ export default function OfertasScreen({ navigation }) {
     try {
       await axios.post(`${API}/ofertas-empleo`, {
         titulo: tituloEmpleo.trim(), descripcion: descripcionEmpleo.trim() || null, zona: zonaEmpleo.trim() || null,
+        tipo_pago: tipoPagoEmpleo, tarifa: tarifaEmpleo ? parseFloat(tarifaEmpleo) : null,
       }, { headers });
       setPublicandoEmpleo(false);
-      setTituloEmpleo(''); setDescripcionEmpleo(''); setZonaEmpleo('');
+      setTituloEmpleo(''); setDescripcionEmpleo(''); setZonaEmpleo(''); setTipoPagoEmpleo('servicio'); setTarifaEmpleo('');
       cargar();
     } catch (e) {
       avisar('Error', mensajeError(e, 'No se pudo publicar la oferta'));
@@ -363,6 +366,16 @@ export default function OfertasScreen({ navigation }) {
                     placeholderTextColor={colors.textFaint} value={descripcionEmpleo} onChangeText={setDescripcionEmpleo} />
                   <TextInput style={s.input} placeholder="Zona (opcional, por defecto la tuya)"
                     placeholderTextColor={colors.textFaint} value={zonaEmpleo} onChangeText={setZonaEmpleo} />
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                    <TouchableOpacity style={[s.chipPago, tipoPagoEmpleo === 'servicio' && s.chipPagoActivo]} onPress={() => setTipoPagoEmpleo('servicio')}>
+                      <Text style={[s.chipPagoText, tipoPagoEmpleo === 'servicio' && s.chipPagoTextActivo]}>Por servicio</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.chipPago, tipoPagoEmpleo === 'hora' && s.chipPagoActivo]} onPress={() => setTipoPagoEmpleo('hora')}>
+                      <Text style={[s.chipPagoText, tipoPagoEmpleo === 'hora' && s.chipPagoTextActivo]}>Por hora</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput style={s.input} placeholder={tipoPagoEmpleo === 'hora' ? 'Tarifa por hora en € (opcional)' : 'Precio por servicio en € (opcional)'}
+                    placeholderTextColor={colors.textFaint} value={tarifaEmpleo} onChangeText={setTarifaEmpleo} keyboardType="numeric" />
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
                     <TouchableOpacity style={s.btnCancelar} onPress={() => setPublicandoEmpleo(false)}>
                       <Text style={s.btnCancelarText}>Cancelar</Text>
@@ -391,6 +404,9 @@ export default function OfertasScreen({ navigation }) {
                           </Text>
                         </View>
                       </View>
+                      {o.tarifa ? (
+                        <Text style={s.tarifaTexto}>💰 {o.tarifa}€{o.tipo_pago === 'hora' ? '/hora' : ' por servicio'}</Text>
+                      ) : null}
                       {o.descripcion ? <Text style={s.cardDesc}>{o.descripcion}</Text> : null}
                       <View style={s.cardFooter}>
                         <TouchableOpacity style={s.btnAccion} onPress={() => verPostulantesEmpleo(o)}>
@@ -443,6 +459,9 @@ export default function OfertasScreen({ navigation }) {
                           </View>
                         </View>
                       </View>
+                      {o.tarifa ? (
+                        <Text style={s.tarifaTexto}>💰 {o.tarifa}€{o.tipo_pago === 'hora' ? '/hora' : ' por servicio'}</Text>
+                      ) : null}
                       {o.descripcion ? <Text style={s.cardDesc}>{o.descripcion}</Text> : null}
                       <View style={s.cardFooter}>
                         <Text style={s.cardFecha}>{o.num_postulantes} postulante{o.num_postulantes !== 1 ? 's' : ''}</Text>
@@ -549,6 +568,11 @@ const s = StyleSheet.create({
   formTitulo: { color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 14 },
   input: { backgroundColor: colors.bgCard2, color: colors.text, borderRadius: 12, padding: 14, fontSize: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border2 },
   textArea: { minHeight: 70, textAlignVertical: 'top' },
+  chipPago: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
+  chipPagoActivo: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  chipPagoText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
+  chipPagoTextActivo: { color: colors.blue },
+  tarifaTexto: { color: colors.green, fontWeight: '700', fontSize: 13, marginBottom: 6 },
   btnCancelar: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
   btnCancelarText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
   btnCrear: { flex: 1, backgroundColor: colors.blue, borderRadius: 12, padding: 13, alignItems: 'center' },

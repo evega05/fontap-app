@@ -104,6 +104,11 @@ export default function PanelGestionScreen({ navigation }) {
   const [pagosEmpleado, setPagosEmpleado] = useState([]);
   const [mostrarPago, setMostrarPago] = useState(false);
   const [pagoForm, setPagoForm] = useState({});
+  const [ofertasEmpleoGestion, setOfertasEmpleoGestion] = useState([]);
+  const [mostrarOfertaEmpleo, setMostrarOfertaEmpleo] = useState(false);
+  const [ofertaEmpleoForm, setOfertaEmpleoForm] = useState({ tipo_pago: 'servicio' });
+  const [postulantesOfertaId, setPostulantesOfertaId] = useState(null);
+  const [postulantesOferta, setPostulantesOferta] = useState([]);
 
   const cargarResumen = useCallback(async () => {
     try {
@@ -161,16 +166,24 @@ export default function PanelGestionScreen({ navigation }) {
     } catch (e) {}
   }, [token]);
 
+  const cargarOfertasEmpleoGestion = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/ofertas-empleo/mias`, { headers });
+      setOfertasEmpleoGestion(res.data || []);
+    } catch (e) {}
+  }, [token]);
+
   useEffect(() => { cargarResumen(); }, [cargarResumen]);
 
   useEffect(() => {
     setCargando(true);
     const cargas = {
       hoy: cargarHoy, clientes: cargarClientes, obras: cargarObras,
-      presupuestos: cargarPresupuestos, equipo: cargarEmpleados,
+      presupuestos: cargarPresupuestos,
+      equipo: () => Promise.all([cargarEmpleados(), cargarOfertasEmpleoGestion()]),
     };
     (cargas[tab] ? cargas[tab]() : Promise.resolve()).finally(() => setCargando(false));
-  }, [tab, cargarHoy, cargarClientes, cargarObras, cargarPresupuestos, cargarEmpleados]);
+  }, [tab, cargarHoy, cargarClientes, cargarObras, cargarPresupuestos, cargarEmpleados, cargarOfertasEmpleoGestion]);
 
   // ── Hoy: crear visita/cobro/tarea ──
   const abrirAdd = () => { setAddPaso(null); setAddForm({ fecha, hora: '09:00' }); setMostrarAdd(true); };
@@ -466,6 +479,37 @@ export default function PanelGestionScreen({ navigation }) {
     }
   };
 
+  // ── Equipo: ofertas de trabajo a profesionales (por servicio o por hora) ──
+  const guardarOfertaEmpleo = async () => {
+    if (!ofertaEmpleoForm.titulo?.trim()) return;
+    try {
+      await axios.post(`${API}/ofertas-empleo`, {
+        titulo: ofertaEmpleoForm.titulo.trim(),
+        descripcion: ofertaEmpleoForm.descripcion || null,
+        zona: ofertaEmpleoForm.zona || null,
+        tipo_pago: ofertaEmpleoForm.tipo_pago || 'servicio',
+        tarifa: ofertaEmpleoForm.tarifa ? parseFloat(ofertaEmpleoForm.tarifa) : null,
+      }, { headers });
+      setMostrarOfertaEmpleo(false);
+      setOfertaEmpleoForm({ tipo_pago: 'servicio' });
+      cargarOfertasEmpleoGestion();
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo publicar la oferta'));
+    }
+  };
+  const cerrarOfertaEmpleoGestion = async (o) => {
+    setOfertasEmpleoGestion(prev => prev.map(x => x.id === o.id ? { ...x, activa: false } : x));
+    try { await axios.put(`${API}/ofertas-empleo/${o.id}`, { activa: false }, { headers }); } catch (e) { cargarOfertasEmpleoGestion(); }
+  };
+  const verPostulantesOferta = async (o) => {
+    if (postulantesOfertaId === o.id) { setPostulantesOfertaId(null); return; }
+    setPostulantesOfertaId(o.id);
+    try {
+      const res = await axios.get(`${API}/ofertas-empleo/${o.id}/postulantes`, { headers });
+      setPostulantesOferta(res.data || []);
+    } catch (e) { setPostulantesOferta([]); }
+  };
+
   const semana = weekDaysOf(semanaFecha);
   const jornadaDe = (fechaDia) => jornadasEmpleado.find(j => j.fecha === fechaDia);
 
@@ -566,9 +610,20 @@ export default function PanelGestionScreen({ navigation }) {
                   {clientes.length === 0 ? <View style={s.vacio}><Text style={s.vacioEmoji}>👤</Text><Text style={s.vacioTitulo}>Sin clientes todavía</Text></View> : (
                     clientes.map(c => (
                       <TouchableOpacity key={c.id} style={s.card} onPress={() => abrirEditarCliente(c)}>
-                        <Text style={s.cardTitulo}>{c.nombre}</Text>
+                        <View style={s.cardTop}>
+                          <Text style={s.cardTitulo}>{c.nombre}</Text>
+                          {c.usuario_id ? <View style={s.estadoPill}><Text style={s.estadoPillText}>Cliente de la app</Text></View> : null}
+                        </View>
                         <Text style={s.cardDesc}>{c.telefono ? `📞 ${c.telefono}` : ''}{c.frecuencia ? ` · ${c.frecuencia}x/semana` : ''}</Text>
                         <Text style={s.cardSub}>{c.ultima_visita ? `Última visita: ${c.ultima_visita}` : 'Sin visitas todavía'}</Text>
+                        {c.usuario_id && c.servicio_id ? (
+                          <TouchableOpacity
+                            style={[s.leadBtn, { alignSelf: 'flex-start', marginTop: 10 }]}
+                            onPress={() => navigation.navigate('Chat', { servicioId: c.servicio_id, otroNombre: c.nombre })}
+                          >
+                            <Text style={s.leadBtnText}>💬 Abrir chat</Text>
+                          </TouchableOpacity>
+                        ) : null}
                       </TouchableOpacity>
                     ))
                   )}
@@ -865,6 +920,45 @@ export default function PanelGestionScreen({ navigation }) {
                   );
                 })
               )}
+
+              <Text style={s.seccionTitulo}>Ofertas de trabajo a profesionales</Text>
+              <Text style={s.emptyTight}>Publica una promoción por servicio o por hora: solo la verán profesionales de tu mismo gremio.</Text>
+              <TouchableOpacity style={[s.btnPublicarEmpleo, { marginTop: 10 }]} onPress={() => { setOfertaEmpleoForm({ tipo_pago: 'servicio' }); setMostrarOfertaEmpleo(true); }}>
+                <Text style={s.btnPublicarEmpleoText}>+ Publicar oferta de trabajo</Text>
+              </TouchableOpacity>
+              {ofertasEmpleoGestion.length === 0 ? (
+                <View style={s.vacio}><Text style={s.vacioEmoji}>📣</Text><Text style={s.vacioTitulo}>Sin ofertas publicadas</Text></View>
+              ) : (
+                ofertasEmpleoGestion.map(o => (
+                  <View key={o.id} style={s.card}>
+                    <View style={s.cardTop}>
+                      <Text style={s.cardTitulo}>{o.titulo}</Text>
+                      <View style={s.estadoPill}><Text style={s.estadoPillText}>{o.activa ? 'Activa' : 'Cerrada'}</Text></View>
+                    </View>
+                    {o.tarifa ? <Text style={s.cardSub}>💰 {o.tarifa}€{o.tipo_pago === 'hora' ? '/hora' : ' por servicio'}</Text> : null}
+                    {o.descripcion ? <Text style={s.cardSub}>{o.descripcion}</Text> : null}
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                      <TouchableOpacity style={[s.leadBtn, { flex: 1 }]} onPress={() => verPostulantesOferta(o)}>
+                        <Text style={s.leadBtnText}>👷 {o.num_postulantes} postulante{o.num_postulantes !== 1 ? 's' : ''}</Text>
+                      </TouchableOpacity>
+                      {o.activa && (
+                        <TouchableOpacity style={[s.leadBtn, { backgroundColor: colors.redLight, borderColor: colors.red }]} onPress={() => cerrarOfertaEmpleoGestion(o)}>
+                          <Text style={[s.leadBtnText, { color: colors.red }]}>Cerrar</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    {postulantesOfertaId === o.id && (
+                      postulantesOferta.length === 0 ? <Text style={s.emptyTight}>Nadie se ha postulado todavía</Text> : (
+                        postulantesOferta.map(p => (
+                          <View key={p.id} style={s.payRow}>
+                            <Text style={s.payRowText}>{p.fontanero_nombre || 'Profesional'}{p.fontanero_telefono ? ` · 📞 ${p.fontanero_telefono}` : ''}</Text>
+                          </View>
+                        ))
+                      )
+                    )}
+                  </View>
+                ))
+              )}
             </>
           )}
         </ScrollView>
@@ -1017,6 +1111,29 @@ export default function PanelGestionScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal: oferta de trabajo a profesionales */}
+      <Modal visible={mostrarOfertaEmpleo} transparent animationType="fade" onRequestClose={() => setMostrarOfertaEmpleo(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <Text style={s.modalTitulo}>Nueva oferta de trabajo</Text>
+            <TextInput style={s.inputSmall} placeholder="Título (ej. Instalador para obra en Getxo)" placeholderTextColor={colors.textFaint} value={ofertaEmpleoForm.titulo || ''} onChangeText={v => setOfertaEmpleoForm({ ...ofertaEmpleoForm, titulo: v })} />
+            <TextInput style={[s.inputSmall, s.textArea]} placeholder="Descripción (opcional)" multiline placeholderTextColor={colors.textFaint} value={ofertaEmpleoForm.descripcion || ''} onChangeText={v => setOfertaEmpleoForm({ ...ofertaEmpleoForm, descripcion: v })} />
+            <TextInput style={s.inputSmall} placeholder="Zona (opcional, por defecto la tuya)" placeholderTextColor={colors.textFaint} value={ofertaEmpleoForm.zona || ''} onChangeText={v => setOfertaEmpleoForm({ ...ofertaEmpleoForm, zona: v })} />
+            <View style={s.chipsWrap}>
+              <TouchableOpacity style={[s.chip, ofertaEmpleoForm.tipo_pago === 'servicio' && s.chipActivo]} onPress={() => setOfertaEmpleoForm({ ...ofertaEmpleoForm, tipo_pago: 'servicio' })}>
+                <Text style={[s.chipText, ofertaEmpleoForm.tipo_pago === 'servicio' && s.chipTextActivo]}>Por servicio</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.chip, ofertaEmpleoForm.tipo_pago === 'hora' && s.chipActivo]} onPress={() => setOfertaEmpleoForm({ ...ofertaEmpleoForm, tipo_pago: 'hora' })}>
+                <Text style={[s.chipText, ofertaEmpleoForm.tipo_pago === 'hora' && s.chipTextActivo]}>Por hora</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput style={s.inputSmall} placeholder={ofertaEmpleoForm.tipo_pago === 'hora' ? 'Tarifa por hora (€, opcional)' : 'Precio por servicio (€, opcional)'} keyboardType="numeric" placeholderTextColor={colors.textFaint} value={ofertaEmpleoForm.tarifa || ''} onChangeText={v => setOfertaEmpleoForm({ ...ofertaEmpleoForm, tarifa: v })} />
+            <TouchableOpacity style={[s.leadBtnBrass, !ofertaEmpleoForm.titulo?.trim() && { opacity: 0.5 }]} onPress={guardarOfertaEmpleo} disabled={!ofertaEmpleoForm.titulo?.trim()}><Text style={s.leadBtnBrassText}>Publicar oferta</Text></TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 12, alignItems: 'center' }} onPress={() => setMostrarOfertaEmpleo(false)}><Text style={s.modalCerrar}>Cerrar</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1026,6 +1143,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 52 },
   back: { color: colors.blue, fontSize: 15, fontWeight: '500' },
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
+  seccionTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginTop: 20, marginBottom: 6 },
   tabsScroll: { maxHeight: 46, marginBottom: 4 },
   tabsContent: { paddingHorizontal: 20, gap: 8 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
