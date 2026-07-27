@@ -17,7 +17,10 @@ export default function OfertasScreen({ navigation }) {
   const [serviciosAbiertos, setServiciosAbiertos] = useState([]);
   const [misOfertas, setMisOfertas] = useState([]);
   const [proyectos, setProyectos] = useState([]);
+  const [ofertasEmpleo, setOfertasEmpleo] = useState([]);
+  const [misOfertasEmpleo, setMisOfertasEmpleo] = useState([]);
   const [interesEnviado, setInteresEnviado] = useState([]);
+  const [postuladoEmpleo, setPostuladoEmpleo] = useState([]);
   const [tab, setTab] = useState('disponibles');
   const [ciudadFiltro, setCiudadFiltro] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -27,6 +30,13 @@ export default function OfertasScreen({ navigation }) {
   const [manoObraOferta, setManoObraOferta] = useState('');
   const [mensajeOferta, setMensajeOferta] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [publicandoEmpleo, setPublicandoEmpleo] = useState(false);
+  const [tituloEmpleo, setTituloEmpleo] = useState('');
+  const [descripcionEmpleo, setDescripcionEmpleo] = useState('');
+  const [zonaEmpleo, setZonaEmpleo] = useState('');
+  const [enviandoEmpleo, setEnviandoEmpleo] = useState(false);
+  const [postulantesDe, setPostulantesDe] = useState(null);
+  const [postulantesEmpleo, setPostulantesEmpleo] = useState([]);
   const totalOferta = (parseFloat(materialesOferta) || 0) + (parseFloat(manoObraOferta) || 0);
 
   const cargar = useCallback(async () => {
@@ -36,14 +46,18 @@ export default function OfertasScreen({ navigation }) {
         const resPerfil = await axios.get(`${API}/fontaneros/${usuario?.id}/perfil`, { headers });
         gremio = resPerfil.data?.gremio || null;
       } catch (e) {}
-      const [resAbiertos, resMis, resProyectos] = await Promise.allSettled([
+      const [resAbiertos, resMis, resProyectos, resEmpleo, resMisEmpleo] = await Promise.allSettled([
         axios.get(`${API}/servicios/abiertos`, { headers, params: gremio ? { gremio } : {} }),
         axios.get(`${API}/fontaneros/${usuario?.id}/ofertas`, { headers }),
         axios.get(`${API}/proyectos`, { headers, params: { ...(gremio ? { gremio } : {}), ...(ciudadFiltro ? { ciudad: ciudadFiltro } : {}) } }),
+        axios.get(`${API}/ofertas-empleo`, { headers, params: gremio ? { gremio } : {} }),
+        axios.get(`${API}/ofertas-empleo/mias`, { headers }),
       ]);
       if (resAbiertos.status === 'fulfilled') setServiciosAbiertos(resAbiertos.value.data || []);
       if (resMis.status === 'fulfilled') setMisOfertas(resMis.value.data || []);
       if (resProyectos.status === 'fulfilled') setProyectos(resProyectos.value.data || []);
+      if (resEmpleo.status === 'fulfilled') setOfertasEmpleo(resEmpleo.value.data || []);
+      if (resMisEmpleo.status === 'fulfilled') setMisOfertasEmpleo(resMisEmpleo.value.data || []);
     } catch (e) {}
     finally { setCargando(false); setRefrescando(false); }
   }, [usuario?.id, token, ciudadFiltro]);
@@ -54,6 +68,46 @@ export default function OfertasScreen({ navigation }) {
       await axios.post(`${API}/proyectos/${proyecto.id}/interes`, {}, { headers });
     } catch (e) {
       setInteresEnviado(prev => prev.filter(id => id !== proyecto.id));
+    }
+  };
+
+  const publicarOfertaEmpleo = async () => {
+    if (!tituloEmpleo.trim()) return;
+    setEnviandoEmpleo(true);
+    try {
+      await axios.post(`${API}/ofertas-empleo`, {
+        titulo: tituloEmpleo.trim(), descripcion: descripcionEmpleo.trim() || null, zona: zonaEmpleo.trim() || null,
+      }, { headers });
+      setPublicandoEmpleo(false);
+      setTituloEmpleo(''); setDescripcionEmpleo(''); setZonaEmpleo('');
+      cargar();
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo publicar la oferta'));
+    } finally {
+      setEnviandoEmpleo(false);
+    }
+  };
+
+  const cerrarOfertaEmpleo = async (o) => {
+    setMisOfertasEmpleo(prev => prev.map(x => x.id === o.id ? { ...x, activa: false } : x));
+    try { await axios.put(`${API}/ofertas-empleo/${o.id}`, { activa: false }, { headers }); } catch (e) { cargar(); }
+  };
+
+  const verPostulantesEmpleo = async (o) => {
+    setPostulantesDe(o);
+    try {
+      const res = await axios.get(`${API}/ofertas-empleo/${o.id}/postulantes`, { headers });
+      setPostulantesEmpleo(res.data || []);
+    } catch (e) { setPostulantesEmpleo([]); }
+  };
+
+  const postularseEmpleo = async (oferta) => {
+    setPostuladoEmpleo(prev => [...prev, oferta.id]);
+    try {
+      await axios.post(`${API}/ofertas-empleo/${oferta.id}/postular`, {}, { headers });
+    } catch (e) {
+      setPostuladoEmpleo(prev => prev.filter(id => id !== oferta.id));
+      avisar('Error', mensajeError(e, 'No se pudo enviar la postulación'));
     }
   };
 
@@ -160,6 +214,10 @@ export default function OfertasScreen({ navigation }) {
         <TouchableOpacity style={[s.tab, tab === 'proyectos' && s.tabActivo]} onPress={() => setTab('proyectos')}>
           <Text style={[s.tabText, tab === 'proyectos' && s.tabTextActivo]}>Proyectos</Text>
           {proyectos.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{proyectos.length}</Text></View>}
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.tab, tab === 'ayudantes' && s.tabActivo]} onPress={() => setTab('ayudantes')}>
+          <Text style={[s.tabText, tab === 'ayudantes' && s.tabTextActivo]}>Ayudantes</Text>
+          {ofertasEmpleo.length > 0 && <View style={s.badge}><Text style={s.badgeText}>{ofertasEmpleo.length}</Text></View>}
         </TouchableOpacity>
       </View>
 
@@ -289,6 +347,119 @@ export default function OfertasScreen({ navigation }) {
               })
             )
           )}
+
+          {tab === 'ayudantes' && (
+            <>
+              {!publicandoEmpleo ? (
+                <TouchableOpacity style={s.btnPublicarEmpleo} onPress={() => setPublicandoEmpleo(true)}>
+                  <Text style={s.btnPublicarEmpleoText}>+ Publicar oferta de ayudante</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={s.formCard}>
+                  <Text style={s.formTitulo}>Nueva oferta de ayudante</Text>
+                  <TextInput style={s.input} placeholder="Título (ej. Busco ayudante media jornada)"
+                    placeholderTextColor={colors.textFaint} value={tituloEmpleo} onChangeText={setTituloEmpleo} />
+                  <TextInput style={[s.input, s.textArea]} placeholder="Descripción (opcional)" multiline
+                    placeholderTextColor={colors.textFaint} value={descripcionEmpleo} onChangeText={setDescripcionEmpleo} />
+                  <TextInput style={s.input} placeholder="Zona (opcional, por defecto la tuya)"
+                    placeholderTextColor={colors.textFaint} value={zonaEmpleo} onChangeText={setZonaEmpleo} />
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+                    <TouchableOpacity style={s.btnCancelar} onPress={() => setPublicandoEmpleo(false)}>
+                      <Text style={s.btnCancelarText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.btnCrear, (!tituloEmpleo.trim() || enviandoEmpleo) && s.btnOff]}
+                      onPress={publicarOfertaEmpleo}
+                      disabled={!tituloEmpleo.trim() || enviandoEmpleo}
+                    >
+                      <Text style={s.btnCrearText}>{enviandoEmpleo ? 'Publicando...' : 'Publicar →'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {misOfertasEmpleo.length > 0 && (
+                <>
+                  <Text style={s.subseccionTitulo}>Tus publicaciones</Text>
+                  {misOfertasEmpleo.map(o => (
+                    <View key={o.id} style={s.card}>
+                      <View style={s.cardTop}>
+                        <Text style={s.cardTitulo}>{o.titulo}</Text>
+                        <View style={[s.estadoPill, o.activa ? s.estadoAbierto : s.estadoCerrado]}>
+                          <Text style={[s.estadoText, o.activa ? s.estadoTextAbierto : s.estadoTextCerrado]}>
+                            {o.activa ? 'Activa' : 'Cerrada'}
+                          </Text>
+                        </View>
+                      </View>
+                      {o.descripcion ? <Text style={s.cardDesc}>{o.descripcion}</Text> : null}
+                      <View style={s.cardFooter}>
+                        <TouchableOpacity style={s.btnAccion} onPress={() => verPostulantesEmpleo(o)}>
+                          <Text style={s.btnAccionText}>👷 {o.num_postulantes} postulante{o.num_postulantes !== 1 ? 's' : ''}</Text>
+                        </TouchableOpacity>
+                        {o.activa && (
+                          <TouchableOpacity style={s.btnCerrar} onPress={() => cerrarOfertaEmpleo(o)}>
+                            <Text style={s.btnCerrarText}>Cerrar</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      {postulantesDe?.id === o.id && (
+                        <View style={s.interesadosWrap}>
+                          {postulantesEmpleo.length === 0 ? (
+                            <Text style={s.interesadoVacio}>Nadie se ha postulado todavía</Text>
+                          ) : (
+                            postulantesEmpleo.map(p => (
+                              <View key={p.id} style={s.interesadoRow}>
+                                <Text style={s.interesadoNombre}>{p.fontanero_nombre || 'Profesional'}</Text>
+                                {p.fontanero_valoracion ? <Text style={s.interesadoVal}>⭐ {p.fontanero_valoracion} · 📞 {p.fontanero_telefono}</Text> : (p.fontanero_telefono ? <Text style={s.interesadoVal}>📞 {p.fontanero_telefono}</Text> : null)}
+                                {p.mensaje ? <Text style={s.interesadoMsg}>"{p.mensaje}"</Text> : null}
+                              </View>
+                            ))
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </>
+              )}
+
+              <Text style={s.subseccionTitulo}>Ofertas de otros profesionales</Text>
+              {ofertasEmpleo.filter(o => !misOfertasEmpleo.some(m => m.id === o.id)).length === 0 ? (
+                <View style={s.vacio}>
+                  <Text style={s.vacioEmoji}>👷</Text>
+                  <Text style={s.vacioTitulo}>Sin ofertas ahora</Text>
+                  <Text style={s.vacioSub}>Las ofertas de ayudante de tu gremio aparecerán aquí</Text>
+                </View>
+              ) : (
+                ofertasEmpleo.filter(o => !misOfertasEmpleo.some(m => m.id === o.id)).map(o => {
+                  const yaPostulado = postuladoEmpleo.includes(o.id);
+                  return (
+                    <View key={o.id} style={s.card}>
+                      <View style={s.cardTop}>
+                        <View style={s.tipoWrap}>
+                          <Text style={s.tipoEmoji}>👷</Text>
+                          <View>
+                            <Text style={s.tipoNombre}>{o.titulo}</Text>
+                            <Text style={s.tipoZona}>{o.fontanero_nombre} · 📍 {o.zona || '—'}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      {o.descripcion ? <Text style={s.cardDesc}>{o.descripcion}</Text> : null}
+                      <View style={s.cardFooter}>
+                        <Text style={s.cardFecha}>{o.num_postulantes} postulante{o.num_postulantes !== 1 ? 's' : ''}</Text>
+                        {yaPostulado ? (
+                          <View style={s.btnOfertarCompleto}><Text style={s.btnOfertarCompletoText}>✓ Postulado</Text></View>
+                        ) : (
+                          <TouchableOpacity style={s.btnOfertar} onPress={() => postularseEmpleo(o)}>
+                            <Text style={s.btnOfertarText}>Postularme →</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </>
+          )}
         </ScrollView>
       )}
     </View>
@@ -371,4 +542,33 @@ const s = StyleSheet.create({
   ofertaPrecio: { color: colors.green, fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
   ofertaDesglose: { color: colors.textMuted, fontSize: 12, marginBottom: 6 },
   ofertaMensaje: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic' },
+  btnPublicarEmpleo: { backgroundColor: colors.blueLight, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: colors.blue },
+  btnPublicarEmpleoText: { color: colors.blue, fontWeight: 'bold', fontSize: 15 },
+  subseccionTitulo: { color: colors.text, fontWeight: '700', fontSize: 14, marginTop: 6, marginBottom: 10 },
+  formCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+  formTitulo: { color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 14 },
+  input: { backgroundColor: colors.bgCard2, color: colors.text, borderRadius: 12, padding: 14, fontSize: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border2 },
+  textArea: { minHeight: 70, textAlignVertical: 'top' },
+  btnCancelar: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
+  btnCancelarText: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
+  btnCrear: { flex: 1, backgroundColor: colors.blue, borderRadius: 12, padding: 13, alignItems: 'center' },
+  btnOff: { opacity: 0.4 },
+  btnCrearText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  estadoPill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
+  estadoAbierto: { backgroundColor: colors.greenGlass, borderColor: colors.green },
+  estadoCerrado: { backgroundColor: colors.glass, borderColor: colors.border },
+  estadoText: { fontSize: 11, fontWeight: '700' },
+  estadoTextAbierto: { color: colors.green },
+  estadoTextCerrado: { color: colors.textMuted },
+  cardTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, flex: 1, marginRight: 8 },
+  btnAccion: { flex: 1, backgroundColor: colors.bgCard2, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.border2, alignItems: 'center' },
+  btnAccionText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
+  btnCerrar: { backgroundColor: colors.redLight, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.red },
+  btnCerrarText: { color: colors.red, fontWeight: '600', fontSize: 13 },
+  interesadosWrap: { marginTop: 12, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: colors.border, gap: 8 },
+  interesadoVacio: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic' },
+  interesadoRow: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 10 },
+  interesadoNombre: { color: colors.text, fontWeight: '600', fontSize: 13 },
+  interesadoVal: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  interesadoMsg: { color: colors.textMuted, fontSize: 12, fontStyle: 'italic', marginTop: 4 },
 });
