@@ -414,6 +414,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <Text style={s.linkTerminosText}>👁️ Ver vista previa de tu perfil público</Text>
             </Pressable>
 
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('Equipo')}>
+              <Text style={s.linkTerminosText}>👥 Mi equipo</Text>
+            </Pressable>
+
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
               <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
             </Pressable>

@@ -66,6 +66,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [instruccionesComision, setInstruccionesComision] = useState(null);
   const [cargandoInstrucciones, setCargandoInstrucciones] = useState(false);
   const [yaLlegue, setYaLlegue] = useState(false);
+  const [equipo, setEquipo] = useState([]);
+  const [mostrarAsignar, setMostrarAsignar] = useState(false);
+  const [asignando, setAsignando] = useState(false);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -101,6 +104,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     axios.get(`${API}/fontaneros/${userId}/checklist-perfil`, { headers })
       .then(res => setChecklist(res.data))
       .catch(() => {});
+  }, [userId, token]);
+
+  useEffect(() => {
+    axios.get(`${API}/fontaneros/${userId}/equipo`, { headers })
+      .then(res => setEquipo(res.data || []))
+      .catch(() => setEquipo([]));
   }, [userId, token]);
 
   const conectarStripe = async () => {
@@ -379,6 +388,21 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
+  const asignarEmpleado = async (empleado) => {
+    if (!trabajoActivo) return;
+    setAsignando(true);
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/asignar-empleado`, { empleado_fontanero_id: empleado.id }, { headers });
+      setMostrarAsignar(false);
+      setTrabajoActivo(null);
+      avisar('Trabajo asignado', `Se le ha asignado a ${empleado.nombre}`);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo asignar el trabajo'));
+    } finally {
+      setAsignando(false);
+    }
+  };
+
   const cancelarTrabajo = () => {
     if (!trabajoActivo) return;
     confirmarAccion('Cancelar trabajo', '¿Seguro que quieres cancelar este trabajo?', async () => {
@@ -472,6 +496,30 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </LinearGradient>
             </Pressable>
             <TouchableOpacity onPress={() => setMostrarReprogramar(false)} style={s.modalCancelar}>
+              <Text style={s.modalCancelarText}>Cancelar</Text>
+            </TouchableOpacity>
+          </Glass>
+        </View>
+      )}
+
+      {mostrarAsignar && trabajoActivo && (
+        <View style={s.modalOverlay}>
+          <Glass strong style={s.modal}>
+            <View style={s.modalIconWrap}>
+              <Ionicons name="people" size={22} color={colors.accent2} />
+            </View>
+            <Text style={s.modalTitulo}>Asignar a mi equipo</Text>
+            <Text style={s.modalSub}>Elige quién de tu equipo se encargará de este trabajo</Text>
+            {equipo.map(m => (
+              <Pressable key={m.id} haptic disabled={asignando} onPress={() => asignarEmpleado(m)} style={s.miembroEquipoRow}>
+                <View>
+                  <Text style={s.miembroEquipoNombre}>{m.nombre}</Text>
+                  <Text style={s.miembroEquipoSub}>{m.disponible ? '🟢 Disponible' : '⚪ No disponible'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Pressable>
+            ))}
+            <TouchableOpacity onPress={() => setMostrarAsignar(false)} style={s.modalCancelar}>
               <Text style={s.modalCancelarText}>Cancelar</Text>
             </TouchableOpacity>
           </Glass>
@@ -673,6 +721,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
                 <Text style={s.enCursoBtnText}>Enviar precio al cliente</Text>
                 <Ionicons name="arrow-forward" size={15} color={colors.text} />
               </LinearGradient>
+            </Pressable>
+          )}
+          {trabajoActivo.estado === 'aceptado' && equipo.length > 0 && (
+            <Pressable style={s.enCursoChatBtn} haptic onPress={() => setMostrarAsignar(true)}>
+              <Ionicons name="people-outline" size={15} color={colors.textMuted} />
+              <Text style={s.enCursoChatText}>Asignar a mi equipo</Text>
             </Pressable>
           )}
           {trabajoActivo.estado === 'precio_aceptado' && (
@@ -963,6 +1017,9 @@ const s = StyleSheet.create({
   reprogHoraBtnText: { color: colors.textMuted, fontSize: 13 },
   reprogBtnActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
   reprogBtnTextActivo: { color: colors.text },
+  miembroEquipoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border2 },
+  miembroEquipoNombre: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
+  miembroEquipoSub: { color: colors.textMuted, fontSize: 12 },
   header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   tabBar: {

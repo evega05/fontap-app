@@ -36,6 +36,7 @@ import OlvidePasswordScreen from './screens/OlvidePasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import VerificarEmailScreen from './screens/VerificarEmailScreen';
 import AjustesCuentaScreen from './screens/AjustesCuentaScreen';
+import EquipoScreen from './screens/EquipoScreen';
 import SeguimientoScreen from './screens/SeguimientoScreen';
 import { IdiomaProvider } from './i18n';
 
@@ -156,6 +157,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="VerificarEmail" component={VerificarEmailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Equipo" component={EquipoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Seguimiento" component={SeguimientoScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
