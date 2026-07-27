@@ -27,7 +27,6 @@ import CalendarioScreen from './screens/CalendarioScreen';
 import MisServiciosScreen from './screens/MisServiciosScreen';
 import ServiciosRecurrentesScreen from './screens/ServiciosRecurrentesScreen';
 import ProyectosScreen from './screens/ProyectosScreen';
-import InmueblesScreen from './screens/InmueblesScreen';
 import EstadisticasScreen from './screens/EstadisticasScreen';
 import OfertasClienteScreen from './screens/OfertasClienteScreen';
 import ChatsRecientesScreen from './screens/ChatsRecientesScreen';
@@ -38,6 +37,7 @@ import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import VerificarEmailScreen from './screens/VerificarEmailScreen';
 import AjustesCuentaScreen from './screens/AjustesCuentaScreen';
 import EquipoScreen from './screens/EquipoScreen';
+import PanelGestionScreen from './screens/PanelGestionScreen';
 import SeguimientoScreen from './screens/SeguimientoScreen';
 import { IdiomaProvider } from './i18n';
 
@@ -149,7 +149,6 @@ function NavegadorPrincipal() {
         <Stack.Screen name="MisServicios" component={MisServiciosScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ServiciosRecurrentes" component={ServiciosRecurrentesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Proyectos" component={ProyectosScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Inmuebles" component={InmueblesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Estadisticas" component={EstadisticasScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OfertasCliente" component={OfertasClienteScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChatsRecientes" component={ChatsRecientesScreen} options={{ headerShown: false }} />
@@ -160,6 +159,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="VerificarEmail" component={VerificarEmailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Equipo" component={EquipoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PanelGestion" component={PanelGestionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Seguimiento" component={SeguimientoScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>

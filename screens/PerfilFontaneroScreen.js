@@ -418,6 +418,10 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               <Text style={s.linkTerminosText}>👥 Mi equipo</Text>
             </Pressable>
 
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('PanelGestion')}>
+              <Text style={s.linkTerminosText}>📋 Panel de gestión (clientes, obras, presupuestos, nómina)</Text>
+            </Pressable>
+
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
               <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
             </Pressable>

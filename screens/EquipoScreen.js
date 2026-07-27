@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { confirmarAccion, avisar } from '../confirmar';
 import { mensajeError } from '../errores';
+import { agregarArchivo } from '../subirArchivo';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -22,6 +24,11 @@ export default function EquipoScreen({ navigation }) {
   const [invitando, setInvitando] = useState(false);
   const [aceptando, setAceptando] = useState(null);
   const [saliendo, setSaliendo] = useState(false);
+  const [comisionPorcentaje, setComisionPorcentaje] = useState('');
+  const [guardandoComision, setGuardandoComision] = useState(false);
+  const [comisionEmpresa, setComisionEmpresa] = useState(null);
+  const [liquidando, setLiquidando] = useState(null);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!usuario?.id) { setCargando(false); return; }
@@ -29,6 +36,7 @@ export default function EquipoScreen({ navigation }) {
       const resPerfil = await axios.get(`${API}/fontaneros/${usuario.id}/perfil`, { headers });
       setPerfil(resPerfil.data);
       setNombreEmpresa(resPerfil.data.nombre_empresa || '');
+      setComisionPorcentaje(resPerfil.data.comision_empresa_porcentaje != null ? String(resPerfil.data.comision_empresa_porcentaje) : '');
       if (resPerfil.data.empresa_id) {
         setEquipo([]);
       } else {
@@ -36,6 +44,10 @@ export default function EquipoScreen({ navigation }) {
           const resEquipo = await axios.get(`${API}/fontaneros/${usuario.id}/equipo`, { headers });
           setEquipo(resEquipo.data || []);
         } catch (e) { setEquipo([]); }
+        try {
+          const resComision = await axios.get(`${API}/fontaneros/${usuario.id}/comision-empresa-pendiente`, { headers });
+          setComisionEmpresa(resComision.data);
+        } catch (e) { setComisionEmpresa(null); }
       }
       try {
         const resNotifs = await axios.get(`${API}/usuarios/${usuario.id}/notificaciones`, { headers });
@@ -57,6 +69,63 @@ export default function EquipoScreen({ navigation }) {
       avisar('Error', mensajeError(e, 'No se pudo guardar el nombre de la empresa'));
     } finally {
       setGuardandoNombre(false);
+    }
+  };
+
+  const guardarComision = async () => {
+    const valor = parseFloat(comisionPorcentaje);
+    if (isNaN(valor) || valor < 0 || valor > 100) {
+      avisar('Error', 'Introduce un porcentaje entre 0 y 100');
+      return;
+    }
+    setGuardandoComision(true);
+    try {
+      await axios.put(`${API}/fontaneros/${usuario.id}/empresa`, { comision_empresa_porcentaje: valor }, { headers });
+      avisar('Guardado', 'Se aplicará a los próximos trabajos que asignes');
+      cargar();
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo guardar el porcentaje'));
+    } finally {
+      setGuardandoComision(false);
+    }
+  };
+
+  const liquidarComision = (empleadoId) => {
+    confirmarAccion('Marcar como saldado', '¿Confirmas que ya has cobrado esto de tu empleado (en efectivo, Bizum, nómina, etc.)?', async () => {
+      setLiquidando(empleadoId);
+      try {
+        await axios.put(`${API}/fontaneros/${usuario.id}/comision-empresa-pendiente/liquidar`, { empleado_fontanero_id: empleadoId }, { headers });
+        cargar();
+      } catch (e) {
+        avisar('Error', mensajeError(e, 'No se pudo marcar como saldado'));
+      } finally {
+        setLiquidando(null);
+      }
+    }, { textoConfirmar: 'Sí, ya lo cobré', textoCancelar: 'Todavía no' });
+  };
+
+  const subirLogo = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) return;
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (resultado.canceled) return;
+    setSubiendoLogo(true);
+    try {
+      const form = new FormData();
+      await agregarArchivo(form, 'archivo', resultado.assets[0].uri, 'logo.jpg', 'image/jpeg');
+      await axios.post(`${API}/fontaneros/${usuario.id}/logo-empresa`, form, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+      });
+      cargar();
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo subir el logo'));
+    } finally {
+      setSubiendoLogo(false);
     }
   };
 
@@ -159,6 +228,16 @@ export default function EquipoScreen({ navigation }) {
               <View style={s.card}>
                 <Text style={s.cardTitulo}>🏢 Nombre de tu empresa</Text>
                 <Text style={s.cardSub}>Ponle nombre a tu empresa para poder invitar a otros profesionales de tu gremio a tu equipo.</Text>
+                {perfil?.nombre_empresa && (
+                  <TouchableOpacity style={s.logoRow} onPress={subirLogo} disabled={subiendoLogo}>
+                    {perfil.logo_empresa_url ? (
+                      <Image source={{ uri: `https://fontap-backend-production.up.railway.app${perfil.logo_empresa_url}` }} style={s.logoImagen} />
+                    ) : (
+                      <View style={s.logoPlaceholder}><Text style={s.logoPlaceholderText}>🏢</Text></View>
+                    )}
+                    <Text style={s.logoTexto}>{subiendoLogo ? 'Subiendo...' : (perfil.logo_empresa_url ? 'Cambiar logo' : 'Subir logo de la empresa')}</Text>
+                  </TouchableOpacity>
+                )}
                 <TextInput
                   style={s.input}
                   placeholder="Ej. Fontanería Bilbao SL"
@@ -177,6 +256,54 @@ export default function EquipoScreen({ navigation }) {
 
               {perfil?.nombre_empresa && (
                 <>
+                  <View style={s.card}>
+                    <Text style={s.cardTitulo}>💰 Comisión del equipo</Text>
+                    <Text style={s.cardSub}>
+                      Cuando le asignes un trabajo a un empleado, este porcentaje de lo que cobre te corresponde a ti.
+                      Os lo repartís aparte (efectivo, Bizum, nómina...); la app solo lo lleva la cuenta.
+                    </Text>
+                    <View style={s.comisionRow}>
+                      <TextInput
+                        style={[s.input, { flex: 1, marginBottom: 0 }]}
+                        placeholder="0"
+                        placeholderTextColor={colors.textFaint}
+                        value={comisionPorcentaje}
+                        onChangeText={setComisionPorcentaje}
+                        keyboardType="numeric"
+                      />
+                      <Text style={s.comisionPorcentajeSigno}>%</Text>
+                      <TouchableOpacity
+                        style={[s.btnPrimario, { paddingHorizontal: 18 }, guardandoComision && s.btnDesactivado]}
+                        onPress={guardarComision}
+                        disabled={guardandoComision}
+                      >
+                        <Text style={s.btnPrimarioText}>{guardandoComision ? '...' : 'Guardar'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {comisionEmpresa && comisionEmpresa.total > 0 && (
+                    <View style={s.card}>
+                      <Text style={s.cardTitulo}>📋 Lo que te deben tus empleados</Text>
+                      <Text style={s.comisionTotal}>{comisionEmpresa.total.toFixed(2)}€</Text>
+                      {comisionEmpresa.por_empleado.map(pe => (
+                        <View key={pe.empleado_id} style={s.comisionEmpleadoRow}>
+                          <View>
+                            <Text style={s.comisionEmpleadoNombre}>{pe.empleado_nombre}</Text>
+                            <Text style={s.comisionEmpleadoSub}>{pe.num_servicios} trabajo{pe.num_servicios !== 1 ? 's' : ''} · {pe.total.toFixed(2)}€</Text>
+                          </View>
+                          <TouchableOpacity
+                            style={[s.btnSaldar, liquidando === pe.empleado_id && s.btnDesactivado]}
+                            onPress={() => liquidarComision(pe.empleado_id)}
+                            disabled={liquidando === pe.empleado_id}
+                          >
+                            <Text style={s.btnSaldarText}>{liquidando === pe.empleado_id ? '...' : 'Ya lo cobré'}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
                   <View style={s.card}>
                     <Text style={s.cardTitulo}>➕ Invitar a un profesional</Text>
                     <Text style={s.cardSub}>Solo puedes invitar a profesionales de tu mismo gremio ({perfil.gremio}) que aún no formen parte de otro equipo.</Text>
@@ -262,4 +389,17 @@ const s = StyleSheet.create({
   btnQuitarText: { fontSize: 16 },
   invitacionRow: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginTop: 8, gap: 10 },
   invitacionTexto: { color: colors.text, fontSize: 13, lineHeight: 18 },
+  comisionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  comisionPorcentajeSigno: { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
+  comisionTotal: { color: colors.green, fontSize: 28, fontWeight: 'bold', marginBottom: 14 },
+  comisionEmpleadoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 8 },
+  comisionEmpleadoNombre: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
+  comisionEmpleadoSub: { color: colors.textMuted, fontSize: 12 },
+  btnSaldar: { backgroundColor: colors.greenGlass, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.green },
+  btnSaldarText: { color: colors.green, fontWeight: '700', fontSize: 12 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  logoImagen: { width: 40, height: 40, borderRadius: 10 },
+  logoPlaceholder: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
+  logoPlaceholderText: { fontSize: 18 },
+  logoTexto: { color: colors.blue, fontSize: 13, fontWeight: '600' },
 });

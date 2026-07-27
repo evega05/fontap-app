@@ -17,6 +17,15 @@ import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
+function distanciaKm(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function getSaludo() {
   const hora = new Date().getHours();
   if (hora < 12) return 'Buenos días';
@@ -69,6 +78,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [equipo, setEquipo] = useState([]);
   const [mostrarAsignar, setMostrarAsignar] = useState(false);
   const [asignando, setAsignando] = useState(false);
+  const [perfilPropio, setPerfilPropio] = useState(null);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -110,6 +120,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     axios.get(`${API}/fontaneros/${userId}/equipo`, { headers })
       .then(res => setEquipo(res.data || []))
       .catch(() => setEquipo([]));
+  }, [userId, token]);
+
+  useEffect(() => {
+    axios.get(`${API}/fontaneros/${userId}/perfil`, { headers })
+      .then(res => setPerfilPropio(res.data))
+      .catch(() => {});
   }, [userId, token]);
 
   const conectarStripe = async () => {
@@ -415,6 +431,17 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }, { textoConfirmar: 'Sí, cancelar', textoCancelar: 'No' });
   };
 
+  const equipoOrdenado = equipo.map(m => ({
+    ...m,
+    _distancia: trabajoActivo ? distanciaKm(m.latitud, m.longitud, trabajoActivo.latitud_cliente, trabajoActivo.longitud_cliente) : null,
+  })).sort((a, b) => {
+    if (a.disponible !== b.disponible) return a.disponible ? -1 : 1;
+    if (a._distancia == null) return 1;
+    if (b._distancia == null) return -1;
+    return a._distancia - b._distancia;
+  });
+  const masCercanoId = equipoOrdenado.find(m => m.disponible && m._distancia != null)?.id;
+
   return (
     <View style={s.container}>
       <GradientBg />
@@ -510,11 +537,19 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             </View>
             <Text style={s.modalTitulo}>Asignar a mi equipo</Text>
             <Text style={s.modalSub}>Elige quién de tu equipo se encargará de este trabajo</Text>
-            {equipo.map(m => (
+            {equipoOrdenado.map(m => (
               <Pressable key={m.id} haptic disabled={asignando} onPress={() => asignarEmpleado(m)} style={s.miembroEquipoRow}>
                 <View>
-                  <Text style={s.miembroEquipoNombre}>{m.nombre}</Text>
-                  <Text style={s.miembroEquipoSub}>{m.disponible ? '🟢 Disponible' : '⚪ No disponible'}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={s.miembroEquipoNombre}>{m.nombre}</Text>
+                    {m.id === masCercanoId && (
+                      <View style={s.masCercanoPill}><Text style={s.masCercanoPillText}>Más cercano</Text></View>
+                    )}
+                  </View>
+                  <Text style={s.miembroEquipoSub}>
+                    {m.disponible ? '🟢 Disponible' : '⚪ No disponible'}
+                    {m._distancia != null ? ` · ${m._distancia < 1 ? `${Math.round(m._distancia * 1000)} m` : `${m._distancia.toFixed(1)} km`}` : ''}
+                  </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </Pressable>
@@ -546,6 +581,18 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           </Pressable>
         </View>
       </View>
+
+      {perfilPropio?.empresa_nombre && (
+        <Pressable haptic onPress={() => navigation.navigate('Equipo')}>
+          <Glass style={s.empresaBanner}>
+            <Ionicons name="people" size={16} color={colors.accent2} />
+            <Text style={s.empresaBannerText}>
+              {perfilPropio.empresa_id ? 'Formas parte de ' : 'Tu equipo: '}
+              <Text style={{ fontWeight: '700' }}>{perfilPropio.empresa_nombre}</Text>
+            </Text>
+          </Glass>
+        </Pressable>
+      )}
 
       <Glass style={s.disponibilidadCard}>
         <View style={s.disponibilidadLeft}>
@@ -1020,6 +1067,8 @@ const s = StyleSheet.create({
   miembroEquipoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border2 },
   miembroEquipoNombre: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
   miembroEquipoSub: { color: colors.textMuted, fontSize: 12 },
+  masCercanoPill: { backgroundColor: colors.greenGlass, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: colors.green },
+  masCercanoPillText: { color: colors.green, fontSize: 10, fontWeight: '700' },
   header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   tabBar: {
@@ -1040,6 +1089,8 @@ const s = StyleSheet.create({
   perfilLetra: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
   logoutBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.redLight, justifyContent: 'center', alignItems: 'center' },
   disponibilidadCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
+  empresaBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.xl, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
+  empresaBannerText: { color: colors.text, fontSize: 13 },
   disponibilidadLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   disponibilidadIconWrap: { width: 30, height: 30, borderRadius: radius.full, backgroundColor: 'rgba(139,92,246,0.15)', justifyContent: 'center', alignItems: 'center' },
   indicador: { width: 10, height: 10, borderRadius: 5 },

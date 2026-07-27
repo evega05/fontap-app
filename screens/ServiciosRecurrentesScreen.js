@@ -14,14 +14,13 @@ const FRECUENCIAS = [
   { valor: 'mensual', label: 'Cada mes' },
 ];
 
-export default function ServiciosRecurrentesScreen({ navigation, route }) {
+export default function ServiciosRecurrentesScreen({ navigation }) {
   const { token } = useAuth();
   const headers = { Authorization: `Bearer ${token}` };
-  const { inmuebleId, inmuebleNombre } = route?.params || {};
 
   const [recurrentes, setRecurrentes] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [creando, setCreando] = useState(!!inmuebleId);
+  const [creando, setCreando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [gremio, setGremio] = useState(null);
   const [tipo, setTipo] = useState(null);
@@ -45,7 +44,6 @@ export default function ServiciosRecurrentesScreen({ navigation, route }) {
       mañana.setDate(mañana.getDate() + 1);
       await axios.post(`${API}/servicios-recurrentes`, {
         gremio, tipo, frecuencia, proxima_ejecucion: mañana.toISOString(),
-        inmueble_id: inmuebleId || null,
       }, { headers });
       setCreando(false);
       setGremio(null);
@@ -89,11 +87,6 @@ export default function ServiciosRecurrentesScreen({ navigation, route }) {
         {creando && (
           <View style={s.formCard}>
             <Text style={s.formTitulo}>🔁 Nuevo servicio recurrente</Text>
-            {inmuebleNombre && (
-              <View style={s.inmuebleBanner}>
-                <Text style={s.inmuebleBannerText}>🏢 Para: {inmuebleNombre}</Text>
-              </View>
-            )}
             <Text style={s.formLabel}>Tipo de profesional</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {GREMIOS.map(g => (
@@ -166,11 +159,6 @@ export default function ServiciosRecurrentesScreen({ navigation, route }) {
               <View style={s.cardTop}>
                 <View>
                   <Text style={s.cardTipo}>{r.tipo}</Text>
-                  {r.inmueble_nombre && (
-                    <Text style={s.cardInmueble}>
-                      🏢 {r.inmueble_nombre}{r.inmueble_num_viviendas ? ` · se reparte entre ${r.inmueble_num_viviendas} viviendas` : ''}
-                    </Text>
-                  )}
                   <Text style={s.cardSub}>{FRECUENCIAS.find(f => f.valor === r.frecuencia)?.label || r.frecuencia}</Text>
                   <Text style={s.cardFecha}>Próxima: {new Date(r.proxima_ejecucion).toLocaleDateString('es-ES')}</Text>
                 </View>
@@ -214,10 +202,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTipo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 4 },
-  cardInmueble: { color: colors.blue, fontSize: 12, fontWeight: '600', marginBottom: 4 },
   cardSub: { color: colors.textMuted, fontSize: 13, marginBottom: 2 },
-  inmuebleBanner: { backgroundColor: colors.blueLight, borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: colors.blue },
-  inmuebleBannerText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
   cardFecha: { color: colors.textMuted, fontSize: 12 },
   btnEliminar: { marginTop: 12, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: colors.border, alignItems: 'center' },
   btnEliminarText: { color: colors.red, fontSize: 13, fontWeight: '600' },
