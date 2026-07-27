@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { confirmarAccion, avisar } from '../confirmar';
 import { mensajeError } from '../errores';
+import { agregarArchivo } from '../subirArchivo';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
@@ -26,6 +28,7 @@ export default function EquipoScreen({ navigation }) {
   const [guardandoComision, setGuardandoComision] = useState(false);
   const [comisionEmpresa, setComisionEmpresa] = useState(null);
   const [liquidando, setLiquidando] = useState(null);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!usuario?.id) { setCargando(false); return; }
@@ -99,6 +102,31 @@ export default function EquipoScreen({ navigation }) {
         setLiquidando(null);
       }
     }, { textoConfirmar: 'Sí, ya lo cobré', textoCancelar: 'Todavía no' });
+  };
+
+  const subirLogo = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) return;
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (resultado.canceled) return;
+    setSubiendoLogo(true);
+    try {
+      const form = new FormData();
+      await agregarArchivo(form, 'archivo', resultado.assets[0].uri, 'logo.jpg', 'image/jpeg');
+      await axios.post(`${API}/fontaneros/${usuario.id}/logo-empresa`, form, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+      });
+      cargar();
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo subir el logo'));
+    } finally {
+      setSubiendoLogo(false);
+    }
   };
 
   const invitar = async () => {
@@ -200,6 +228,16 @@ export default function EquipoScreen({ navigation }) {
               <View style={s.card}>
                 <Text style={s.cardTitulo}>🏢 Nombre de tu empresa</Text>
                 <Text style={s.cardSub}>Ponle nombre a tu empresa para poder invitar a otros profesionales de tu gremio a tu equipo.</Text>
+                {perfil?.nombre_empresa && (
+                  <TouchableOpacity style={s.logoRow} onPress={subirLogo} disabled={subiendoLogo}>
+                    {perfil.logo_empresa_url ? (
+                      <Image source={{ uri: `https://fontap-backend-production.up.railway.app${perfil.logo_empresa_url}` }} style={s.logoImagen} />
+                    ) : (
+                      <View style={s.logoPlaceholder}><Text style={s.logoPlaceholderText}>🏢</Text></View>
+                    )}
+                    <Text style={s.logoTexto}>{subiendoLogo ? 'Subiendo...' : (perfil.logo_empresa_url ? 'Cambiar logo' : 'Subir logo de la empresa')}</Text>
+                  </TouchableOpacity>
+                )}
                 <TextInput
                   style={s.input}
                   placeholder="Ej. Fontanería Bilbao SL"
@@ -359,4 +397,9 @@ const s = StyleSheet.create({
   comisionEmpleadoSub: { color: colors.textMuted, fontSize: 12 },
   btnSaldar: { backgroundColor: colors.greenGlass, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.green },
   btnSaldarText: { color: colors.green, fontWeight: '700', fontSize: 12 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  logoImagen: { width: 40, height: 40, borderRadius: 10 },
+  logoPlaceholder: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
+  logoPlaceholderText: { fontSize: 18 },
+  logoTexto: { color: colors.blue, fontSize: 13, fontWeight: '600' },
 });

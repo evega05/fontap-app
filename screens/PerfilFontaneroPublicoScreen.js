@@ -214,6 +214,20 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
 
             <Text style={s.nombre}>{perfil.nombre}</Text>
 
+            {perfil.empresa_nombre && (
+              <View style={s.empresaRow}>
+                {perfil.logo_empresa_url ? (
+                  <Image source={{ uri: `${API}${perfil.logo_empresa_url}` }} style={s.empresaLogo} />
+                ) : (
+                  <Ionicons name="business" size={13} color={colors.accent2} />
+                )}
+                <Text style={s.empresaNombre}>{perfil.empresa_nombre}</Text>
+                {perfil.equipo_num_miembros > 1 && (
+                  <Text style={s.empresaEquipoTexto}> · equipo de {perfil.equipo_num_miembros}</Text>
+                )}
+              </View>
+            )}
+
             <View style={s.gremioRow}>
               {gremioInfo && <Text style={s.gremioEmoji}>{gremioInfo.emoji}</Text>}
               <Text style={s.gremioTexto}>
@@ -226,8 +240,10 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
 
             <View style={s.ratingRow}>
               <Ionicons name="star" size={16} color={colors.amber} />
-              <Text style={s.ratingNum}>{(stats?.valoracion_media ?? perfil.valoracion) || '—'}</Text>
-              <Text style={s.ratingSub}>({resenas.length} reseña{resenas.length !== 1 ? 's' : ''})</Text>
+              <Text style={s.ratingNum}>{(perfil.equipo_valoracion_media ?? stats?.valoracion_media ?? perfil.valoracion) || '—'}</Text>
+              <Text style={s.ratingSub}>
+                ({resenas.length} reseña{resenas.length !== 1 ? 's' : ''}{perfil.empresa_nombre ? ' del equipo' : ''})
+              </Text>
             </View>
           </View>
         </FadeInUp>
@@ -352,6 +368,9 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
                       ))}
                       <Text style={s.resenaFecha}>· {formatFechaResena(r.creado_en)}</Text>
                     </View>
+                    {perfil.empresa_nombre && r.fontanero_nombre && (
+                      <Text style={s.resenaAtendioPor}>Atendió: {r.fontanero_nombre}</Text>
+                    )}
                   </View>
                 </View>
                 {r.comentario ? <Text style={s.resenaComentario}>"{r.comentario}"</Text> : null}
@@ -402,6 +421,10 @@ const s = StyleSheet.create({
   verificadoBadge: { position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.green, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.bg },
   nombre: { color: colors.text, ...type.h1, textAlign: 'center' },
   gremioRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
+  empresaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  empresaLogo: { width: 14, height: 14, borderRadius: 4 },
+  empresaNombre: { color: colors.accent2, fontSize: 12.5, fontWeight: '700' },
+  empresaEquipoTexto: { color: colors.textMuted, fontSize: 12 },
   gremioEmoji: { fontSize: 14 },
   gremioTexto: { color: colors.textMuted, fontSize: 13 },
   puntoSeparador: { color: colors.textFaint, fontSize: 13 },
@@ -451,6 +474,7 @@ const s = StyleSheet.create({
   resenaNombre: { color: colors.text, fontSize: 13, fontWeight: '600' },
   estrellasRow: { flexDirection: 'row', alignItems: 'center', gap: 1, marginTop: 2 },
   resenaFecha: { color: colors.textFaint, fontSize: 11, marginLeft: 4 },
+  resenaAtendioPor: { color: colors.textMuted, fontSize: 11, marginTop: 2, fontStyle: 'italic' },
   resenaComentario: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic', lineHeight: 19 },
 
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: 34 },
