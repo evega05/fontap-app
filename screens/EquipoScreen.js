@@ -197,6 +197,17 @@ export default function EquipoScreen({ navigation }) {
         <View style={s.centro}><ActivityIndicator color={colors.blue} size="large" /></View>
       ) : (
         <ScrollView style={s.lista} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+          <TouchableOpacity style={s.panelGestionCard} onPress={() => navigation.navigate('PanelGestion')} activeOpacity={0.85}>
+            <View style={s.panelGestionIconWrap}>
+              <Text style={s.panelGestionIcon}>📊</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.panelGestionTitulo}>Panel de gestión</Text>
+              <Text style={s.panelGestionSub}>Agenda, clientes, obras, presupuestos y nómina de tu negocio</Text>
+            </View>
+            <Text style={s.panelGestionChevron}>›</Text>
+          </TouchableOpacity>
+
           {invitaciones.length > 0 && (
             <View style={s.card}>
               <Text style={s.cardTitulo}>🤝 Invitaciones pendientes</Text>
@@ -366,6 +377,12 @@ const s = StyleSheet.create({
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   lista: { flex: 1 },
+  panelGestionCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.blueLight, borderRadius: 20, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.blue },
+  panelGestionIconWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  panelGestionIcon: { fontSize: 22 },
+  panelGestionTitulo: { color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 3 },
+  panelGestionSub: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17 },
+  panelGestionChevron: { color: colors.blue, fontSize: 28, fontWeight: '300' },
   card: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
   cardTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 6 },
   cardSub: { color: colors.textMuted, fontSize: 13, marginBottom: 14, lineHeight: 18 },
