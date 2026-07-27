@@ -45,6 +45,8 @@ export default function NotificacionesScreen({ navigation }) {
       navigation.navigate('Confirmacion', { servicioId: sid });
     } else if ((n.tipo === 'pago' || n.tipo === 'resena') && sid) {
       navigation.navigate('MisServicios');
+    } else if (n.tipo === 'invitacion_equipo') {
+      navigation.navigate('Equipo');
     }
   };
 

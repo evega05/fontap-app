@@ -74,6 +74,9 @@ export default function ProyectosScreen({ navigation }) {
       <View style={s.header}>
         <Text style={s.titulo}>🏢 Proyectos</Text>
         <View style={{ flexDirection: 'row', gap: 14 }}>
+          <TouchableOpacity onPress={() => navigation.navigate('Inmuebles')}>
+            <Text style={s.btnNuevoHeader}>Comunidades</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setCreando(true)}>
             <Text style={s.btnNuevoHeader}>+ Nuevo</Text>
           </TouchableOpacity>

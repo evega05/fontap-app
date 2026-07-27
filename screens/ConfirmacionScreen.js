@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { colors } from '../theme';
 import { useAuth } from '../AuthContext';
 import axios from 'axios';
@@ -10,6 +10,8 @@ import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const TIMEOUT_URGENTE_MS = 3 * 60 * 1000; // aviso tras 3 min sin respuesta en urgencias
+const HORAS_REPROGRAMAR = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '15:00', '16:00', '17:00', '18:00'];
+const ESTADOS_REPROGRAMABLES = new Set(['pendiente', 'aceptado', 'precio_enviado', 'precio_aceptado']);
 
 const ESTADOS = {
   pendiente: { emoji: '🔍', titulo: 'Buscando profesional...', sub: 'Tu solicitud ha sido enviada', color: '#FFC043', paso: 1 },
@@ -34,6 +36,10 @@ export default function ConfirmacionScreen({ navigation, route }) {
   const [descargando, setDescargando] = useState(false);
   const [sinRespuesta, setSinRespuesta] = useState(false);
   const [aceptando, setAceptando] = useState(false);
+  const [modalReprogramar, setModalReprogramar] = useState(false);
+  const [diaReprog, setDiaReprog] = useState(0);
+  const [horaReprog, setHoraReprog] = useState(null);
+  const [reprogramando, setReprogramando] = useState(false);
   const desdeRef = useRef(Date.now());
 
   const consultar = useCallback(async () => {
@@ -82,6 +88,31 @@ export default function ConfirmacionScreen({ navigation, route }) {
         setCancelando(false);
       }
     }, { textoConfirmar: 'Sí, cancelar', textoCancelar: 'No' });
+  };
+
+  const abrirReprogramar = () => {
+    setDiaReprog(0);
+    setHoraReprog(null);
+    setModalReprogramar(true);
+  };
+
+  const confirmarReprogramar = async () => {
+    if (!servicioId || !horaReprog) return;
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate() + diaReprog);
+    const [h, m] = horaReprog.split(':').map(Number);
+    fecha.setHours(h, m, 0, 0);
+    setReprogramando(true);
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.put(`${API}/servicios/${servicioId}/reprogramar`, { fecha: fecha.toISOString() }, { headers });
+      setModalReprogramar(false);
+      avisar('Cita reprogramada', 'Se ha avisado a la otra parte del nuevo horario');
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo reprogramar la cita'));
+    } finally {
+      setReprogramando(false);
+    }
   };
 
   const aceptarPrecio = async () => {
@@ -296,6 +327,11 @@ export default function ConfirmacionScreen({ navigation, route }) {
             <Text style={[s.btnPrimarioText, { color: colors.blue }]}>💬 Chatear con el profesional</Text>
           </TouchableOpacity>
         )}
+        {ESTADOS_REPROGRAMABLES.has(estado) && servicioId && (
+          <TouchableOpacity style={s.btnReprogramar} onPress={abrirReprogramar}>
+            <Text style={s.btnReprogramarText}>📅 Reprogramar cita</Text>
+          </TouchableOpacity>
+        )}
         {['pendiente', 'aceptado', 'precio_aceptado', 'en_camino'].includes(estado) && servicioId && (
           <TouchableOpacity style={s.btnRechazar} onPress={cancelarServicio} disabled={cancelando}>
             {cancelando
@@ -313,6 +349,53 @@ export default function ConfirmacionScreen({ navigation, route }) {
           <Text style={[s.btnPrimarioText, { color: colors.textMuted }]}>📋 Ver todos mis servicios</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={modalReprogramar} transparent animationType="fade" onRequestClose={() => setModalReprogramar(false)}>
+        <View style={s.modalFondo}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitulo}>📅 Reprogramar cita</Text>
+            <Text style={s.modalSub}>Elige el nuevo día y hora. Se avisará a la otra parte al momento.</Text>
+
+            <Text style={s.modalLabel}>Día</Text>
+            <View style={s.modalDiasWrap}>
+              {[0, 1, 2, 3, 4, 5, 6].map(i => {
+                const f = new Date();
+                f.setDate(f.getDate() + i);
+                const etiqueta = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][f.getDay()];
+                return (
+                  <TouchableOpacity key={i} style={[s.modalDiaBtn, diaReprog === i && s.modalDiaBtnActivo]}
+                    onPress={() => setDiaReprog(i)}>
+                    <Text style={[s.modalDiaBtnText, diaReprog === i && s.modalDiaBtnTextActivo]}>{etiqueta}</Text>
+                    <Text style={[s.modalDiaBtnNum, diaReprog === i && s.modalDiaBtnTextActivo]}>{f.getDate()}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={s.modalLabel}>Hora</Text>
+            <View style={s.modalHorasWrap}>
+              {HORAS_REPROGRAMAR.map(h => (
+                <TouchableOpacity key={h} style={[s.modalHoraBtn, horaReprog === h && s.modalDiaBtnActivo]}
+                  onPress={() => setHoraReprog(h)}>
+                  <Text style={[s.modalHoraBtnText, horaReprog === h && s.modalDiaBtnTextActivo]}>{h}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[s.btnPago, { marginTop: 20 }, (!horaReprog || reprogramando) && { opacity: 0.5 }]}
+              onPress={confirmarReprogramar}
+              disabled={!horaReprog || reprogramando}>
+              {reprogramando
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={s.btnPagoText}>Confirmar nuevo horario</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 12, alignItems: 'center' }} onPress={() => setModalReprogramar(false)}>
+              <Text style={{ color: colors.textMuted, fontSize: 14 }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -365,4 +448,20 @@ const s = StyleSheet.create({
   btnReciboText: { color: colors.blue, fontWeight: 'bold', fontSize: 16 },
   btnPrimario: { backgroundColor: colors.blue, borderRadius: 14, padding: 16, alignItems: 'center' },
   btnPrimarioText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  btnReprogramar: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.blue },
+  btnReprogramarText: { color: colors.blue, fontWeight: 'bold', fontSize: 16 },
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: colors.bgCard, borderRadius: 20, padding: 22, borderWidth: 1, borderColor: colors.border },
+  modalTitulo: { color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' },
+  modalSub: { color: colors.textMuted, fontSize: 13, textAlign: 'center', marginBottom: 20, lineHeight: 18 },
+  modalLabel: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 10 },
+  modalDiasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  modalDiaBtn: { backgroundColor: colors.bgCard3, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: colors.border, minWidth: 52 },
+  modalDiaBtnActivo: { backgroundColor: colors.blue, borderColor: colors.blue },
+  modalDiaBtnText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  modalDiaBtnNum: { color: colors.text, fontSize: 15, fontWeight: 'bold', marginTop: 2 },
+  modalDiaBtnTextActivo: { color: '#fff' },
+  modalHorasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  modalHoraBtn: { backgroundColor: colors.bgCard3, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.border },
+  modalHoraBtnText: { color: colors.textMuted, fontSize: 13 },
 });

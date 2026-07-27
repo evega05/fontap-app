@@ -24,6 +24,9 @@ function getSaludo() {
   return 'Buenas noches';
 }
 
+const HORAS_REPROGRAMAR = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '15:00', '16:00', '17:00', '18:00'];
+const ESTADOS_REPROGRAMABLES = new Set(['aceptado', 'precio_enviado', 'precio_aceptado']);
+
 const ESTADO_PILL = {
   aceptado: { icon: 'cash-outline', label: 'Falta enviar precio' },
   precio_enviado: { icon: 'hourglass-outline', label: 'Esperando que acepte el precio' },
@@ -45,6 +48,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [trabajoActivo, setTrabajoActivo] = useState(null);
   const [precioFinal, setPrecioFinal] = useState('');
   const [mostrarPrecio, setMostrarPrecio] = useState(false);
+  const [mostrarReprogramar, setMostrarReprogramar] = useState(false);
+  const [diaReprog, setDiaReprog] = useState(0);
+  const [horaReprog, setHoraReprog] = useState(null);
+  const [reprogramando, setReprogramando] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [stats, setStats] = useState(null);
   const [stripeEstado, setStripeEstado] = useState(null);
@@ -59,6 +66,9 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [instruccionesComision, setInstruccionesComision] = useState(null);
   const [cargandoInstrucciones, setCargandoInstrucciones] = useState(false);
   const [yaLlegue, setYaLlegue] = useState(false);
+  const [equipo, setEquipo] = useState([]);
+  const [mostrarAsignar, setMostrarAsignar] = useState(false);
+  const [asignando, setAsignando] = useState(false);
 
   const pollingRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -94,6 +104,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     axios.get(`${API}/fontaneros/${userId}/checklist-perfil`, { headers })
       .then(res => setChecklist(res.data))
       .catch(() => {});
+  }, [userId, token]);
+
+  useEffect(() => {
+    axios.get(`${API}/fontaneros/${userId}/equipo`, { headers })
+      .then(res => setEquipo(res.data || []))
+      .catch(() => setEquipo([]));
   }, [userId, token]);
 
   const conectarStripe = async () => {
@@ -354,6 +370,39 @@ export default function PanelFontaneroScreen({ navigation, route }) {
     }
   };
 
+  const confirmarReprogramar = async () => {
+    if (!trabajoActivo || !horaReprog) return;
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate() + diaReprog);
+    const [h, m] = horaReprog.split(':').map(Number);
+    fecha.setHours(h, m, 0, 0);
+    setReprogramando(true);
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/reprogramar`, { fecha: fecha.toISOString() }, { headers });
+      setMostrarReprogramar(false);
+      avisar('Cita reprogramada', 'Se ha avisado al cliente del nuevo horario');
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo reprogramar la cita'));
+    } finally {
+      setReprogramando(false);
+    }
+  };
+
+  const asignarEmpleado = async (empleado) => {
+    if (!trabajoActivo) return;
+    setAsignando(true);
+    try {
+      await axios.put(`${API}/servicios/${trabajoActivo.id}/asignar-empleado`, { empleado_fontanero_id: empleado.id }, { headers });
+      setMostrarAsignar(false);
+      setTrabajoActivo(null);
+      avisar('Trabajo asignado', `Se le ha asignado a ${empleado.nombre}`);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo asignar el trabajo'));
+    } finally {
+      setAsignando(false);
+    }
+  };
+
   const cancelarTrabajo = () => {
     if (!trabajoActivo) return;
     confirmarAccion('Cancelar trabajo', '¿Seguro que quieres cancelar este trabajo?', async () => {
@@ -400,6 +449,78 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             </Pressable>
             <TouchableOpacity onPress={() => setMostrarPrecio(false)} style={s.modalCancelar}>
               <Text style={s.modalCancelarText}>Seguir trabajando</Text>
+            </TouchableOpacity>
+          </Glass>
+        </View>
+      )}
+
+      {mostrarReprogramar && trabajoActivo && (
+        <View style={s.modalOverlay}>
+          <Glass strong style={s.modal}>
+            <View style={s.modalIconWrap}>
+              <Ionicons name="calendar" size={22} color={colors.accent2} />
+            </View>
+            <Text style={s.modalTitulo}>Reprogramar cita</Text>
+            <Text style={s.modalSub}>Elige el nuevo día y hora. Se avisará al cliente al momento.</Text>
+
+            <Text style={s.reprogLabel}>Día</Text>
+            <View style={s.reprogDiasWrap}>
+              {[0, 1, 2, 3, 4, 5, 6].map(i => {
+                const f = new Date();
+                f.setDate(f.getDate() + i);
+                const etiqueta = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][f.getDay()];
+                return (
+                  <TouchableOpacity key={i} style={[s.reprogDiaBtn, diaReprog === i && s.reprogBtnActivo]}
+                    onPress={() => setDiaReprog(i)}>
+                    <Text style={[s.reprogDiaBtnText, diaReprog === i && s.reprogBtnTextActivo]}>{etiqueta}</Text>
+                    <Text style={[s.reprogDiaBtnNum, diaReprog === i && s.reprogBtnTextActivo]}>{f.getDate()}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={s.reprogLabel}>Hora</Text>
+            <View style={s.reprogHorasWrap}>
+              {HORAS_REPROGRAMAR.map(h => (
+                <TouchableOpacity key={h} style={[s.reprogHoraBtn, horaReprog === h && s.reprogBtnActivo]}
+                  onPress={() => setHoraReprog(h)}>
+                  <Text style={[s.reprogHoraBtnText, horaReprog === h && s.reprogBtnTextActivo]}>{h}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Pressable haptic disabled={!horaReprog || reprogramando} onPress={confirmarReprogramar} style={(!horaReprog || reprogramando) && s.modalBtnDesactivado}>
+              <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[s.modalBtn, { marginTop: spacing.md }]}>
+                <Text style={s.modalBtnText}>Confirmar nuevo horario</Text>
+                <Ionicons name="checkmark" size={16} color={colors.text} />
+              </LinearGradient>
+            </Pressable>
+            <TouchableOpacity onPress={() => setMostrarReprogramar(false)} style={s.modalCancelar}>
+              <Text style={s.modalCancelarText}>Cancelar</Text>
+            </TouchableOpacity>
+          </Glass>
+        </View>
+      )}
+
+      {mostrarAsignar && trabajoActivo && (
+        <View style={s.modalOverlay}>
+          <Glass strong style={s.modal}>
+            <View style={s.modalIconWrap}>
+              <Ionicons name="people" size={22} color={colors.accent2} />
+            </View>
+            <Text style={s.modalTitulo}>Asignar a mi equipo</Text>
+            <Text style={s.modalSub}>Elige quién de tu equipo se encargará de este trabajo</Text>
+            {equipo.map(m => (
+              <Pressable key={m.id} haptic disabled={asignando} onPress={() => asignarEmpleado(m)} style={s.miembroEquipoRow}>
+                <View>
+                  <Text style={s.miembroEquipoNombre}>{m.nombre}</Text>
+                  <Text style={s.miembroEquipoSub}>{m.disponible ? '🟢 Disponible' : '⚪ No disponible'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Pressable>
+            ))}
+            <TouchableOpacity onPress={() => setMostrarAsignar(false)} style={s.modalCancelar}>
+              <Text style={s.modalCancelarText}>Cancelar</Text>
             </TouchableOpacity>
           </Glass>
         </View>
@@ -602,6 +723,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </LinearGradient>
             </Pressable>
           )}
+          {trabajoActivo.estado === 'aceptado' && equipo.length > 0 && (
+            <Pressable style={s.enCursoChatBtn} haptic onPress={() => setMostrarAsignar(true)}>
+              <Ionicons name="people-outline" size={15} color={colors.textMuted} />
+              <Text style={s.enCursoChatText}>Asignar a mi equipo</Text>
+            </Pressable>
+          )}
           {trabajoActivo.estado === 'precio_aceptado' && (
             <Pressable style={s.enCaminoBtn} haptic onPress={marcarEnCamino}>
               <Ionicons name="car-sport" size={16} color={colors.blue} />
@@ -657,6 +784,12 @@ export default function PanelFontaneroScreen({ navigation, route }) {
             <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
             <Text style={s.enCursoChatText}>Chat con cliente</Text>
           </Pressable>
+          {ESTADOS_REPROGRAMABLES.has(trabajoActivo.estado) && (
+            <Pressable style={s.enCursoChatBtn} haptic onPress={() => { setDiaReprog(0); setHoraReprog(null); setMostrarReprogramar(true); }}>
+              <Ionicons name="calendar-outline" size={15} color={colors.textMuted} />
+              <Text style={s.enCursoChatText}>Reprogramar cita</Text>
+            </Pressable>
+          )}
           <Pressable style={s.enCursoCancelarBtn} haptic onPress={cancelarTrabajo}>
             <Text style={s.enCursoCancelarText}>Cancelar trabajo</Text>
           </Pressable>
@@ -874,6 +1007,19 @@ const s = StyleSheet.create({
   modalBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
   modalCancelar: { marginTop: spacing.md, alignItems: 'center' },
   modalCancelarText: { color: colors.textMuted, fontSize: 14 },
+  reprogLabel: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: spacing.sm },
+  reprogDiasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.lg },
+  reprogDiaBtn: { backgroundColor: colors.bgCard2, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: colors.border2, minWidth: 50 },
+  reprogDiaBtnText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  reprogDiaBtnNum: { color: colors.text, fontSize: 15, fontWeight: 'bold', marginTop: 2 },
+  reprogHorasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  reprogHoraBtn: { backgroundColor: colors.bgCard2, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.border2 },
+  reprogHoraBtnText: { color: colors.textMuted, fontSize: 13 },
+  reprogBtnActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
+  reprogBtnTextActivo: { color: colors.text },
+  miembroEquipoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border2 },
+  miembroEquipoNombre: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
+  miembroEquipoSub: { color: colors.textMuted, fontSize: 12 },
   header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   tabBar: {
