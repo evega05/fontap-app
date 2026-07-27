@@ -189,7 +189,7 @@ export default function EquipoScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={s.back}>← Volver</Text>
         </TouchableOpacity>
-        <Text style={s.titulo}>Mi equipo</Text>
+        <Text style={s.titulo}>Administración</Text>
         <View style={{ width: 60 }} />
       </View>
 

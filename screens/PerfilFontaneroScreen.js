@@ -410,12 +410,21 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               );
             })}
 
-            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: { usuario_id: userId, nombre } })}>
-              <Text style={s.linkTerminosText}>👁️ Ver vista previa de tu perfil público</Text>
+            <Pressable haptic onPress={() => navigation.navigate('Equipo')}>
+              <Glass style={s.adminCard}>
+                <LinearGradient colors={[colors.accent, colors.accent2]} style={s.adminIconWrap}>
+                  <Ionicons name="business" size={22} color="#fff" />
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.adminTitulo}>Administración</Text>
+                  <Text style={s.adminSub}>Registra tu empresa, gestiona tu equipo y tu panel de gestión</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={colors.textFaint} />
+              </Glass>
             </Pressable>
 
-            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('Equipo')}>
-              <Text style={s.linkTerminosText}>👥 Mi equipo</Text>
+            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: { usuario_id: userId, nombre } })}>
+              <Text style={s.linkTerminosText}>👁️ Ver vista previa de tu perfil público</Text>
             </Pressable>
 
             <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
@@ -678,6 +687,10 @@ const s = StyleSheet.create({
   docBtnText: { color: colors.blue, fontSize: 12.5, fontWeight: '700' },
   linkTerminos: { alignItems: 'center', paddingVertical: spacing.lg },
   linkTerminosText: { color: colors.textFaint, fontSize: 12.5, textDecorationLine: 'underline' },
+  adminCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.md, marginTop: spacing.md },
+  adminIconWrap: { width: 48, height: 48, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
+  adminTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 3 },
+  adminSub: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
   diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
   diaCardInactivo: { opacity: 0.5 },
   diaNombre: { color: colors.text, fontWeight: '500', fontSize: 14, flex: 1 },
