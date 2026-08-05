@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import * as Location from 'expo-location';
-import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../AuthContext';
 import { colors, spacing, radius, type, shadow } from '../theme';
 import Pressable from '../components/Pressable';
@@ -63,13 +62,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   const [reprogramando, setReprogramando] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [stats, setStats] = useState(null);
-  const [stripeEstado, setStripeEstado] = useState(null);
   const [comisionPendiente, setComisionPendiente] = useState(0);
   const [comisionNumServicios, setComisionNumServicios] = useState(0);
   const [comisionLimite, setComisionLimite] = useState(10);
-  const [conectandoStripe, setConectandoStripe] = useState(false);
   const [checklist, setChecklist] = useState(null);
-  const [pagandoComision, setPagandoComision] = useState(false);
   const [mostrarPagoComision, setMostrarPagoComision] = useState(false);
   const [metodoComisionElegido, setMetodoComisionElegido] = useState(null);
   const [instruccionesComision, setInstruccionesComision] = useState(null);
@@ -92,11 +88,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   const cargarCobros = useCallback(async () => {
     try {
-      const [resEstado, resComision] = await Promise.all([
-        axios.get(`${API}/fontaneros/${userId}/stripe/estado`, { headers }),
-        axios.get(`${API}/fontaneros/${userId}/comision-pendiente`, { headers }),
-      ]);
-      setStripeEstado(resEstado.data);
+      const resComision = await axios.get(`${API}/fontaneros/${userId}/comision-pendiente`, { headers });
       setComisionPendiente(resComision.data.total || 0);
       setComisionNumServicios(resComision.data.num_servicios || 0);
       setComisionLimite(resComision.data.limite_servicios || 10);
@@ -128,36 +120,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       .catch(() => {});
   }, [userId, token]);
 
-  const conectarStripe = async () => {
-    setConectandoStripe(true);
-    try {
-      const res = await axios.post(`${API}/fontaneros/${userId}/stripe/conectar`, {}, { headers });
-      await WebBrowser.openBrowserAsync(res.data.onboarding_url);
-      cargarCobros();
-    } catch (e) {
-      avisar('Error', mensajeError(e, 'No se pudo conectar con Stripe'));
-    } finally {
-      setConectandoStripe(false);
-    }
-  };
-
-  const pagarComisionPendiente = async () => {
-    setPagandoComision(true);
-    try {
-      const res = await axios.post(`${API}/fontaneros/${userId}/comision-pendiente/pagar`, {}, { headers });
-      await WebBrowser.openBrowserAsync(res.data.checkout_url);
-      const verif = await axios.post(`${API}/fontaneros/${userId}/comision-pendiente/verificar`, {}, { headers });
-      if (verif.data.liquidada) {
-        setComisionPendiente(0);
-        avisar('Listo', 'Comisión pendiente liquidada');
-      }
-    } catch (e) {
-      avisar('Error', mensajeError(e, 'No se pudo procesar el pago'));
-    } finally {
-      setPagandoComision(false);
-    }
-  };
-
   const cerrarModalComision = () => {
     setMostrarPagoComision(false);
     setMetodoComisionElegido(null);
@@ -165,11 +127,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
   };
 
   const elegirMetodoComision = async (metodo) => {
-    if (metodo === 'tarjeta') {
-      cerrarModalComision();
-      pagarComisionPendiente();
-      return;
-    }
     setMetodoComisionElegido(metodo);
     setCargandoInstrucciones(true);
     try {
@@ -670,19 +627,6 @@ export default function PanelFontaneroScreen({ navigation, route }) {
         </Glass>
       </View>
 
-      {stripeEstado && !stripeEstado.cobros_activos && (
-        <Glass style={s.cobrosCard}>
-          <Ionicons name="card-outline" size={18} color={colors.accent2} />
-          <View style={{ flex: 1 }}>
-            <Text style={s.cobrosTitulo}>Cobra directo a tu cuenta</Text>
-            <Text style={s.cobrosSub}>Conecta tu cuenta bancaria para recibir los pagos con tarjeta automáticamente</Text>
-          </View>
-          <Pressable style={s.cobrosBtn} haptic onPress={conectarStripe} disabled={conectandoStripe}>
-            <Text style={s.cobrosBtnText}>{conectandoStripe ? '...' : 'Conectar'}</Text>
-          </Pressable>
-        </Glass>
-      )}
-
       {comisionPendiente > 0 && (
         <Glass style={s.cobrosCard} colorTint={colors.amberGlass}>
           <Ionicons name="alert-circle-outline" size={18} color={colors.amber} />
@@ -697,8 +641,8 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </Text>
             )}
           </View>
-          <Pressable style={s.cobrosBtn} haptic onPress={() => setMostrarPagoComision(true)} disabled={pagandoComision}>
-            <Text style={s.cobrosBtnText}>{pagandoComision ? '...' : 'Pagar'}</Text>
+          <Pressable style={s.cobrosBtn} haptic onPress={() => setMostrarPagoComision(true)}>
+            <Text style={s.cobrosBtnText}>Pagar</Text>
           </Pressable>
         </Glass>
       )}
@@ -714,13 +658,10 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
             {!metodoComisionElegido && (
               <View style={{ gap: 10, width: '100%', marginTop: 8 }}>
-                <Pressable haptic onPress={() => elegirMetodoComision('tarjeta')}>
+                <Pressable haptic onPress={() => elegirMetodoComision('bizum')}>
                   <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalBtn}>
-                    <Text style={s.modalBtnText}>💳 Pagar con tarjeta</Text>
+                    <Text style={s.modalBtnText}>📱 Pagar por Bizum</Text>
                   </LinearGradient>
-                </Pressable>
-                <Pressable style={s.metodoComisionBtn} haptic onPress={() => elegirMetodoComision('bizum')}>
-                  <Text style={s.metodoComisionBtnText}>📱 Pagar por Bizum</Text>
                 </Pressable>
                 <Pressable style={s.metodoComisionBtn} haptic onPress={() => elegirMetodoComision('transferencia')}>
                   <Text style={s.metodoComisionBtnText}>🏦 Pagar por transferencia</Text>
@@ -728,7 +669,7 @@ export default function PanelFontaneroScreen({ navigation, route }) {
               </View>
             )}
 
-            {metodoComisionElegido && metodoComisionElegido !== 'tarjeta' && (
+            {metodoComisionElegido && (
               <View style={{ width: '100%', marginTop: 8 }}>
                 {cargandoInstrucciones ? (
                   <Text style={s.modalSub}>Cargando instrucciones…</Text>

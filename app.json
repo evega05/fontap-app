@@ -44,13 +44,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.fontap.app",
-          "enableGooglePay": true
-        }
-      ],
       "expo-font",
       [
         "expo-location",

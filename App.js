@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import axios from 'axios';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider, useAuth } from './AuthContext';
-import StripeWrapper from './StripeWrapper';
 import { rutaParaNotificacion } from './pushNavigation';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
@@ -179,13 +178,11 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StripeWrapper>
-        <AuthProvider>
-          <IdiomaProvider>
-            <NavegadorPrincipal />
-          </IdiomaProvider>
-        </AuthProvider>
-      </StripeWrapper>
+      <AuthProvider>
+        <IdiomaProvider>
+          <NavegadorPrincipal />
+        </IdiomaProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }
