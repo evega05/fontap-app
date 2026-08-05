@@ -1,6 +1,6 @@
 ---
 name: copy-reviewer
-description: Revisa el tono, la longitud y la consistencia de los textos visibles al usuario (Text, placeholders, mensajes de error/confirmación) en una pantalla de fontap-app, comparándolos con el estilo ya establecido en el resto de la app. Usar cuando se pide revisar/mejorar la redacción, el copy, o los mensajes que ve el usuario. NO usar para revisar calidad o estructura del código (esa es la skill global simplify de Claude Code) — esta skill mira solo el contenido de los textos, no el código que los rodea.
+description: Revisa el tono, la longitud y la consistencia de los textos visibles al usuario (Text, placeholders, mensajes de error/confirmación) en una pantalla de fontap-app, comparándolos con el estilo ya establecido en el resto de la app. Usar cuando se pide revisar/mejorar la redacción, el tono, o cómo suenan los mensajes que ve el usuario (texto ya en español, sin importar si está o no en i18n.js). NO usar para revisar calidad o estructura del código (esa es la skill global simplify de Claude Code) — esta skill mira solo el contenido de los textos, no el código que los rodea. NO usar para cobertura de idiomas o claves faltantes en euskera/inglés (esa es la skill i18n-audit) — esta skill nunca evalúa si un texto está traducido, solo si está bien escrito en el idioma en que ya está.
 ---
 
 # Revisor de copy

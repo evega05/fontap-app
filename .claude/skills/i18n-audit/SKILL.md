@@ -1,6 +1,6 @@
 ---
 name: i18n-audit
-description: Recorre i18n.js de fontap-app y señala claves de traducción que falten en español, euskera o inglés, o textos nuevos en pantallas que todavía no pasaron por el sistema de traducción. Usar cuando se pregunta por cobertura de idiomas, textos sin traducir, o antes de dar por terminada una feature que agrega texto visible nuevo.
+description: Recorre i18n.js de fontap-app y señala claves de traducción que falten en español, euskera o inglés, o textos nuevos en pantallas que todavía no pasaron por el sistema de traducción. Usar específicamente cuando se pregunta por cobertura de idiomas, claves faltantes en eu/en, o textos sin pasar por t('clave'). NO usar para revisar tono, longitud o redacción de un texto que ya está traducido (esa es la skill copy-reviewer) — esta skill solo verifica que el texto exista en los 3 idiomas, no si está bien escrito.
 ---
 
 # Auditor de traducciones
