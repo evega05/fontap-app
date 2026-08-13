@@ -299,7 +299,7 @@ export default function ConfirmacionScreen({ navigation, route }) {
             </View>
             <TouchableOpacity style={s.btnPago}
               onPress={() => navigation.navigate('Pago', { fontanero, servicio: tipo, precio, servicioId })}>
-              <Text style={s.btnPagoText}>💳 Pagar {precio}€</Text>
+              <Text style={s.btnPagoText}>💶 Pagar {precio}€</Text>
             </TouchableOpacity>
           </>
         )}

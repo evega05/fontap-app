@@ -60,7 +60,7 @@ export default function NotificacionesScreen({ navigation }) {
   const noLeidas = notifs.filter(n => !esLeida(n)).length;
 
   const tipoIcono = (tipo) => {
-    const iconos = { nuevo_servicio: '🔔', aceptado: '✅', precio: '💰', pago: '💳', resena: '⭐', sistema: 'ℹ️' };
+    const iconos = { nuevo_servicio: '🔔', aceptado: '✅', precio: '💰', pago: '💶', resena: '⭐', sistema: 'ℹ️' };
     return iconos[tipo] || '🔔';
   };
 

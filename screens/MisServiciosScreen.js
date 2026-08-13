@@ -135,7 +135,7 @@ export default function MisServiciosScreen({ navigation, route }) {
                   )}
                   {sv.estado === 'completado' && (
                     <View style={s.btnPagarWrap}>
-                      <Text style={s.btnPagarText}>💳 Tocar para pagar {sv.precio}€ →</Text>
+                      <Text style={s.btnPagarText}>💶 Tocar para pagar {sv.precio}€ →</Text>
                     </View>
                   )}
                 </TouchableOpacity>

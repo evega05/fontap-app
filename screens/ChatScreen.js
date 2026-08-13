@@ -322,7 +322,7 @@ export default function ChatScreen({ navigation, route }) {
 
           {usuario?.tipo === 'cliente' && servicio.estado === 'completado' && (
             <TouchableOpacity style={s.estadoBtnVerde} onPress={irAPagar}>
-              <Text style={s.estadoBtnVerdeText}>💳 Pagar {servicio.precio}€</Text>
+              <Text style={s.estadoBtnVerdeText}>💶 Pagar {servicio.precio}€</Text>
             </TouchableOpacity>
           )}
 

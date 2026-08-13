@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import axios from 'axios';
-import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../AuthContext';
 import { mensajeError } from '../errores';
 
@@ -20,7 +19,7 @@ export default function PagoScreen({ navigation, route }) {
   const [pagado, setPagado] = useState(false);
   const [yaPagadoAlEntrar, setYaPagadoAlEntrar] = useState(false);
   const [error, setError] = useState('');
-  const [metodoPago, setMetodoPago] = useState('tarjeta');
+  const [metodoPago, setMetodoPago] = useState('efectivo');
   const [bizumInfo, setBizumInfo] = useState(null);
   const [cargandoBizum, setCargandoBizum] = useState(false);
 
@@ -28,39 +27,14 @@ export default function PagoScreen({ navigation, route }) {
   const redireccionRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-  // El pago con tarjeta queda confirmado al instante (Stripe ya verificó el cargo),
-  // así que ahí sí se puede ir directo a la reseña. Efectivo y Bizum solo quedan
-  // "declarados" por el cliente: el backend exige estado "pagado" para reseñar, y ese
-  // estado solo llega cuando el profesional confirma la recepción, así que llevamos
-  // al cliente a Mis Servicios en vez de a una reseña que el backend rechazaría.
+  // Efectivo y Bizum solo quedan "declarados" por el cliente: el backend exige
+  // estado "pagado" para reseñar, y ese estado solo llega cuando el profesional
+  // confirma la recepción, así que llevamos al cliente a Mis Servicios en vez de
+  // a una reseña que el backend rechazaría hasta esa confirmación.
   const marcarPagado = () => {
     setCargando(false);
     setPagado(true);
-    if (metodoPago === 'tarjeta') {
-      redireccionRef.current = setTimeout(() => navigation.navigate('Resena', { fontanero, tipo: servicio, servicioId }), 2000);
-    } else {
-      redireccionRef.current = setTimeout(() => navigation.navigate('MisServicios'), 2500);
-    }
-  };
-
-  const pagarConTarjeta = async () => {
-    setCargando(true);
-    setError('');
-    try {
-      const res = await axios.post(`${API}/servicios/${servicioId}/stripe/crear-checkout`, {}, { headers });
-      await WebBrowser.openBrowserAsync(res.data.checkout_url);
-      // Al volver del navegador, comprobamos directamente con Stripe si se pagó de verdad
-      const verif = await axios.post(`${API}/servicios/${servicioId}/stripe/verificar`, {}, { headers });
-      if (verif.data.pagado) {
-        marcarPagado();
-      } else {
-        setCargando(false);
-        setError('El pago no se completó. Puedes intentarlo de nuevo.');
-      }
-    } catch (e) {
-      setCargando(false);
-      setError(mensajeError(e, 'Error al procesar el pago. Inténtalo de nuevo.'));
-    }
+    redireccionRef.current = setTimeout(() => navigation.navigate('MisServicios'), 2500);
   };
 
   const cargarBizum = async () => {
@@ -128,7 +102,6 @@ export default function PagoScreen({ navigation, route }) {
 
   const pagar = () => {
     if (!precio || !servicioId) return;
-    if (metodoPago === 'tarjeta') return pagarConTarjeta();
     if (metodoPago === 'efectivo') return pagarEfectivo();
     if (metodoPago === 'bizum') return confirmarBizum();
   };
@@ -162,20 +135,16 @@ export default function PagoScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
         <View style={s.centro}>
-          <Text style={s.emoji}>{metodoPago === 'efectivo' ? '💵' : metodoPago === 'bizum' ? '📱' : '💳'}✅</Text>
-          <Text style={s.titulo}>{metodoPago === 'tarjeta' ? '¡Pago completado!' : 'Aviso enviado'}</Text>
+          <Text style={s.emoji}>{metodoPago === 'efectivo' ? '💵' : '📱'}✅</Text>
+          <Text style={s.titulo}>Aviso enviado</Text>
           <Text style={s.sub}>
             {metodoPago === 'efectivo'
               ? 'Recuerda pagar en efectivo al profesional. Quedará confirmado cuando él lo reciba.'
-              : metodoPago === 'bizum'
-              ? 'El profesional ha recibido un aviso para confirmar que le llegó el Bizum.'
-              : 'Pago procesado correctamente'}
+              : 'El profesional ha recibido un aviso para confirmar que le llegó el Bizum.'}
           </Text>
-          {metodoPago !== 'tarjeta' && (
-            <Text style={[s.sub, { marginTop: -20 }]}>
-              Podrás dejar tu reseña desde "Mis servicios" en cuanto el profesional confirme el pago.
-            </Text>
-          )}
+          <Text style={[s.sub, { marginTop: -20 }]}>
+            Podrás dejar tu reseña desde "Mis servicios" en cuanto el profesional confirme el pago.
+          </Text>
         </View>
       </View>
     );
@@ -190,7 +159,7 @@ export default function PagoScreen({ navigation, route }) {
       </View>
 
       <View style={s.contenido}>
-        <Text style={s.emoji}>💳</Text>
+        <Text style={s.emoji}>💶</Text>
         <Text style={s.titulo}>Pagar el servicio</Text>
 
         {/* Mostrar estado de espera si el profesional no envió precio */}
@@ -225,7 +194,6 @@ export default function PagoScreen({ navigation, route }) {
 
             <View style={s.metodosRow}>
               {[
-                { id: 'tarjeta', emoji: '💳', label: 'Tarjeta' },
                 { id: 'efectivo', emoji: '💵', label: 'Efectivo' },
                 { id: 'bizum', emoji: '📱', label: 'Bizum' },
               ].map(m => (
@@ -238,16 +206,6 @@ export default function PagoScreen({ navigation, route }) {
                 </TouchableOpacity>
               ))}
             </View>
-
-            {metodoPago === 'tarjeta' && (
-              <View style={s.infoBox}>
-                <Text style={s.infoText}>💳 Pago seguro con tarjeta</Text>
-                <Text style={s.infoSub}>
-                  Se abrirá la página segura de Stripe para introducir los datos de tu tarjeta.
-                  Multiservicios Provenza nunca ve ni guarda tu número de tarjeta.
-                </Text>
-              </View>
-            )}
 
             {metodoPago === 'efectivo' && (
               <View style={s.infoBox}>
@@ -294,13 +252,12 @@ export default function PagoScreen({ navigation, route }) {
                   <Text style={s.btnPagarText}>
                     {metodoPago === 'efectivo' && 'Confirmar pago en efectivo'}
                     {metodoPago === 'bizum' && 'Ya he pagado por Bizum'}
-                    {metodoPago === 'tarjeta' && `Pagar ${precio}€ →`}
                   </Text>
                 )}
               </TouchableOpacity>
             )}
 
-            <Text style={s.seguro}>🔒 Transacción segura</Text>
+            <Text style={s.seguro}>🔒 El pago se acuerda directamente con el profesional</Text>
           </>
         )}
       </View>

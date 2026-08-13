@@ -26,6 +26,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.fontap.app",
+      "versionCode": 1,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyA7ySPuuzWVj_rMIQU35VJk_XiVM-FSgAA"
@@ -44,13 +45,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.fontap.app",
-          "enableGooglePay": true
-        }
-      ],
       "expo-font",
       [
         "expo-location",
@@ -73,7 +67,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#0057D8"
         }
-      ]
+      ],
+      "./plugins/withAndroidReleaseSigning.js"
     ],
     "extra": {
       "eas": {

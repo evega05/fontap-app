@@ -275,7 +275,7 @@ function estadoColor(e) {
 }
 function estadoLabel(e) {
   if (e === 'aceptado') return '✅ Confirmado';
-  if (e === 'pagado') return '💳 Pagado';
+  if (e === 'pagado') return '💶 Pagado';
   if (e === 'completado') return '✓ Completado';
   return '⏳ Pendiente';
 }
