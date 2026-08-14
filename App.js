@@ -39,6 +39,7 @@ import VerificarEmailScreen from './screens/VerificarEmailScreen';
 import AjustesCuentaScreen from './screens/AjustesCuentaScreen';
 import EquipoScreen from './screens/EquipoScreen';
 import PanelEmpleadoScreen from './screens/PanelEmpleadoScreen';
+import TareaChatScreen from './screens/TareaChatScreen';
 import PanelGestionScreen from './screens/PanelGestionScreen';
 import SeguimientoScreen from './screens/SeguimientoScreen';
 import { IdiomaProvider } from './i18n';
@@ -162,6 +163,7 @@ function NavegadorPrincipal() {
         <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Equipo" component={EquipoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PanelEmpleado" component={PanelEmpleadoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TareaChat" component={TareaChatScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PanelGestion" component={PanelGestionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Seguimiento" component={SeguimientoScreen} options={{ headerShown: false }} />
         </Stack.Navigator>

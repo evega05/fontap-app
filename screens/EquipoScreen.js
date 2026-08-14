@@ -19,6 +19,25 @@ const TAREA_ESTADO_COLOR = {
   en_camino: { backgroundColor: colors.greenGlass },
 };
 
+// Sin selector de fecha nativo (evita sumar una dependencia solo para esto): unas
+// pocas opciones rápidas cubren el uso real de "instrucción para dentro de un rato".
+const OPCIONES_FECHA_INSTRUCCION = [
+  { label: 'En 1h', calcular: () => new Date(Date.now() + 60 * 60000) },
+  { label: 'En 3h', calcular: () => new Date(Date.now() + 3 * 60 * 60000) },
+  { label: 'Mañana 9:00', calcular: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; } },
+];
+
+function formatFechaCorta(fecha) {
+  if (!fecha) return null;
+  const hora = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const ahora = new Date();
+  if (fecha.toDateString() === ahora.toDateString()) return `Hoy · ${hora}`;
+  const mañana = new Date(ahora);
+  mañana.setDate(mañana.getDate() + 1);
+  if (fecha.toDateString() === mañana.toDateString()) return `Mañana · ${hora}`;
+  return `${fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · ${hora}`;
+}
+
 const RADIO_DIAL_COMISION = 40;
 const CIRCUNFERENCIA_DIAL_COMISION = 2 * Math.PI * RADIO_DIAL_COMISION;
 
@@ -47,6 +66,9 @@ export default function EquipoScreen({ navigation }) {
   const [miembroSeleccionado, setMiembroSeleccionado] = useState(null);
   const [instruccionTexto, setInstruccionTexto] = useState('');
   const [enviandoInstruccion, setEnviandoInstruccion] = useState(false);
+  const [urgenteInstruccion, setUrgenteInstruccion] = useState(false);
+  const [fechaInstruccion, setFechaInstruccion] = useState(null);
+  const [fechaInstruccionLabel, setFechaInstruccionLabel] = useState(null);
 
   const cargar = useCallback(async () => {
     if (!usuario?.id) { setCargando(false); return; }
@@ -182,8 +204,13 @@ export default function EquipoScreen({ navigation }) {
       await axios.post(`${API}/tareas`, {
         empleado_fontanero_id: miembroSeleccionado.id,
         descripcion: instruccionTexto.trim(),
+        urgente: urgenteInstruccion,
+        fecha_objetivo: fechaInstruccion ? fechaInstruccion.toISOString() : null,
       }, { headers });
       setInstruccionTexto('');
+      setUrgenteInstruccion(false);
+      setFechaInstruccion(null);
+      setFechaInstruccionLabel(null);
       const resTareas = await axios.get(`${API}/fontaneros/${usuario.id}/tareas-equipo`, { headers });
       setTareasEquipo(resTareas.data || []);
     } catch (e) {
@@ -421,7 +448,7 @@ export default function EquipoScreen({ navigation }) {
                         </View>
                       ) : (
                         equipo.map(m => (
-                          <TouchableOpacity key={m.id} style={s.miembroCard} activeOpacity={0.8} onPress={() => setMiembroSeleccionado(m)}>
+                          <TouchableOpacity key={m.id} style={s.miembroCard} activeOpacity={0.8} onPress={() => { setMiembroSeleccionado(m); setUrgenteInstruccion(false); setFechaInstruccion(null); setFechaInstruccionLabel(null); }}>
                             <View style={s.miembroLeft}>
                               <View style={s.avatar}><Text style={s.avatarText}>{(m.nombre || '?')[0].toUpperCase()}</Text></View>
                               <View>
@@ -527,6 +554,34 @@ export default function EquipoScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
+            <View style={s.instruccionOpciones}>
+              <TouchableOpacity
+                style={[s.chipOpcion, urgenteInstruccion && s.chipOpcionUrgenteActiva]}
+                onPress={() => setUrgenteInstruccion(v => !v)}
+              >
+                <Ionicons name="alert-circle-outline" size={13} color={urgenteInstruccion ? colors.red : colors.textMuted} />
+                <Text style={[s.chipOpcionText, urgenteInstruccion && { color: colors.red }]}>Urgente</Text>
+              </TouchableOpacity>
+              {OPCIONES_FECHA_INSTRUCCION.map(op => {
+                const activa = fechaInstruccionLabel === op.label;
+                return (
+                  <TouchableOpacity
+                    key={op.label}
+                    style={[s.chipOpcion, activa && s.chipOpcionActiva]}
+                    onPress={() => {
+                      if (activa) { setFechaInstruccion(null); setFechaInstruccionLabel(null); }
+                      else { setFechaInstruccion(op.calcular()); setFechaInstruccionLabel(op.label); }
+                    }}
+                  >
+                    <Text style={[s.chipOpcionText, activa && { color: colors.text, fontWeight: '700' }]}>{op.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {fechaInstruccion && (
+              <Text style={s.instruccionFechaHint}>Se enviará para: {formatFechaCorta(fechaInstruccion)}</Text>
+            )}
+
             <Text style={s.sheetLabel}>Tareas activas</Text>
             {tareasEquipo.filter(t => t.empleado_id === miembroSeleccionado.id).length === 0 ? (
               <Text style={s.sheetVacio}>No tiene tareas activas ahora mismo</Text>
@@ -534,6 +589,16 @@ export default function EquipoScreen({ navigation }) {
               tareasEquipo.filter(t => t.empleado_id === miembroSeleccionado.id).map(t => (
                 <View key={t.id} style={s.sheetTareaRow}>
                   <View style={{ flex: 1 }}>
+                    <View style={s.sheetTareaBadgesRow}>
+                      {t.urgente && (
+                        <View style={s.sheetUrgenteBadge}>
+                          <Text style={s.sheetUrgenteBadgeText}>Urgente</Text>
+                        </View>
+                      )}
+                      {t.fecha_objetivo && (
+                        <Text style={s.sheetTareaFecha}>{formatFechaCorta(new Date(t.fecha_objetivo))}</Text>
+                      )}
+                    </View>
                     <Text style={s.sheetTareaDescripcion} numberOfLines={2}>{t.descripcion}</Text>
                     {t.estado === 'en_camino' && t.empleado_latitud != null && (
                       <Text style={s.sheetTareaUbicacion}>📍 Compartiendo ubicación en vivo</Text>
@@ -654,10 +719,20 @@ const s = StyleSheet.create({
   sheetNombre: { flex: 1, color: colors.text, fontWeight: '800', fontSize: 16 },
   sheetCerrar: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
   sheetLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 4 },
-  sheetInputRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end', marginBottom: 18 },
+  sheetInputRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end', marginBottom: 10 },
   btnEnviarInstruccion: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  instruccionOpciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
+  chipOpcion: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.bgCard2, borderRadius: 999, borderWidth: 1, borderColor: colors.border2, paddingHorizontal: 10, paddingVertical: 6 },
+  chipOpcionActiva: { backgroundColor: colors.blueLight, borderColor: colors.blue },
+  chipOpcionUrgenteActiva: { backgroundColor: colors.redGlass, borderColor: colors.red },
+  chipOpcionText: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
+  instruccionFechaHint: { color: colors.textFaint, fontSize: 11, marginBottom: 14 },
   sheetVacio: { color: colors.textFaint, fontSize: 13 },
   sheetTareaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 8 },
+  sheetTareaBadgesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+  sheetUrgenteBadge: { backgroundColor: colors.redGlass, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
+  sheetUrgenteBadgeText: { color: colors.red, fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
+  sheetTareaFecha: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600' },
   sheetTareaDescripcion: { color: colors.text, fontSize: 13, lineHeight: 18 },
   sheetTareaUbicacion: { color: colors.green, fontSize: 11, fontWeight: '600', marginTop: 3 },
   sheetEstadoPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
