@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../AuthContext';
@@ -9,6 +11,9 @@ import { mensajeError } from '../errores';
 import { agregarArchivo } from '../subirArchivo';
 
 const API = 'https://fontap-backend-production.up.railway.app';
+
+const RADIO_DIAL_COMISION = 40;
+const CIRCUNFERENCIA_DIAL_COMISION = 2 * Math.PI * RADIO_DIAL_COMISION;
 
 export default function EquipoScreen({ navigation }) {
   const { usuario, token } = useAuth();
@@ -22,6 +27,7 @@ export default function EquipoScreen({ navigation }) {
   const [guardandoNombre, setGuardandoNombre] = useState(false);
   const [emailInvitar, setEmailInvitar] = useState('');
   const [invitando, setInvitando] = useState(false);
+  const [mostrarInvitar, setMostrarInvitar] = useState(false);
   const [aceptando, setAceptando] = useState(null);
   const [saliendo, setSaliendo] = useState(false);
   const [comisionPorcentaje, setComisionPorcentaje] = useState('');
@@ -29,6 +35,7 @@ export default function EquipoScreen({ navigation }) {
   const [comisionEmpresa, setComisionEmpresa] = useState(null);
   const [liquidando, setLiquidando] = useState(null);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [tabAdmin, setTabAdmin] = useState('equipo');
 
   const cargar = useCallback(async () => {
     if (!usuario?.id) { setCargando(false); return; }
@@ -70,6 +77,12 @@ export default function EquipoScreen({ navigation }) {
     } finally {
       setGuardandoNombre(false);
     }
+  };
+
+  const ajustarComision = (delta) => {
+    const actual = parseFloat(comisionPorcentaje) || 0;
+    const nuevo = Math.min(100, Math.max(0, actual + delta));
+    setComisionPorcentaje(String(nuevo));
   };
 
   const guardarComision = async () => {
@@ -136,6 +149,7 @@ export default function EquipoScreen({ navigation }) {
       await axios.post(`${API}/fontaneros/${usuario.id}/equipo/invitar`, { email: emailInvitar.trim() }, { headers });
       avisar('Invitación enviada', 'Le avisaremos para que la acepte');
       setEmailInvitar('');
+      setMostrarInvitar(false);
     } catch (e) {
       avisar('Error', mensajeError(e, 'No se pudo enviar la invitación'));
     } finally {
@@ -183,6 +197,8 @@ export default function EquipoScreen({ navigation }) {
     }, { textoConfirmar: 'Sí, salir', textoCancelar: 'No' });
   };
 
+  const comisionNum = parseFloat(comisionPorcentaje) || 0;
+
   return (
     <View style={s.container}>
       <View style={s.header}>
@@ -197,20 +213,9 @@ export default function EquipoScreen({ navigation }) {
         <View style={s.centro}><ActivityIndicator color={colors.blue} size="large" /></View>
       ) : (
         <ScrollView style={s.lista} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-          <TouchableOpacity style={s.panelGestionCard} onPress={() => navigation.navigate('PanelGestion')} activeOpacity={0.85}>
-            <View style={s.panelGestionIconWrap}>
-              <Text style={s.panelGestionIcon}>📊</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.panelGestionTitulo}>Panel de gestión</Text>
-              <Text style={s.panelGestionSub}>Agenda, clientes, obras, presupuestos y nómina de tu negocio</Text>
-            </View>
-            <Text style={s.panelGestionChevron}>›</Text>
-          </TouchableOpacity>
-
           {invitaciones.length > 0 && (
             <View style={s.card}>
-              <Text style={s.cardTitulo}>🤝 Invitaciones pendientes</Text>
+              <Text style={s.cardTitulo}>Invitaciones pendientes</Text>
               {invitaciones.map(n => (
                 <View key={n.id} style={s.invitacionRow}>
                   <Text style={s.invitacionTexto}>{n.mensaje || n.cuerpo}</Text>
@@ -228,7 +233,12 @@ export default function EquipoScreen({ navigation }) {
 
           {perfil?.empresa_id ? (
             <View style={s.card}>
-              <Text style={s.cardTitulo}>👥 Formas parte de un equipo</Text>
+              <View style={s.cardHeadRow}>
+                <View style={[s.cardIcon, s.cardIconViolet]}>
+                  <Ionicons name="people" size={15} color={colors.purple} />
+                </View>
+                <Text style={s.cardTitulo}>Formas parte de un equipo</Text>
+              </View>
               <Text style={s.cardSub}>Ya no puedes crear tu propia empresa mientras seas parte de otro equipo.</Text>
               <TouchableOpacity style={[s.btnPeligro, saliendo && s.btnDesactivado]} onPress={salirDelEquipo} disabled={saliendo}>
                 <Text style={s.btnPeligroText}>{saliendo ? 'Saliendo...' : 'Salir del equipo'}</Text>
@@ -236,129 +246,212 @@ export default function EquipoScreen({ navigation }) {
             </View>
           ) : (
             <>
-              <View style={s.card}>
-                <Text style={s.cardTitulo}>🏢 Nombre de tu empresa</Text>
-                <Text style={s.cardSub}>Ponle nombre a tu empresa para poder invitar a otros profesionales de tu gremio a tu equipo.</Text>
-                {perfil?.nombre_empresa && (
-                  <TouchableOpacity style={s.logoRow} onPress={subirLogo} disabled={subiendoLogo}>
-                    {perfil.logo_empresa_url ? (
-                      <Image source={{ uri: `https://fontap-backend-production.up.railway.app${perfil.logo_empresa_url}` }} style={s.logoImagen} />
-                    ) : (
-                      <View style={s.logoPlaceholder}><Text style={s.logoPlaceholderText}>🏢</Text></View>
-                    )}
-                    <Text style={s.logoTexto}>{subiendoLogo ? 'Subiendo...' : (perfil.logo_empresa_url ? 'Cambiar logo' : 'Subir logo de la empresa')}</Text>
-                  </TouchableOpacity>
-                )}
-                <TextInput
-                  style={s.input}
-                  placeholder="Ej. Fontanería Bilbao SL"
-                  placeholderTextColor={colors.textFaint}
-                  value={nombreEmpresa}
-                  onChangeText={setNombreEmpresa}
-                />
-                <TouchableOpacity
-                  style={[s.btnPrimario, (!nombreEmpresa.trim() || guardandoNombre) && s.btnDesactivado]}
-                  onPress={guardarNombreEmpresa}
-                  disabled={!nombreEmpresa.trim() || guardandoNombre}
-                >
-                  <Text style={s.btnPrimarioText}>{guardandoNombre ? 'Guardando...' : 'Guardar'}</Text>
+              <View style={s.identityRow}>
+                <TouchableOpacity style={s.identityLogo} onPress={subirLogo} disabled={subiendoLogo}>
+                  {perfil?.logo_empresa_url ? (
+                    <Image source={{ uri: `${API}${perfil.logo_empresa_url}` }} style={s.identityLogoImg} />
+                  ) : (
+                    <Ionicons name="business" size={22} color={colors.textFaint} />
+                  )}
+                  <View style={s.identityLogoBadge}>
+                    {subiendoLogo ? <ActivityIndicator size={10} color="#fff" /> : <Ionicons name="camera" size={11} color="#fff" />}
+                  </View>
                 </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.identityEyebrow}>Tu empresa</Text>
+                  <View style={s.identityNameRow}>
+                    <TextInput
+                      style={s.identityNameInput}
+                      placeholder="Ej. Fontanería Bilbao SL"
+                      placeholderTextColor={colors.textFaint}
+                      value={nombreEmpresa}
+                      onChangeText={setNombreEmpresa}
+                    />
+                    {nombreEmpresa.trim() && nombreEmpresa !== (perfil?.nombre_empresa || '') && (
+                      <TouchableOpacity onPress={guardarNombreEmpresa} disabled={guardandoNombre} style={s.identitySaveBtn}>
+                        <Text style={s.identitySaveBtnText}>{guardandoNombre ? '...' : 'Guardar'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
               </View>
+
+              <TouchableOpacity style={s.panelGestionCard} onPress={() => navigation.navigate('PanelGestion')} activeOpacity={0.85}>
+                <View style={s.panelGestionIconWrap}>
+                  <Ionicons name="stats-chart" size={20} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.panelGestionTitulo}>Panel de gestión</Text>
+                  <Text style={s.panelGestionSub}>Agenda, clientes, obras, presupuestos y nómina</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </TouchableOpacity>
 
               {perfil?.nombre_empresa && (
                 <>
-                  <View style={s.card}>
-                    <Text style={s.cardTitulo}>💰 Comisión del equipo</Text>
-                    <Text style={s.cardSub}>
-                      Cuando le asignes un trabajo a un empleado, este porcentaje de lo que cobre te corresponde a ti.
-                      Os lo repartís aparte (efectivo, Bizum, nómina...); la app solo lo lleva la cuenta.
-                    </Text>
-                    <View style={s.comisionRow}>
-                      <TextInput
-                        style={[s.input, { flex: 1, marginBottom: 0 }]}
-                        placeholder="0"
-                        placeholderTextColor={colors.textFaint}
-                        value={comisionPorcentaje}
-                        onChangeText={setComisionPorcentaje}
-                        keyboardType="numeric"
-                      />
-                      <Text style={s.comisionPorcentajeSigno}>%</Text>
-                      <TouchableOpacity
-                        style={[s.btnPrimario, { paddingHorizontal: 18 }, guardandoComision && s.btnDesactivado]}
-                        onPress={guardarComision}
-                        disabled={guardandoComision}
-                      >
-                        <Text style={s.btnPrimarioText}>{guardandoComision ? '...' : 'Guardar'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {comisionEmpresa && comisionEmpresa.total > 0 && (
-                    <View style={s.card}>
-                      <Text style={s.cardTitulo}>📋 Lo que te deben tus empleados</Text>
-                      <Text style={s.comisionTotal}>{comisionEmpresa.total.toFixed(2)}€</Text>
-                      {comisionEmpresa.por_empleado.map(pe => (
-                        <View key={pe.empleado_id} style={s.comisionEmpleadoRow}>
-                          <View>
-                            <Text style={s.comisionEmpleadoNombre}>{pe.empleado_nombre}</Text>
-                            <Text style={s.comisionEmpleadoSub}>{pe.num_servicios} trabajo{pe.num_servicios !== 1 ? 's' : ''} · {pe.total.toFixed(2)}€</Text>
-                          </View>
-                          <TouchableOpacity
-                            style={[s.btnSaldar, liquidando === pe.empleado_id && s.btnDesactivado]}
-                            onPress={() => liquidarComision(pe.empleado_id)}
-                            disabled={liquidando === pe.empleado_id}
-                          >
-                            <Text style={s.btnSaldarText}>{liquidando === pe.empleado_id ? '...' : 'Ya lo cobré'}</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <View style={s.card}>
-                    <Text style={s.cardTitulo}>➕ Invitar a un profesional</Text>
-                    <Text style={s.cardSub}>Solo puedes invitar a profesionales de tu mismo gremio ({perfil.gremio}) que aún no formen parte de otro equipo.</Text>
-                    <TextInput
-                      style={s.input}
-                      placeholder="Email del profesional"
-                      placeholderTextColor={colors.textFaint}
-                      value={emailInvitar}
-                      onChangeText={setEmailInvitar}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                    />
+                  <View style={s.tabs}>
                     <TouchableOpacity
-                      style={[s.btnPrimario, (!emailInvitar.trim() || invitando) && s.btnDesactivado]}
-                      onPress={invitar}
-                      disabled={!emailInvitar.trim() || invitando}
+                      style={[s.tabBtn, tabAdmin === 'equipo' && s.tabBtnActivo]}
+                      onPress={() => setTabAdmin('equipo')}
                     >
-                      <Text style={s.btnPrimarioText}>{invitando ? 'Enviando...' : 'Enviar invitación'}</Text>
+                      <Ionicons name="people" size={14} color={tabAdmin === 'equipo' ? colors.text : colors.textMuted} />
+                      <Text style={[s.tabBtnText, tabAdmin === 'equipo' && s.tabBtnTextActivo]}>Equipo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.tabBtn, tabAdmin === 'ajustes' && s.tabBtnActivo]}
+                      onPress={() => setTabAdmin('ajustes')}
+                    >
+                      <Ionicons name="settings" size={14} color={tabAdmin === 'ajustes' ? colors.text : colors.textMuted} />
+                      <Text style={[s.tabBtnText, tabAdmin === 'ajustes' && s.tabBtnTextActivo]}>Ajustes</Text>
                     </TouchableOpacity>
                   </View>
 
-                  <Text style={s.subtitulo}>Tu equipo ({equipo.length})</Text>
-                  {equipo.length === 0 ? (
-                    <View style={s.vacio}>
-                      <Text style={s.vacioEmoji}>👷</Text>
-                      <Text style={s.vacioTexto}>Todavía no tienes empleados en tu equipo</Text>
-                    </View>
-                  ) : (
-                    equipo.map(m => (
-                      <View key={m.id} style={s.miembroCard}>
-                        <View style={s.miembroLeft}>
-                          <View style={s.avatar}><Text style={s.avatarText}>{(m.nombre || '?')[0].toUpperCase()}</Text></View>
-                          <View>
-                            <Text style={s.miembroNombre}>{m.nombre}</Text>
-                            <Text style={s.miembroSub}>
-                              {m.disponible ? '🟢 Disponible' : '⚪ No disponible'}{m.valoracion ? ` · ⭐ ${m.valoracion}` : ''} · {m.num_trabajos} trabajos
-                            </Text>
+                  {tabAdmin === 'equipo' ? (
+                    <>
+                      <View style={s.equipoHeadRow}>
+                        <View style={s.equipoHeadLeft}>
+                          <View style={[s.cardIcon, s.cardIconAccent]}>
+                            <Ionicons name="people" size={14} color={colors.accent2} />
                           </View>
+                          <Text style={s.equipoHeadTitulo}>Tu equipo</Text>
+                          <Text style={s.equipoHeadCount}>· {equipo.length}</Text>
                         </View>
-                        <TouchableOpacity style={s.btnQuitar} onPress={() => quitarDelEquipo(m)}>
-                          <Text style={s.btnQuitarText}>🗑</Text>
+                        <TouchableOpacity
+                          style={[s.fabInvite, mostrarInvitar && s.fabInviteOpen]}
+                          onPress={() => setMostrarInvitar(v => !v)}
+                        >
+                          <Ionicons name={mostrarInvitar ? 'close' : 'add'} size={18} color={mostrarInvitar ? colors.textMuted : '#fff'} />
                         </TouchableOpacity>
                       </View>
-                    ))
+
+                      {mostrarInvitar && (
+                        <View style={s.inviteCard}>
+                          <Text style={s.inviteCardSub}>Solo puedes invitar a profesionales de tu mismo gremio ({perfil.gremio}) que aún no formen parte de otro equipo.</Text>
+                          <View style={s.inviteRow}>
+                            <TextInput
+                              style={[s.input, { flex: 1, marginBottom: 0 }]}
+                              placeholder="Email del profesional"
+                              placeholderTextColor={colors.textFaint}
+                              value={emailInvitar}
+                              onChangeText={setEmailInvitar}
+                              autoCapitalize="none"
+                              keyboardType="email-address"
+                            />
+                            <TouchableOpacity
+                              style={[s.btnEnviar, (!emailInvitar.trim() || invitando) && s.btnDesactivado]}
+                              onPress={invitar}
+                              disabled={!emailInvitar.trim() || invitando}
+                            >
+                              <Text style={s.btnEnviarText}>{invitando ? '...' : 'Enviar'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+
+                      {comisionEmpresa && comisionEmpresa.total > 0 && (
+                        <View style={s.card}>
+                          <View style={s.cardHeadRow}>
+                            <View style={[s.cardIcon, s.cardIconGreen]}>
+                              <Ionicons name="cash" size={14} color={colors.green} />
+                            </View>
+                            <Text style={s.cardTitulo}>Lo que te deben tus empleados</Text>
+                          </View>
+                          <Text style={s.comisionTotal}>{comisionEmpresa.total.toFixed(2)}€</Text>
+                          {comisionEmpresa.por_empleado.map(pe => (
+                            <View key={pe.empleado_id} style={s.comisionEmpleadoRow}>
+                              <View>
+                                <Text style={s.comisionEmpleadoNombre}>{pe.empleado_nombre}</Text>
+                                <Text style={s.comisionEmpleadoSub}>{pe.num_servicios} trabajo{pe.num_servicios !== 1 ? 's' : ''} · {pe.total.toFixed(2)}€</Text>
+                              </View>
+                              <TouchableOpacity
+                                style={[s.btnSaldar, liquidando === pe.empleado_id && s.btnDesactivado]}
+                                onPress={() => liquidarComision(pe.empleado_id)}
+                                disabled={liquidando === pe.empleado_id}
+                              >
+                                <Text style={s.btnSaldarText}>{liquidando === pe.empleado_id ? '...' : 'Ya lo cobré'}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {equipo.length === 0 ? (
+                        <View style={s.vacio}>
+                          <View style={s.vacioIconWrap}>
+                            <Ionicons name="people-outline" size={20} color={colors.purple} />
+                          </View>
+                          <Text style={s.vacioTexto}>Todavía no invitaste a nadie</Text>
+                          <Text style={s.vacioSub}>Los profesionales que aceptes aparecerán acá, con su disponibilidad y trabajos asignados.</Text>
+                        </View>
+                      ) : (
+                        equipo.map(m => (
+                          <View key={m.id} style={s.miembroCard}>
+                            <View style={s.miembroLeft}>
+                              <View style={s.avatar}><Text style={s.avatarText}>{(m.nombre || '?')[0].toUpperCase()}</Text></View>
+                              <View>
+                                <Text style={s.miembroNombre}>{m.nombre}</Text>
+                                <Text style={s.miembroSub}>
+                                  {m.disponible ? '🟢 Disponible' : '⚪ No disponible'}{m.valoracion ? ` · ⭐ ${m.valoracion}` : ''} · {m.num_trabajos} trabajos
+                                </Text>
+                              </View>
+                            </View>
+                            <TouchableOpacity style={s.btnQuitar} onPress={() => quitarDelEquipo(m)}>
+                              <Ionicons name="trash-outline" size={15} color={colors.red} />
+                            </TouchableOpacity>
+                          </View>
+                        ))
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <View style={s.dialCard}>
+                        <View style={s.cardHeadRow}>
+                          <View style={[s.cardIcon, s.cardIconGreen]}>
+                            <Ionicons name="cash-outline" size={14} color={colors.green} />
+                          </View>
+                          <Text style={s.cardTitulo}>Comisión del equipo</Text>
+                        </View>
+                        <View style={s.dialBody}>
+                          <TouchableOpacity style={s.stepperBtn} onPress={() => ajustarComision(-5)}>
+                            <Ionicons name="remove" size={18} color={colors.text} />
+                          </TouchableOpacity>
+                          <View style={s.dialRingWrap}>
+                            <Svg width={96} height={96} style={{ transform: [{ rotate: '-90deg' }] }}>
+                              <Circle cx={48} cy={48} r={RADIO_DIAL_COMISION} stroke={colors.glassBorder} strokeWidth={8} fill="none" />
+                              <Circle
+                                cx={48} cy={48} r={RADIO_DIAL_COMISION} stroke={colors.green} strokeWidth={8} fill="none"
+                                strokeLinecap="round"
+                                strokeDasharray={CIRCUNFERENCIA_DIAL_COMISION}
+                                strokeDashoffset={CIRCUNFERENCIA_DIAL_COMISION * (1 - Math.min(comisionNum, 100) / 100)}
+                              />
+                            </Svg>
+                            <View style={s.dialValueWrap}>
+                              <Text style={s.dialValueText}>{comisionNum}%</Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity style={s.stepperBtn} onPress={() => ajustarComision(5)}>
+                            <Ionicons name="add" size={18} color={colors.text} />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={s.dialFoot}>
+                          <Text style={s.dialFootText}>
+                            De lo que cobre un empleado, este % te corresponde. Os lo repartís aparte — la app solo lleva la cuenta.
+                          </Text>
+                          <TouchableOpacity
+                            style={[s.btnGuardarDial, guardandoComision && s.btnDesactivado]}
+                            onPress={guardarComision}
+                            disabled={guardandoComision}
+                          >
+                            <Text style={s.btnGuardarDialText}>{guardandoComision ? '...' : 'Guardar'}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={s.fieldCard}>
+                        <Text style={s.fieldCardLabel}>Gremio del equipo</Text>
+                        <Text style={s.fieldCardVal}>{perfil.gremio}</Text>
+                      </View>
+                    </>
                   )}
                 </>
               )}
@@ -377,14 +470,35 @@ const s = StyleSheet.create({
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   lista: { flex: 1 },
+
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 18 },
+  identityLogo: { width: 56, height: 56, borderRadius: 17, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2, justifyContent: 'center', alignItems: 'center' },
+  identityLogoImg: { width: 56, height: 56, borderRadius: 17 },
+  identityLogoBadge: { position: 'absolute', bottom: -4, right: -4, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.blue, borderWidth: 2.5, borderColor: colors.bg, justifyContent: 'center', alignItems: 'center' },
+  identityEyebrow: { color: colors.textFaint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  identityNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  identityNameInput: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '800', letterSpacing: -0.3, padding: 0 },
+  identitySaveBtn: { backgroundColor: colors.blue, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 7 },
+  identitySaveBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
   panelGestionCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.blueLight, borderRadius: 20, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.blue },
-  panelGestionIconWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
-  panelGestionIcon: { fontSize: 22 },
+  panelGestionIconWrap: { width: 44, height: 44, borderRadius: 13, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
   panelGestionTitulo: { color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 3 },
   panelGestionSub: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17 },
-  panelGestionChevron: { color: colors.blue, fontSize: 28, fontWeight: '300' },
+
+  tabs: { flexDirection: 'row', gap: 6, backgroundColor: colors.bgCard2, borderRadius: 14, padding: 4, marginBottom: 16 },
+  tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 11 },
+  tabBtnActivo: { backgroundColor: colors.blue },
+  tabBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  tabBtnTextActivo: { color: colors.text },
+
   card: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  cardTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 6 },
+  cardHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 6 },
+  cardIcon: { width: 28, height: 28, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+  cardIconAccent: { backgroundColor: colors.blueLight },
+  cardIconGreen: { backgroundColor: colors.greenLight },
+  cardIconViolet: { backgroundColor: 'rgba(180,156,255,0.15)' },
+  cardTitulo: { color: colors.text, fontWeight: '700', fontSize: 15 },
   cardSub: { color: colors.textMuted, fontSize: 13, marginBottom: 14, lineHeight: 18 },
   input: { backgroundColor: colors.bgCard2, color: colors.text, borderRadius: 12, padding: 14, fontSize: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border2 },
   btnPrimario: { backgroundColor: colors.blue, borderRadius: 12, padding: 13, alignItems: 'center' },
@@ -392,10 +506,25 @@ const s = StyleSheet.create({
   btnDesactivado: { opacity: 0.5 },
   btnPeligro: { backgroundColor: colors.redLight, borderRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1, borderColor: colors.red },
   btnPeligroText: { color: colors.red, fontWeight: 'bold', fontSize: 14 },
-  subtitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 12 },
-  vacio: { alignItems: 'center', paddingVertical: 30 },
-  vacioEmoji: { fontSize: 40, marginBottom: 10 },
-  vacioTexto: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+
+  equipoHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  equipoHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  equipoHeadTitulo: { color: colors.text, fontWeight: '800', fontSize: 14 },
+  equipoHeadCount: { color: colors.textFaint, fontSize: 12, fontWeight: '700' },
+  fabInvite: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  fabInviteOpen: { backgroundColor: colors.bgCard2 },
+
+  inviteCard: { backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 },
+  inviteCardSub: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginBottom: 10 },
+  inviteRow: { flexDirection: 'row', gap: 8 },
+  btnEnviar: { backgroundColor: colors.bgCard2, borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center', borderWidth: 1, borderColor: colors.border2 },
+  btnEnviarText: { color: colors.text, fontWeight: '700', fontSize: 13 },
+
+  vacio: { alignItems: 'center', paddingVertical: 26, backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+  vacioIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(180,156,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  vacioTexto: { color: colors.text, fontWeight: '800', fontSize: 14.5, marginBottom: 5 },
+  vacioSub: { color: colors.textMuted, fontSize: 12.5, textAlign: 'center', lineHeight: 18, paddingHorizontal: 20 },
+
   miembroCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   miembroLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
@@ -403,20 +532,29 @@ const s = StyleSheet.create({
   miembroNombre: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
   miembroSub: { color: colors.textMuted, fontSize: 12 },
   btnQuitar: { backgroundColor: colors.redLight, borderRadius: 10, width: 36, height: 36, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.red },
-  btnQuitarText: { fontSize: 16 },
+
   invitacionRow: { backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginTop: 8, gap: 10 },
   invitacionTexto: { color: colors.text, fontSize: 13, lineHeight: 18 },
-  comisionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  comisionPorcentajeSigno: { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
+
   comisionTotal: { color: colors.green, fontSize: 28, fontWeight: 'bold', marginBottom: 14 },
   comisionEmpleadoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 8 },
   comisionEmpleadoNombre: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
   comisionEmpleadoSub: { color: colors.textMuted, fontSize: 12 },
   btnSaldar: { backgroundColor: colors.greenGlass, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.green },
   btnSaldarText: { color: colors.green, fontWeight: '700', fontSize: 12 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  logoImagen: { width: 40, height: 40, borderRadius: 10 },
-  logoPlaceholder: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border2 },
-  logoPlaceholderText: { fontSize: 18 },
-  logoTexto: { color: colors.blue, fontSize: 13, fontWeight: '600' },
+
+  dialCard: { backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 14 },
+  dialBody: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, marginTop: 8 },
+  stepperBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2, justifyContent: 'center', alignItems: 'center' },
+  dialRingWrap: { width: 96, height: 96, justifyContent: 'center', alignItems: 'center' },
+  dialValueWrap: { position: 'absolute', justifyContent: 'center', alignItems: 'center' },
+  dialValueText: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  dialFoot: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  dialFootText: { flex: 1, color: colors.textMuted, fontSize: 11.5, lineHeight: 16 },
+  btnGuardarDial: { backgroundColor: colors.green, borderRadius: 11, paddingHorizontal: 15, paddingVertical: 9 },
+  btnGuardarDialText: { color: '#052018', fontWeight: '800', fontSize: 12.5 },
+
+  fieldCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 15 },
+  fieldCardLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
+  fieldCardVal: { color: colors.text, fontSize: 13.5, fontWeight: '700' },
 });
