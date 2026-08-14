@@ -275,7 +275,7 @@ export default function RegistroScreen({ navigation }) {
 
       <TouchableOpacity style={s.btnGoogle} onPress={handleGoogle} disabled={!googleRequest || cargando}>
         <Text style={s.btnGoogleIcon}>G</Text>
-        <Text style={s.btnGoogleText}>Continuar con Google como {tipo === 'fontanero' ? 'profesional' : 'cliente'}</Text>
+        <Text style={s.btnGoogleText}>Continuar con Google como {tipo === 'fontanero' ? 'profesional' : tipo === 'administrador_fincas' ? 'administrador' : 'cliente'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')} style={s.loginLink}>
