@@ -26,6 +26,10 @@ export function rutaParaNotificacion(data, usuario) {
         return { name: 'PanelFontanero', params: { nombre: usuario?.nombre, userId: usuario?.id } };
       case 'recordatorio':
         return { name: 'Calendario', params: { userId: usuario?.id } };
+      case 'nueva_tarea':
+        return { name: 'PanelEmpleado', params: { nombre: usuario?.nombre, userId: usuario?.id } };
+      case 'tarea_actualizada':
+        return { name: 'Equipo' };
       default:
         return { name: 'PanelFontanero', params: { nombre: usuario?.nombre, userId: usuario?.id } };
     }

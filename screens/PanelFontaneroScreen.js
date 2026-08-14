@@ -120,7 +120,14 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
   useEffect(() => {
     axios.get(`${API}/fontaneros/${userId}/perfil`, { headers })
-      .then(res => setPerfilPropio(res.data))
+      .then(res => {
+        setPerfilPropio(res.data);
+        // Si es empleado de otra empresa (no dueño), este panel no es el suyo — el
+        // suyo es el de tareas/avisos, más simple y sin las métricas del jefe.
+        if (res.data?.empresa_id) {
+          navigation.replace('PanelEmpleado', { nombre, userId });
+        }
+      })
       .catch(() => {});
   }, [userId, token]);
 

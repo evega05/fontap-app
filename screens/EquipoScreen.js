@@ -12,6 +12,13 @@ import { agregarArchivo } from '../subirArchivo';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
+const TAREA_ESTADO_LABEL = { pendiente: 'Nueva', aceptada: 'Aceptada', en_camino: 'En camino' };
+const TAREA_ESTADO_COLOR = {
+  pendiente: { backgroundColor: colors.blueLight },
+  aceptada: { backgroundColor: colors.amberGlass },
+  en_camino: { backgroundColor: colors.greenGlass },
+};
+
 const RADIO_DIAL_COMISION = 40;
 const CIRCUNFERENCIA_DIAL_COMISION = 2 * Math.PI * RADIO_DIAL_COMISION;
 
@@ -36,6 +43,10 @@ export default function EquipoScreen({ navigation }) {
   const [liquidando, setLiquidando] = useState(null);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [tabAdmin, setTabAdmin] = useState('equipo');
+  const [tareasEquipo, setTareasEquipo] = useState([]);
+  const [miembroSeleccionado, setMiembroSeleccionado] = useState(null);
+  const [instruccionTexto, setInstruccionTexto] = useState('');
+  const [enviandoInstruccion, setEnviandoInstruccion] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!usuario?.id) { setCargando(false); return; }
@@ -55,6 +66,10 @@ export default function EquipoScreen({ navigation }) {
           const resComision = await axios.get(`${API}/fontaneros/${usuario.id}/comision-empresa-pendiente`, { headers });
           setComisionEmpresa(resComision.data);
         } catch (e) { setComisionEmpresa(null); }
+        try {
+          const resTareas = await axios.get(`${API}/fontaneros/${usuario.id}/tareas-equipo`, { headers });
+          setTareasEquipo(resTareas.data || []);
+        } catch (e) { setTareasEquipo([]); }
       }
       try {
         const resNotifs = await axios.get(`${API}/usuarios/${usuario.id}/notificaciones`, { headers });
@@ -154,6 +169,24 @@ export default function EquipoScreen({ navigation }) {
       avisar('Error', mensajeError(e, 'No se pudo enviar la invitación'));
     } finally {
       setInvitando(false);
+    }
+  };
+
+  const enviarInstruccion = async () => {
+    if (!instruccionTexto.trim() || !miembroSeleccionado) return;
+    setEnviandoInstruccion(true);
+    try {
+      await axios.post(`${API}/tareas`, {
+        empleado_fontanero_id: miembroSeleccionado.id,
+        descripcion: instruccionTexto.trim(),
+      }, { headers });
+      setInstruccionTexto('');
+      const resTareas = await axios.get(`${API}/fontaneros/${usuario.id}/tareas-equipo`, { headers });
+      setTareasEquipo(resTareas.data || []);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo enviar la instrucción'));
+    } finally {
+      setEnviandoInstruccion(false);
     }
   };
 
@@ -385,7 +418,7 @@ export default function EquipoScreen({ navigation }) {
                         </View>
                       ) : (
                         equipo.map(m => (
-                          <View key={m.id} style={s.miembroCard}>
+                          <TouchableOpacity key={m.id} style={s.miembroCard} activeOpacity={0.8} onPress={() => setMiembroSeleccionado(m)}>
                             <View style={s.miembroLeft}>
                               <View style={s.avatar}><Text style={s.avatarText}>{(m.nombre || '?')[0].toUpperCase()}</Text></View>
                               <View>
@@ -395,10 +428,10 @@ export default function EquipoScreen({ navigation }) {
                                 </Text>
                               </View>
                             </View>
-                            <TouchableOpacity style={s.btnQuitar} onPress={() => quitarDelEquipo(m)}>
+                            <TouchableOpacity style={s.btnQuitar} onPress={(e) => { e.stopPropagation(); quitarDelEquipo(m); }}>
                               <Ionicons name="trash-outline" size={15} color={colors.red} />
                             </TouchableOpacity>
-                          </View>
+                          </TouchableOpacity>
                         ))
                       )}
                     </>
@@ -458,6 +491,59 @@ export default function EquipoScreen({ navigation }) {
             </>
           )}
         </ScrollView>
+      )}
+
+      {miembroSeleccionado && (
+        <View style={s.sheetOverlay}>
+          <TouchableOpacity style={s.sheetBackdrop} activeOpacity={1} onPress={() => setMiembroSeleccionado(null)} />
+          <View style={s.sheet}>
+            <View style={s.sheetHeader}>
+              <View style={s.avatar}><Text style={s.avatarText}>{(miembroSeleccionado.nombre || '?')[0].toUpperCase()}</Text></View>
+              <Text style={s.sheetNombre} numberOfLines={1}>{miembroSeleccionado.nombre}</Text>
+              <TouchableOpacity onPress={() => setMiembroSeleccionado(null)} style={s.sheetCerrar}>
+                <Ionicons name="close" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.sheetLabel}>Instrucción rápida</Text>
+            <View style={s.sheetInputRow}>
+              <TextInput
+                style={[s.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Ej. Pasate a buscar materiales al depósito"
+                placeholderTextColor={colors.textFaint}
+                value={instruccionTexto}
+                onChangeText={setInstruccionTexto}
+                multiline
+              />
+              <TouchableOpacity
+                style={[s.btnEnviarInstruccion, (!instruccionTexto.trim() || enviandoInstruccion) && s.btnDesactivado]}
+                onPress={enviarInstruccion}
+                disabled={!instruccionTexto.trim() || enviandoInstruccion}
+              >
+                <Ionicons name="send" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.sheetLabel}>Tareas activas</Text>
+            {tareasEquipo.filter(t => t.empleado_id === miembroSeleccionado.id).length === 0 ? (
+              <Text style={s.sheetVacio}>No tiene tareas activas ahora mismo</Text>
+            ) : (
+              tareasEquipo.filter(t => t.empleado_id === miembroSeleccionado.id).map(t => (
+                <View key={t.id} style={s.sheetTareaRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.sheetTareaDescripcion} numberOfLines={2}>{t.descripcion}</Text>
+                    {t.estado === 'en_camino' && t.empleado_latitud != null && (
+                      <Text style={s.sheetTareaUbicacion}>📍 Compartiendo ubicación en vivo</Text>
+                    )}
+                  </View>
+                  <View style={[s.sheetEstadoPill, TAREA_ESTADO_COLOR[t.estado]]}>
+                    <Text style={s.sheetEstadoPillText}>{TAREA_ESTADO_LABEL[t.estado] || t.estado}</Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
       )}
     </View>
   );
@@ -557,4 +643,20 @@ const s = StyleSheet.create({
   fieldCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 15 },
   fieldCardLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
   fieldCardVal: { color: colors.text, fontSize: 13.5, fontWeight: '700' },
+
+  sheetOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 200 },
+  sheetBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, maxHeight: '75%' },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
+  sheetNombre: { flex: 1, color: colors.text, fontWeight: '800', fontSize: 16 },
+  sheetCerrar: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
+  sheetLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 4 },
+  sheetInputRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end', marginBottom: 18 },
+  btnEnviarInstruccion: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  sheetVacio: { color: colors.textFaint, fontSize: 13 },
+  sheetTareaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bgCard2, borderRadius: 12, padding: 12, marginBottom: 8 },
+  sheetTareaDescripcion: { color: colors.text, fontSize: 13, lineHeight: 18 },
+  sheetTareaUbicacion: { color: colors.green, fontSize: 11, fontWeight: '600', marginTop: 3 },
+  sheetEstadoPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  sheetEstadoPillText: { color: colors.text, fontSize: 10.5, fontWeight: '700' },
 });

@@ -1,10 +1,12 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import axios from 'axios';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider, useAuth } from './AuthContext';
 import { rutaParaNotificacion } from './pushNavigation';
+import { navigationRef } from './navigationRef';
+import AlertaTareaModal from './components/AlertaTareaModal';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import LoginScreen from './screens/LoginScreen';
@@ -36,12 +38,12 @@ import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import VerificarEmailScreen from './screens/VerificarEmailScreen';
 import AjustesCuentaScreen from './screens/AjustesCuentaScreen';
 import EquipoScreen from './screens/EquipoScreen';
+import PanelEmpleadoScreen from './screens/PanelEmpleadoScreen';
 import PanelGestionScreen from './screens/PanelGestionScreen';
 import SeguimientoScreen from './screens/SeguimientoScreen';
 import { IdiomaProvider } from './i18n';
 
 const Stack = createNativeStackNavigator();
-const navigationRef = createNavigationContainerRef();
 
 function SplashScreen({ onFinish }) {
   const escala = new Animated.Value(0.3);
@@ -127,8 +129,9 @@ function NavegadorPrincipal() {
   }, []);
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName={rutaInicial} screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#070B14' } }}>
+    <>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator initialRouteName={rutaInicial} screenOptions={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#070B14' } }}>
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Registro" component={RegistroScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Mapa" component={MapaScreen} options={{ headerShown: false }} />
@@ -158,10 +161,13 @@ function NavegadorPrincipal() {
         <Stack.Screen name="VerificarEmail" component={VerificarEmailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Equipo" component={EquipoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PanelEmpleado" component={PanelEmpleadoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PanelGestion" component={PanelGestionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Seguimiento" component={SeguimientoScreen} options={{ headerShown: false }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+        </Stack.Navigator>
+      </NavigationContainer>
+      <AlertaTareaModal />
+    </>
   );
 }
 
