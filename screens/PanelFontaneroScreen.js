@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -118,18 +119,23 @@ export default function PanelFontaneroScreen({ navigation, route }) {
       .catch(() => setEquipo([]));
   }, [userId, token]);
 
-  useEffect(() => {
-    axios.get(`${API}/fontaneros/${userId}/perfil`, { headers })
-      .then(res => {
-        setPerfilPropio(res.data);
-        // Si es empleado de otra empresa (no dueño), este panel no es el suyo — el
-        // suyo es el de tareas/avisos, más simple y sin las métricas del jefe.
-        if (res.data?.empresa_id) {
-          navigation.replace('PanelEmpleado', { nombre, userId });
-        }
-      })
-      .catch(() => {});
-  }, [userId, token]);
+  // useFocusEffect (no useEffect simple) porque esta pantalla queda montada al
+  // volver de Administración — si acabás de aceptar una invitación de equipo ahí,
+  // hace falta repetir el chequeo al volver, no solo la primera vez que se abrió.
+  useFocusEffect(
+    useCallback(() => {
+      axios.get(`${API}/fontaneros/${userId}/perfil`, { headers })
+        .then(res => {
+          setPerfilPropio(res.data);
+          // Si es empleado de otra empresa (no dueño), este panel no es el suyo — el
+          // suyo es el de tareas/avisos, más simple y sin las métricas del jefe.
+          if (res.data?.empresa_id) {
+            navigation.replace('PanelEmpleado', { nombre, userId });
+          }
+        })
+        .catch(() => {});
+    }, [userId, token])
+  );
 
   const cerrarModalComision = () => {
     setMostrarPagoComision(false);
