@@ -14,7 +14,11 @@ export default function SolicitudScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const fontanero = route.params?.fontanero;
   const [gremioElegido, setGremioElegido] = useState(fontanero?.gremio || null);
-  const necesitaPasoGremio = !fontanero;
+  // Si se pide directo a un profesional que practica más de un oficio, igual hay que
+  // preguntar cuál — si no, el servicio quedaría mal clasificado (ver gremio_final en
+  // el backend) y sus reseñas se mezclarían con las del oficio equivocado.
+  const gremiosDelFontanero = fontanero?.gremios?.length ? fontanero.gremios : (fontanero?.gremio ? [fontanero.gremio] : []);
+  const necesitaPasoGremio = !fontanero || gremiosDelFontanero.length > 1;
   const PASO_GREMIO = necesitaPasoGremio ? 1 : null;
   const PASO_SERVICIO = necesitaPasoGremio ? 2 : 1;
   const PASO_DETALLES = necesitaPasoGremio ? 3 : 2;
@@ -34,7 +38,7 @@ export default function SolicitudScreen({ navigation, route }) {
   }, [fontanero?.id]);
 
   const nombresEnCatalogo = new Set(catalogoFontanero.map(c => c.nombre.trim().toLowerCase()));
-  const serviciosGenericos = serviciosDe(fontanero?.gremio || gremioElegido)
+  const serviciosGenericos = serviciosDe(gremioElegido || fontanero?.gremio)
     .filter(sv => !nombresEnCatalogo.has(sv.nombre.trim().toLowerCase()));
   const SERVICIOS = [
     ...catalogoFontanero.map(c => ({ nombre: c.nombre, emoji: '🔧', precio: `${c.precio}€`, catalogoServicioId: c.id })),
@@ -126,7 +130,7 @@ export default function SolicitudScreen({ navigation, route }) {
     fecha: fechaCita ? fechaCita.toISOString() : null,
     fontanero_id: fontanero?.id || null,
     catalogo_servicio_id: tipo.catalogoServicioId || null,
-    gremio: fontanero?.gremio || gremioElegido,
+    gremio: gremioElegido || fontanero?.gremio || null,
     ciudad: route.params?.ciudad || null,
     latitud_cliente,
     longitud_cliente,
@@ -179,9 +183,11 @@ export default function SolicitudScreen({ navigation, route }) {
       <ScrollView style={s.contenido} contentContainerStyle={{ padding: 20 }}>
         {paso === PASO_GREMIO && (
           <>
-            <Text style={s.subtitulo}>¿Qué tipo de profesional necesitas?</Text>
+            <Text style={s.subtitulo}>
+              {fontanero ? `${fontanero.nombre} hace varios oficios — ¿para cuál lo necesitas?` : '¿Qué tipo de profesional necesitas?'}
+            </Text>
             <View style={s.grid}>
-              {GREMIOS.map(g => (
+              {(fontanero ? GREMIOS.filter(g => gremiosDelFontanero.includes(g.valor)) : GREMIOS).map(g => (
                 <TouchableOpacity
                   key={g.valor}
                   style={[s.servicioCard, gremioElegido === g.valor && s.servicioCardActivo]}

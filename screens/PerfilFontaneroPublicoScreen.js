@@ -45,6 +45,8 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
   const [servicios, setServicios] = useState([]);
   const [galeria, setGaleria] = useState([]);
   const [resenas, setResenas] = useState([]);
+  const [estadisticasGremio, setEstadisticasGremio] = useState([]);
+  const [gremioFiltro, setGremioFiltro] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [favorito, setFavorito] = useState(false);
   const [iniciandoChat, setIniciandoChat] = useState(false);
@@ -60,17 +62,17 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
         axios.get(`${API}/fontaneros/${usuarioId}/estadisticas`, { headers }),
         axios.get(`${API}/fontaneros/${usuarioId}/servicios`),
         axios.get(`${API}/fontaneros/${usuarioId}/galeria`),
-        axios.get(`${API}/fontaneros/${usuarioId}/resenas`),
+        axios.get(`${API}/fontaneros/${usuarioId}/estadisticas-por-gremio`),
       ];
       if (esCliente && clienteId) {
         peticiones.push(axios.get(`${API}/clientes/${clienteId}/favoritos`, { headers }));
       }
-      const [rPerfil, rStats, rServicios, rGaleria, rResenas, rFavoritos] = await Promise.allSettled(peticiones);
+      const [rPerfil, rStats, rServicios, rGaleria, rEstadisticasGremio, rFavoritos] = await Promise.allSettled(peticiones);
       if (rPerfil.status === 'fulfilled') setPerfil(prev => ({ ...prev, ...rPerfil.value.data }));
       if (rStats.status === 'fulfilled') setStats(rStats.value.data);
       if (rServicios.status === 'fulfilled') setServicios(rServicios.value.data || []);
       if (rGaleria.status === 'fulfilled') setGaleria(rGaleria.value.data || []);
-      if (rResenas.status === 'fulfilled') setResenas(rResenas.value.data || []);
+      if (rEstadisticasGremio.status === 'fulfilled') setEstadisticasGremio(rEstadisticasGremio.value.data || []);
       if (rFavoritos?.status === 'fulfilled') {
         setFavorito((rFavoritos.value.data || []).some(f => f.id === perfil.id));
       }
@@ -79,6 +81,15 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
   }, [usuarioId, token]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Las reseñas se piden aparte (y se repiten al cambiar el filtro de oficio) porque
+  // un profesional multi-gremio no debe mezclar las de un oficio con las de otro.
+  useEffect(() => {
+    if (!usuarioId) return;
+    axios.get(`${API}/fontaneros/${usuarioId}/resenas`, { params: gremioFiltro ? { gremio: gremioFiltro } : {} })
+      .then(res => setResenas(res.data || []))
+      .catch(() => setResenas([]));
+  }, [usuarioId, gremioFiltro]);
 
   const contratar = () => {
     navigation.navigate('Solicitud', { fontanero: perfil, clienteId });
@@ -167,6 +178,7 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
   }
 
   const gremioInfo = GREMIOS.find(g => g.valor === perfil.gremio);
+  const estadisticaGremioActiva = gremioFiltro ? estadisticasGremio.find(e => e.gremio === gremioFiltro) : null;
   const miembroDesde = formatMiembroDesde(perfil.miembro_desde);
   const chips = [
     perfil.verificado && { icon: 'checkmark-circle', texto: 'Identidad verificada', color: colors.green },
@@ -277,11 +289,11 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
         <FadeInUp index={3}>
           <View style={s.statsRow}>
             <Glass style={s.statCard}>
-              <Text style={s.statNum}>{stats?.valoracion_media ?? perfil.valoracion ?? '—'}</Text>
+              <Text style={s.statNum}>{estadisticaGremioActiva ? (estadisticaGremioActiva.valoracion_media ?? '—') : (stats?.valoracion_media ?? perfil.valoracion ?? '—')}</Text>
               <Text style={s.statLabel}>⭐ Valoración</Text>
             </Glass>
             <Glass style={s.statCard}>
-              <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
+              <Text style={s.statNum}>{estadisticaGremioActiva ? estadisticaGremioActiva.num_trabajos : (stats?.trabajos_completados ?? 0)}</Text>
               <Text style={s.statLabel}>✅ Trabajos</Text>
             </Glass>
             <Glass style={s.statCard}>
@@ -290,6 +302,29 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
             </Glass>
           </View>
         </FadeInUp>
+
+        {perfil.gremios?.length > 1 && (
+          <FadeInUp>
+            <Text style={s.seccionTitulo}>Trabaja en varios oficios</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.gremioFiltroFila}>
+              <Pressable haptic onPress={() => setGremioFiltro(null)} style={[s.gremioFiltroChip, !gremioFiltro && s.gremioFiltroChipActivo]}>
+                <Text style={[s.gremioFiltroTexto, !gremioFiltro && s.gremioFiltroTextoActivo]}>Todos</Text>
+              </Pressable>
+              {perfil.gremios.map(g => {
+                const info = GREMIOS.find(x => x.valor === g);
+                return (
+                  <Pressable key={g} haptic onPress={() => setGremioFiltro(g)} style={[s.gremioFiltroChip, gremioFiltro === g && s.gremioFiltroChipActivo]}>
+                    <Text style={s.gremioFiltroEmoji}>{info?.emoji}</Text>
+                    <Text style={[s.gremioFiltroTexto, gremioFiltro === g && s.gremioFiltroTextoActivo]}>
+                      {g.charAt(0).toUpperCase() + g.slice(1)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Text style={s.gremioFiltroHint}>Las reseñas y trabajos de abajo se filtran por el oficio elegido</Text>
+          </FadeInUp>
+        )}
 
         <Text style={s.seccionTitulo}>Servicios y tarifas aproximadas</Text>
         {servicios.length === 0 ? (
@@ -319,7 +354,9 @@ export default function PerfilFontaneroPublicoScreen({ navigation, route }) {
           </ScrollView>
         )}
 
-        <Text style={s.seccionTitulo}>Reseñas ({resenas.length})</Text>
+        <Text style={s.seccionTitulo}>
+          {gremioFiltro ? `Reseñas de ${gremioFiltro} (${resenas.length})` : `Reseñas (${resenas.length})`}
+        </Text>
         {resenas.length === 0 ? (
           <Text style={s.seccionVacia}>Aún no tiene reseñas.</Text>
         ) : (
@@ -447,6 +484,14 @@ const s = StyleSheet.create({
 
   seccionTitulo: { color: colors.text, ...type.h3, marginTop: spacing.lg, marginBottom: spacing.md },
   seccionVacia: { color: colors.textMuted, fontSize: 13, fontStyle: 'italic' },
+
+  gremioFiltroFila: { gap: spacing.sm, paddingBottom: spacing.xs },
+  gremioFiltroChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2 },
+  gremioFiltroChipActivo: { backgroundColor: colors.accent, borderColor: colors.accent },
+  gremioFiltroEmoji: { fontSize: 13 },
+  gremioFiltroTexto: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
+  gremioFiltroTextoActivo: { color: '#fff', fontWeight: '700' },
+  gremioFiltroHint: { color: colors.textFaint, fontSize: 11, marginTop: spacing.xs, marginBottom: spacing.sm },
 
   serviciosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   servicioCardWrap: { width: '48%' },

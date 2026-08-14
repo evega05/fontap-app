@@ -44,15 +44,18 @@ export default function EstadisticasScreen({ navigation, route }) {
   const [periodoIngresos, setPeriodoIngresos] = useState('semana');
   const [descargandoFiscal, setDescargandoFiscal] = useState(false);
   const [comparativa, setComparativa] = useState(null);
+  const [estadisticasGremio, setEstadisticasGremio] = useState([]);
 
   const cargar = useCallback(async () => {
     try {
-      const [resStats, resSolicitudes, resComparativa] = await Promise.allSettled([
+      const [resStats, resSolicitudes, resComparativa, resEstadisticasGremio] = await Promise.allSettled([
         axios.get(`${API}/fontaneros/${userId}/estadisticas`, { headers }),
         axios.get(`${API}/fontaneros/${userId}/solicitudes`, { headers }),
         axios.get(`${API}/fontaneros/${userId}/comparativa-precio`, { headers }),
+        axios.get(`${API}/fontaneros/${userId}/estadisticas-por-gremio`, { headers }),
       ]);
       if (resComparativa.status === 'fulfilled') setComparativa(resComparativa.value.data);
+      if (resEstadisticasGremio.status === 'fulfilled') setEstadisticasGremio(resEstadisticasGremio.value.data || []);
 
       if (resStats.status === 'fulfilled' && resStats.value.data) {
         setStats(resStats.value.data);
@@ -232,6 +235,23 @@ export default function EstadisticasScreen({ navigation, route }) {
               </Text>
             </View>
           </View>
+
+          {estadisticasGremio.length > 1 && (
+            <View style={s.resumenCard}>
+              <Text style={s.resumenTitulo}>Por oficio</Text>
+              {estadisticasGremio.map((e, i) => (
+                <View key={e.gremio} style={[s.resumenFila, i === estadisticasGremio.length - 1 && { borderBottomWidth: 0 }]}>
+                  <Text style={s.resumenLabel}>
+                    {e.gremio.charAt(0).toUpperCase() + e.gremio.slice(1)}{e.es_principal ? ' ⭐' : ''}
+                  </Text>
+                  <Text style={s.resumenValor}>
+                    {e.num_trabajos} trabajo{e.num_trabajos !== 1 ? 's' : ''}
+                    {e.valoracion_media != null ? ` · ${e.valoracion_media}⭐` : ''}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {comparativa?.precio_propio_medio != null && comparativa?.precio_gremio_zona_medio != null && (
             <View style={s.resumenCard}>

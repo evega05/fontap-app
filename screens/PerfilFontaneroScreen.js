@@ -6,7 +6,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, type, shadow } from '../theme';
-import { avisar } from '../confirmar';
+import { avisar, confirmarAccion } from '../confirmar';
+import { mensajeError } from '../errores';
+import { GREMIOS } from '../gremios';
 import axios from 'axios';
 import { agregarArchivo } from '../subirArchivo';
 import Pressable from '../components/Pressable';
@@ -76,6 +78,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const [guardandoVacaciones, setGuardandoVacaciones] = useState(false);
   const [avisoAutomatico, setAvisoAutomatico] = useState(false);
   const [actualizandoAviso, setActualizandoAviso] = useState(false);
+  const [gremios, setGremios] = useState([]);
+  const [mostrarAgregarGremio, setMostrarAgregarGremio] = useState(false);
+  const [actualizandoGremio, setActualizandoGremio] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -101,6 +106,11 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     try {
       const res = await axios.get(`${API}/fontaneros/${userId}/estadisticas`, { headers });
       setStats(res.data);
+    } catch (e) {}
+
+    try {
+      const res = await axios.get(`${API}/fontaneros/${userId}/gremios`, { headers });
+      setGremios(res.data || []);
     } catch (e) {}
 
     try {
@@ -293,6 +303,50 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     }
   };
 
+  const agregarGremio = async (valor) => {
+    setActualizandoGremio(true);
+    try {
+      const res = await axios.post(`${API}/fontaneros/${userId}/gremios`, { gremio: valor }, { headers });
+      setGremios(res.data || []);
+      setMostrarAgregarGremio(false);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo agregar el oficio'));
+    } finally {
+      setActualizandoGremio(false);
+    }
+  };
+
+  const hacerGremioPrincipal = async (valor) => {
+    setActualizandoGremio(true);
+    try {
+      await axios.put(`${API}/fontaneros/${userId}/perfil`, { gremio: valor }, { headers });
+      const res = await axios.get(`${API}/fontaneros/${userId}/gremios`, { headers });
+      setGremios(res.data || []);
+    } catch (e) {
+      avisar('Error', mensajeError(e, 'No se pudo cambiar tu oficio principal'));
+    } finally {
+      setActualizandoGremio(false);
+    }
+  };
+
+  const quitarGremio = (valor) => {
+    confirmarAccion(
+      'Quitar oficio',
+      `¿Ya no trabajás como ${valor}? Vas a dejar de aparecer en las búsquedas de ese oficio (tus reseñas y servicios pasados no se borran).`,
+      async () => {
+        const anterior = gremios;
+        setGremios(prev => prev.filter(g => g.gremio !== valor));
+        try {
+          await axios.delete(`${API}/fontaneros/${userId}/gremios/${valor}`, { headers });
+        } catch (e) {
+          setGremios(anterior);
+          avisar('Error', mensajeError(e, 'No se pudo quitar el oficio'));
+        }
+      },
+      { textoConfirmar: 'Quitar' }
+    );
+  };
+
   // Lunes a viernes (índices 0-4) suelen compartir el mismo horario — si coinciden,
   // se editan juntos en la vista compacta en vez de repetir 5 filas idénticas.
   const lunVierIguales = [1, 2, 3, 4].every(i => horario[i].activo === horario[0].activo && horario[i].inicio === horario[0].inicio && horario[i].fin === horario[0].fin);
@@ -475,6 +529,54 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 value={descripcion}
                 onChangeText={setDescripcion}
               />
+            </Glass>
+
+            <Text style={s.seccionTitulo}>Tus oficios</Text>
+            <Text style={s.seccionSub}>Podés practicar más de un gremio a la vez — tus reseñas y estadísticas se muestran separadas por cada uno</Text>
+            <Glass style={s.gremiosCard}>
+              <View style={s.gremiosChipsRow}>
+                {gremios.map(g => {
+                  const info = GREMIOS.find(x => x.valor === g.gremio);
+                  return (
+                    <View key={g.gremio} style={[s.gremioChip, g.es_principal && s.gremioChipPrincipal]}>
+                      <Pressable
+                        haptic
+                        disabled={g.es_principal || actualizandoGremio}
+                        onPress={() => hacerGremioPrincipal(g.gremio)}
+                        style={s.gremioChipContenido}
+                      >
+                        <Text style={s.gremioChipEmoji}>{info?.emoji || '🔧'}</Text>
+                        <Text style={[s.gremioChipText, g.es_principal && s.gremioChipTextPrincipal]}>
+                          {g.gremio.charAt(0).toUpperCase() + g.gremio.slice(1)}
+                        </Text>
+                        {g.es_principal && <Ionicons name="star" size={10} color={colors.amber} />}
+                      </Pressable>
+                      {!g.es_principal && (
+                        <Pressable haptic disabled={actualizandoGremio} onPress={() => quitarGremio(g.gremio)} style={s.gremioChipEliminar}>
+                          <Ionicons name="close" size={11} color={colors.textMuted} />
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })}
+                <Pressable haptic onPress={() => setMostrarAgregarGremio(v => !v)} style={s.gremioChipAgregar}>
+                  <Ionicons name="add" size={14} color={colors.accent2} />
+                  <Text style={s.gremioChipAgregarText}>Agregar</Text>
+                </Pressable>
+              </View>
+              {gremios.length > 1 && (
+                <Text style={s.gremiosHint}>Tocá un oficio para hacerlo tu principal ⭐</Text>
+              )}
+              {mostrarAgregarGremio && (
+                <View style={s.gremiosPicker}>
+                  {GREMIOS.filter(gr => !gremios.some(g => g.gremio === gr.valor)).map(gr => (
+                    <Pressable key={gr.valor} haptic disabled={actualizandoGremio} onPress={() => agregarGremio(gr.valor)} style={s.gremioPickerItem}>
+                      <Text style={s.gremioChipEmoji}>{gr.emoji}</Text>
+                      <Text style={s.gremioChipText}>{gr.valor.charAt(0).toUpperCase() + gr.valor.slice(1)}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </Glass>
 
             <View style={s.verifHeadRow}>
@@ -970,6 +1072,20 @@ const s = StyleSheet.create({
 
   bioCard: { padding: spacing.lg, borderRadius: radius.lg, marginBottom: spacing.sm },
   bioFieldLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: spacing.sm },
+  gremiosCard: { padding: spacing.lg, borderRadius: radius.lg, marginBottom: spacing.sm },
+  gremiosChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  gremioChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border2, paddingLeft: 10, paddingRight: 4, paddingVertical: 6, gap: 4 },
+  gremioChipPrincipal: { backgroundColor: colors.amberGlass, borderColor: colors.amber, paddingRight: 10 },
+  gremioChipContenido: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  gremioChipEmoji: { fontSize: 13 },
+  gremioChipText: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
+  gremioChipTextPrincipal: { color: colors.text, fontWeight: '700' },
+  gremioChipEliminar: { width: 20, height: 20, borderRadius: radius.full, backgroundColor: colors.bgCard3, justifyContent: 'center', alignItems: 'center', marginLeft: 2 },
+  gremioChipAgregar: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.accent, borderStyle: 'dashed', paddingHorizontal: 10, paddingVertical: 6 },
+  gremioChipAgregarText: { color: colors.accent2, fontSize: 12.5, fontWeight: '700' },
+  gremiosHint: { color: colors.textFaint, fontSize: 11.5, marginTop: spacing.sm },
+  gremiosPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.glassBorder },
+  gremioPickerItem: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.bgCard2, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 6 },
   seccionTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10, marginTop: spacing.lg },
   seccionSub: { color: colors.textMuted, fontSize: 12, marginBottom: spacing.lg },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
