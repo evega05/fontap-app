@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle } from 'react-native-svg';
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { useAuth } from '../AuthContext';
@@ -31,6 +32,9 @@ function getSaludo() {
   if (hora < 20) return 'Buenas tardes';
   return 'Buenas noches';
 }
+
+const RADIO_ANILLO_PERFIL = 14.5;
+const CIRCUNFERENCIA_ANILLO_PERFIL = 2 * Math.PI * RADIO_ANILLO_PERFIL;
 
 const HORAS_REPROGRAMAR = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '15:00', '16:00', '17:00', '18:00'];
 const ESTADOS_REPROGRAMABLES = new Set(['aceptado', 'precio_enviado', 'precio_aceptado']);
@@ -523,58 +527,60 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           <View style={{ flex: 1 }}>
             <Text style={s.saludo}>{getSaludo()} 👋</Text>
             <Text style={s.nombre} numberOfLines={1}>{nombre}</Text>
-            <Text style={s.idText}>ID: {userId}</Text>
+            <View style={s.metaRow}>
+              {perfilPropio?.empresa_nombre && (
+                <Pressable haptic onPress={() => navigation.navigate('Equipo')}>
+                  <View style={s.teamChip}>
+                    <Ionicons name="people" size={12} color={colors.textMuted} />
+                    <Text style={s.teamChipText} numberOfLines={1}>{perfilPropio.empresa_nombre}</Text>
+                  </View>
+                </Pressable>
+              )}
+              <Text style={s.idText}>ID {userId}</Text>
+            </View>
           </View>
           <Pressable haptic onPress={() => navigation.navigate('Notificaciones')}>
-            <Glass style={s.logoutBtn}><Ionicons name="notifications-outline" size={18} color={colors.text} /></Glass>
+            <Glass style={s.iconBtn}>
+              <Ionicons name="notifications-outline" size={17} color={colors.text} />
+              {pendientes.length > 0 && <View style={s.notifDot} />}
+            </Glass>
           </Pressable>
           <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
-            <LinearGradient colors={[colors.accent, colors.accent2]} style={s.perfilBtn}>
+            <LinearGradient colors={[colors.accent, colors.accent2]} style={s.iconBtn}>
               <Text style={s.perfilLetra}>{nombre[0]}</Text>
             </LinearGradient>
           </Pressable>
           <Pressable haptic onPress={() => confirmarAccion('Cerrar sesión', '¿Seguro que quieres salir?', () => { logout(); navigation.replace('Login'); }, { textoConfirmar: 'Salir' })}>
-            <Glass style={s.logoutBtn} colorTint={colors.redGlass}><Ionicons name="log-out-outline" size={18} color={colors.red} /></Glass>
+            <Glass style={[s.iconBtn, s.iconBtnDanger]} colorTint={colors.redGlass}><Ionicons name="log-out-outline" size={17} color={colors.red} /></Glass>
           </Pressable>
         </View>
       </View>
 
-      {perfilPropio?.empresa_nombre && (
-        <Pressable haptic onPress={() => navigation.navigate('Equipo')}>
-          <Glass style={s.empresaBanner}>
-            <Ionicons name="people" size={16} color={colors.accent2} />
-            <Text style={s.empresaBannerText}>
-              {perfilPropio.empresa_id ? 'Formas parte de ' : 'Tu equipo: '}
-              <Text style={{ fontWeight: '700' }}>{perfilPropio.empresa_nombre}</Text>
-            </Text>
-          </Glass>
-        </Pressable>
-      )}
-
       <Glass style={s.disponibilidadCard}>
-        <View style={s.disponibilidadLeft}>
-          <View style={[s.indicador, disponible ? s.indicadorVerde : s.indicadorRojo]} />
-          <View>
-            <Text style={s.disponibilidadTitulo}>{disponible ? 'Visible para clientes' : 'No disponible'}</Text>
-            <Text style={s.disponibilidadSub}>{disponible ? 'Estás recibiendo solicitudes' : 'Activa para recibir trabajos'}</Text>
+        <View style={s.disponibilidadRow}>
+          <View style={s.disponibilidadLeft}>
+            <View style={[s.indicador, disponible ? s.indicadorVerde : s.indicadorRojo]} />
+            <View>
+              <Text style={s.disponibilidadTitulo}>{disponible ? 'Visible para clientes' : 'No disponible'}</Text>
+              <Text style={s.disponibilidadSub}>{disponible ? 'Estás recibiendo solicitudes' : 'Activa para recibir trabajos'}</Text>
+            </View>
           </View>
+          <Switch value={disponible} onValueChange={toggleDisponible}
+            trackColor={{ false: colors.glassStrong, true: colors.accent }} thumbColor={disponible ? colors.accent2 : colors.textFaint} />
         </View>
-        <Switch value={disponible} onValueChange={toggleDisponible}
-          trackColor={{ false: colors.glassStrong, true: colors.accent }} thumbColor={disponible ? colors.accent2 : colors.textFaint} />
-      </Glass>
-
-      <Glass style={[s.disponibilidadCard, { marginTop: -4 }]}>
-        <View style={s.disponibilidadLeft}>
-          <View style={s.disponibilidadIconWrap}>
-            <Ionicons name="flash" size={16} color={colors.purple} />
+        <View style={[s.disponibilidadRow, s.disponibilidadRowDivider]}>
+          <View style={s.disponibilidadLeft}>
+            <View style={s.disponibilidadIconWrap}>
+              <Ionicons name="flash" size={16} color={colors.purple} />
+            </View>
+            <View>
+              <Text style={s.disponibilidadTitulo}>Servicio 24 horas</Text>
+              <Text style={s.disponibilidadSub}>{disponible24h ? 'Aceptas urgencias nocturnas' : 'Solo horario normal'}</Text>
+            </View>
           </View>
-          <View>
-            <Text style={s.disponibilidadTitulo}>Servicio 24 horas</Text>
-            <Text style={s.disponibilidadSub}>{disponible24h ? 'Aceptas urgencias nocturnas' : 'Solo horario normal'}</Text>
-          </View>
+          <Switch value={disponible24h} onValueChange={toggle24h}
+            trackColor={{ false: colors.glassStrong, true: colors.purple }} thumbColor={disponible24h ? '#fff' : colors.textFaint} />
         </View>
-        <Switch value={disponible24h} onValueChange={toggle24h}
-          trackColor={{ false: colors.glassStrong, true: colors.purple }} thumbColor={disponible24h ? '#fff' : colors.textFaint} />
       </Glass>
 
       {checklist && checklist.email_verificado === false && (
@@ -594,38 +600,44 @@ export default function PanelFontaneroScreen({ navigation, route }) {
 
       {checklist && checklist.porcentaje < 100 && (
         <Pressable haptic onPress={() => navigation.navigate('PerfilFontanero', { nombre, userId })}>
-          <Glass style={s.checklistCard}>
-            <View style={s.checklistHeader}>
-              <Text style={s.checklistTitulo}>Completa tu perfil</Text>
-              <Text style={s.checklistPct}>{checklist.porcentaje}%</Text>
+          <Glass style={s.progressRow}>
+            <Svg width={34} height={34} style={{ transform: [{ rotate: '-90deg' }] }}>
+              <Circle cx={17} cy={17} r={RADIO_ANILLO_PERFIL} stroke={colors.glassBorder} strokeWidth={3} fill="none" />
+              <Circle
+                cx={17} cy={17} r={RADIO_ANILLO_PERFIL} stroke={colors.accent} strokeWidth={3} fill="none"
+                strokeLinecap="round"
+                strokeDasharray={CIRCUNFERENCIA_ANILLO_PERFIL}
+                strokeDashoffset={CIRCUNFERENCIA_ANILLO_PERFIL * (1 - checklist.porcentaje / 100)}
+              />
+            </Svg>
+            <View style={s.progressCopy}>
+              <Text style={s.progressTitulo}>Perfil al {checklist.porcentaje}%</Text>
+              <Text style={s.progressSub} numberOfLines={1}>
+                {checklist.items.filter(i => !i.hecho).slice(0, 2).map(i => i.etiqueta).join(' · ')}
+              </Text>
             </View>
-            <View style={s.checklistBarraFondo}>
-              <View style={[s.checklistBarraRelleno, { width: `${checklist.porcentaje}%` }]} />
-            </View>
-            <Text style={s.checklistSub}>
-              {checklist.items.filter(i => !i.hecho).slice(0, 2).map(i => i.etiqueta).join(' · ')}
-            </Text>
+            <Text style={s.progressCta}>Completar</Text>
           </Glass>
         </Pressable>
       )}
 
-      <View style={s.statsRow}>
-        <Glass style={s.statCard}>
-          <Ionicons name="star" size={18} color={colors.amber} />
-          <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
+      <Glass style={s.statsStrip}>
+        <View style={s.statItem}>
+          <View style={s.statValueRow}>
+            <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
+            <Ionicons name="star" size={13} color={colors.amber} />
+          </View>
           <Text style={s.statLabel}>Valoración</Text>
-        </Glass>
-        <Glass style={s.statCard}>
-          <Ionicons name="checkmark-circle" size={18} color={colors.green} />
+        </View>
+        <View style={[s.statItem, s.statItemDivider]}>
           <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
           <Text style={s.statLabel}>Trabajos</Text>
-        </Glass>
-        <Glass style={s.statCard}>
-          <Ionicons name="cash" size={18} color={colors.accent2} />
-          <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
-          <Text style={s.statLabel}>Total ganado</Text>
-        </Glass>
-      </View>
+        </View>
+        <View style={[s.statItem, s.statItemDivider]}>
+          <Text style={[s.statNum, s.statNumDinero]}>{stats?.ingresos_totales ?? 0}€</Text>
+          <Text style={s.statLabel}>Ganado</Text>
+        </View>
+      </Glass>
 
       {comisionPendiente > 0 && (
         <Glass style={s.cobrosCard} colorTint={colors.amberGlass}>
@@ -807,15 +819,19 @@ export default function PanelFontaneroScreen({ navigation, route }) {
           ) : pendientes.length === 0 ? (
             <View style={s.vacio}>
               <View style={s.vacioIconWrap}>
-                <Ionicons name="checkmark-done" size={36} color={colors.green} />
+                <Ionicons name="checkmark-done" size={24} color={colors.green} />
               </View>
-              <Text style={s.vacioTitulo}>¡Al día!</Text>
+              <Text style={s.vacioTitulo}>Al día</Text>
               <Text style={s.vacioSub}>No tienes solicitudes pendientes</Text>
             </View>
           ) : (
             pendientes.map((t, i) => (
               <FadeInUp key={t.id} index={i}>
-                <Glass style={s.trabajoCard}>
+                <Glass style={[s.trabajoCard, t.urgente && s.trabajoCardUrgente]}>
+                  <View style={s.trabajoFlagRow}>
+                    <View style={s.trabajoFlagDot} />
+                    <Text style={s.trabajoFlagText}>Nueva solicitud</Text>
+                  </View>
                   <View style={s.trabajoHeader}>
                     <LinearGradient colors={[colors.accent, colors.accent2]} style={s.avatar}>
                       <Text style={s.avatarText}>{(t.cliente_nombre || t.cliente || '?')[0]}</Text>
@@ -1012,6 +1028,12 @@ const s = StyleSheet.create({
   masCercanoPillText: { color: colors.green, fontSize: 10, fontWeight: '700' },
   header: { paddingHorizontal: spacing.xl, paddingTop: 50, paddingBottom: spacing.sm },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  teamChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 4, maxWidth: 160 },
+  teamChipText: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
+  iconBtn: { width: 38, height: 38, borderRadius: radius.sm, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  iconBtnDanger: { backgroundColor: colors.redLight },
+  notifDot: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.red, borderWidth: 1.5, borderColor: colors.bg },
   tabBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', backgroundColor: colors.bg,
@@ -1025,13 +1047,11 @@ const s = StyleSheet.create({
   tabBarLabelActivo: { color: colors.text, fontSize: 11, fontWeight: '700' },
   saludo: { color: colors.textMuted, fontSize: 13, marginBottom: 2 },
   nombre: { color: colors.text, ...type.h1 },
-  idText: { color: colors.blue, fontSize: 11, marginTop: 2 },
-  perfilBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', ...shadow.glow(colors.blue) },
-  perfilLetra: { color: '#fff', fontWeight: 'bold', fontSize: 20 },
-  logoutBtn: { width: 38, height: 38, borderRadius: radius.full, backgroundColor: colors.redLight, justifyContent: 'center', alignItems: 'center' },
-  disponibilidadCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
-  empresaBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.xl, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  empresaBannerText: { color: colors.text, fontSize: 13 },
+  idText: { color: colors.textFaint, fontSize: 11.5, fontWeight: '600' },
+  perfilLetra: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  disponibilidadCard: { backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, marginBottom: spacing.sm, overflow: 'hidden', ...shadow.sm },
+  disponibilidadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg },
+  disponibilidadRowDivider: { borderTopWidth: 1, borderTopColor: colors.glassBorder },
   disponibilidadLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   disponibilidadIconWrap: { width: 30, height: 30, borderRadius: radius.full, backgroundColor: 'rgba(139,92,246,0.15)', justifyContent: 'center', alignItems: 'center' },
   indicador: { width: 10, height: 10, borderRadius: 5 },
@@ -1039,15 +1059,16 @@ const s = StyleSheet.create({
   indicadorRojo: { backgroundColor: colors.red },
   disponibilidadTitulo: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 2 },
   disponibilidadSub: { color: colors.textMuted, fontSize: 12 },
-  checklistCard: { backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
-  checklistHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  checklistTitulo: { color: colors.text, fontWeight: '600', fontSize: 14 },
-  checklistPct: { color: colors.accent2, fontWeight: '700', fontSize: 14 },
-  checklistBarraFondo: { height: 6, borderRadius: 3, backgroundColor: colors.glassStrong, overflow: 'hidden', marginBottom: 8 },
-  checklistBarraRelleno: { height: 6, borderRadius: 3, backgroundColor: colors.accent2 },
-  checklistSub: { color: colors.textMuted, fontSize: 12 },
-  statsRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.xl, marginVertical: spacing.lg },
-  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bgCard, marginHorizontal: spacing.xl, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, ...shadow.sm },
+  progressCopy: { flex: 1 },
+  progressTitulo: { color: colors.text, fontWeight: '700', fontSize: 13.5 },
+  progressSub: { color: colors.textMuted, fontSize: 12, marginTop: 1 },
+  progressCta: { color: colors.accent, fontWeight: '700', fontSize: 12.5 },
+  statsStrip: { flexDirection: 'row', marginHorizontal: spacing.xl, borderRadius: radius.lg, marginVertical: spacing.lg, overflow: 'hidden', ...shadow.sm },
+  statItem: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, gap: 3 },
+  statItemDivider: { borderLeftWidth: 1, borderLeftColor: colors.glassBorder },
+  statValueRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  statNumDinero: { color: colors.green },
   cobrosCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md, marginHorizontal: spacing.xl },
   cobrosTitulo: { color: colors.text, fontWeight: '700', fontSize: 13 },
   cobrosSub: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
@@ -1068,11 +1089,15 @@ const s = StyleSheet.create({
   badge: { backgroundColor: colors.red, borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   lista: { flex: 1, paddingHorizontal: spacing.xl },
-  vacio: { alignItems: 'center', paddingTop: 50 },
-  vacioIconWrap: { width: 80, height: 80, borderRadius: radius.full, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, ...shadow.sm },
-  vacioTitulo: { color: colors.text, fontSize: 20, fontWeight: 'bold', marginBottom: spacing.sm },
-  vacioSub: { color: colors.textMuted, fontSize: 14 },
+  vacio: { alignItems: 'center', paddingTop: 36 },
+  vacioIconWrap: { width: 52, height: 52, borderRadius: radius.full, backgroundColor: colors.greenGlass, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md },
+  vacioTitulo: { color: colors.text, fontSize: 17, fontWeight: 'bold', marginBottom: 4 },
+  vacioSub: { color: colors.textMuted, fontSize: 13.5 },
   trabajoCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadow.md },
+  trabajoCardUrgente: { borderWidth: 1, borderColor: colors.red },
+  trabajoFlagRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },
+  trabajoFlagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
+  trabajoFlagText: { color: colors.accent, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
   trabajoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
   avatarCompletado: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
