@@ -3,6 +3,7 @@ import { useAuth } from '../AuthContext';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Image, ActivityIndicator, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, type, shadow } from '../theme';
 import { avisar } from '../confirmar';
@@ -36,6 +37,9 @@ const TABS = [
   { key: 'resenas', label: 'Reseñas', icon: 'star-outline' },
 ];
 
+const RADIO_ANILLO_DOC = 24;
+const CIRCUNFERENCIA_ANILLO_DOC = 2 * Math.PI * RADIO_ANILLO_DOC;
+
 export default function PerfilFontaneroScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
   const nombre = route.params?.nombre || usuario?.nombre || 'Fontanero';
@@ -63,6 +67,13 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const [documentos, setDocumentos] = useState([]);
   const [subiendoDoc, setSubiendoDoc] = useState(null);
   const [fotoPerfil, setFotoPerfil] = useState(null);
+  const [mostrarDetallado, setMostrarDetallado] = useState(false);
+  const [disponible, setDisponible] = useState(true);
+  const [actualizandoDisponible, setActualizandoDisponible] = useState(false);
+  const [vacacionesDesde, setVacacionesDesde] = useState(null);
+  const [vacacionesHasta, setVacacionesHasta] = useState(null);
+  const [mostrarVacaciones, setMostrarVacaciones] = useState(false);
+  const [guardandoVacaciones, setGuardandoVacaciones] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -78,6 +89,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       setCertificadoPro(!!p.certificado_pro);
       setCodigoReferido(p.codigo_referido || '');
       setTrabajosGratis(p.primeros_trabajos_gratis || 0);
+      setDisponible(p.disponible !== false);
+      setVacacionesDesde(p.vacaciones_desde || null);
+      setVacacionesHasta(p.vacaciones_hasta || null);
       if (p.foto_url) setFotoPerfil(`${API}${p.foto_url}`);
     } catch (e) {}
 
@@ -110,9 +124,9 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   };
 
   const DOCUMENTOS_TIPOS = [
-    { tipo: 'dni', label: 'DNI / NIE' },
-    { tipo: 'carnet_profesional', label: 'Carnet profesional' },
-    { tipo: 'seguro', label: 'Seguro de responsabilidad civil' },
+    { tipo: 'dni', label: 'DNI / NIE', icon: 'card-outline' },
+    { tipo: 'carnet_profesional', label: 'Carnet profesional', icon: 'ribbon-outline' },
+    { tipo: 'seguro', label: 'Seguro RC', icon: 'shield-checkmark-outline' },
   ];
 
   const documentoDe = (tipo) => documentos.filter(d => d.tipo === tipo).sort((a, b) => b.id - a.id)[0];
@@ -214,6 +228,71 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
     } catch (e) {}
   };
 
+  const toggleDisponibleAhora = async () => {
+    const nuevoValor = !disponible;
+    setDisponible(nuevoValor);
+    setActualizandoDisponible(true);
+    try {
+      await axios.put(`${API}/fontaneros/${userId}/disponibilidad`, { disponible: nuevoValor }, { headers });
+    } catch (e) {
+      setDisponible(!nuevoValor);
+      avisar('Error', 'No se pudo actualizar tu disponibilidad');
+    } finally {
+      setActualizandoDisponible(false);
+    }
+  };
+
+  const activarVacaciones = async (dias) => {
+    const desde = new Date();
+    const hasta = new Date();
+    hasta.setDate(hasta.getDate() + dias);
+    setGuardandoVacaciones(true);
+    try {
+      await axios.put(`${API}/fontaneros/${userId}/vacaciones`, { desde: desde.toISOString(), hasta: hasta.toISOString() }, { headers });
+      setVacacionesDesde(desde.toISOString());
+      setVacacionesHasta(hasta.toISOString());
+      setDisponible(false);
+      setMostrarVacaciones(false);
+    } catch (e) {
+      avisar('Error', 'No se pudo activar el modo vacaciones');
+    } finally {
+      setGuardandoVacaciones(false);
+    }
+  };
+
+  const cancelarVacaciones = async () => {
+    setGuardandoVacaciones(true);
+    try {
+      await axios.delete(`${API}/fontaneros/${userId}/vacaciones`, { headers });
+      setVacacionesDesde(null);
+      setVacacionesHasta(null);
+      setDisponible(true);
+    } catch (e) {
+      avisar('Error', 'No se pudo cancelar el modo vacaciones');
+    } finally {
+      setGuardandoVacaciones(false);
+    }
+  };
+
+  const vacacionesActivas = vacacionesHasta && new Date(vacacionesHasta) > new Date();
+
+  // Lunes a viernes (índices 0-4) suelen compartir el mismo horario — si coinciden,
+  // se editan juntos en la vista compacta en vez de repetir 5 filas idénticas.
+  const lunVierIguales = [1, 2, 3, 4].every(i => horario[i].activo === horario[0].activo && horario[i].inicio === horario[0].inicio && horario[i].fin === horario[0].fin);
+
+  const toggleLunVier = (valor) => {
+    const nuevo = [...horario];
+    for (let i = 0; i <= 4; i++) nuevo[i] = { ...nuevo[i], activo: valor };
+    setHorario(nuevo);
+  };
+
+  const cambiarHoraLunVier = (tipo, hora) => {
+    const nuevo = [...horario];
+    for (let i = 0; i <= 4; i++) nuevo[i] = { ...nuevo[i], [tipo]: hora };
+    setHorario(nuevo);
+    setEditandoHora(null);
+  };
+
   const toggleDia = (index) => {
     const nuevo = [...horario];
     nuevo[index].activo = !nuevo[index].activo;
@@ -282,199 +361,362 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
         </Pressable>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabsScroll} contentContainerStyle={s.tabs}>
+      <View style={s.dock}>
         {TABS.map(t => (
-          <Pressable key={t.key} haptic onPress={() => setTab(t.key)}>
-            <Glass style={[s.tab, tab === t.key && s.tabActivo]}>
-              <Ionicons name={t.icon} size={14} color={tab === t.key ? colors.accent2 : colors.textMuted} />
-              <Text style={[s.tabText, tab === t.key && s.tabTextActivo]}>{t.label}</Text>
-            </Glass>
+          <Pressable key={t.key} haptic onPress={() => setTab(t.key)} style={s.dockItem}>
+            <View style={[s.dockIcon, tab === t.key && s.dockIconActivo]}>
+              <Ionicons name={t.icon} size={17} color={tab === t.key ? '#fff' : colors.textMuted} />
+            </View>
+            <Text style={[s.dockLabel, tab === t.key && s.dockLabelActivo]} numberOfLines={1}>{t.label}</Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </View>
 
       <ScrollView style={s.contenido} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60 }}>
 
         {tab === 'perfil' && (
           <>
-            <View style={s.avatarWrap}>
-              <TouchableOpacity onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
-                {subiendoFotoPerfil ? (
-                  <View style={s.avatarGrande}><ActivityIndicator color="#fff" /></View>
-                ) : fotoPerfil ? (
-                  <Image source={{ uri: fotoPerfil }} style={s.avatarGrandeImagen} />
-                ) : (
-                  <LinearGradient colors={[colors.accent, colors.accent2]} style={s.avatarGrande}>
-                    <Text style={s.avatarGrandeText}>{nombre[0]}</Text>
-                  </LinearGradient>
-                )}
-              </TouchableOpacity>
-              <Pressable haptic onPress={subirFotoPerfil} disabled={subiendoFotoPerfil}>
-                <Glass style={s.fotoBtn}>
-                  <Ionicons name="camera-outline" size={14} color={colors.accent2} />
-                  <Text style={s.fotoBtnText}>Cambiar foto</Text>
-                </Glass>
-              </Pressable>
-            </View>
-
-            <Text style={s.nombreGrande}>{nombre}</Text>
-            <View style={s.verificadoRow}>
-              <Ionicons name={verificado ? 'checkmark-circle' : 'time-outline'} size={14} color={verificado ? colors.green : colors.amber} />
-              <Text style={verificado ? s.verificado : s.noVerificado}>
-                {verificado ? 'Identidad verificada' : 'Verificación pendiente'}
-              </Text>
-              {certificadoPro && <Text style={s.badgeProGrande}>🏅 Provenza Pro</Text>}
-            </View>
-
-            {trabajosGratis > 0 && (
-              <Glass style={s.referidoCard}>
-                <Text style={s.referidoTitulo}>🎁 Te quedan {trabajosGratis} trabajo{trabajosGratis > 1 ? 's' : ''} sin comisión</Text>
-                <Text style={s.referidoSub}>Los primeros trabajos que cobres no le pagan comisión a la plataforma.</Text>
-              </Glass>
-            )}
-
-            {!!codigoReferido && (
-              <Glass style={s.referidoCard}>
-                <Text style={s.referidoTitulo}>🎟️ Invita a un colega de tu gremio</Text>
-                <Text style={s.referidoSub}>Comparte tu código: en cuanto tu colega se registre con él, tú tendrás comisión reducida (2,5%) durante los 90 días siguientes.</Text>
-                <View style={s.referidoCodigoRow}>
-                  <Text style={s.referidoCodigo}>{codigoReferido}</Text>
-                  <Pressable
-                    haptic
-                    style={s.referidoBtn}
-                    onPress={() => Share.share({ message: `Únete a Multiservicios Provenza como profesional usando mi código ${codigoReferido} y los dos salimos ganando.` })}
-                  >
-                    <Ionicons name="share-social-outline" size={14} color={colors.text} />
-                    <Text style={s.referidoBtnText}>Compartir</Text>
-                  </Pressable>
+            <Glass style={s.heroCard}>
+              <View style={s.heroTop}>
+                <TouchableOpacity onPress={subirFotoPerfil} disabled={subiendoFotoPerfil} style={s.heroAvatarWrap}>
+                  {subiendoFotoPerfil ? (
+                    <View style={s.heroAvatar}><ActivityIndicator color="#fff" /></View>
+                  ) : fotoPerfil ? (
+                    <Image source={{ uri: fotoPerfil }} style={s.heroAvatarImagen} />
+                  ) : (
+                    <LinearGradient colors={[colors.accent, colors.accent2]} style={s.heroAvatar}>
+                      <Text style={s.heroAvatarText}>{nombre[0]}</Text>
+                    </LinearGradient>
+                  )}
+                  <View style={s.heroAvatarBadge}>
+                    <Ionicons name="camera" size={11} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.heroNombre} numberOfLines={1}>{nombre}</Text>
+                  <View style={s.badgesRow}>
+                    <View style={[s.idBadge, verificado ? s.idBadgeVerde : s.idBadgeAmbar]}>
+                      <Ionicons name={verificado ? 'checkmark-circle' : 'time-outline'} size={11} color={verificado ? colors.green : colors.amber} />
+                      <Text style={[s.idBadgeText, { color: verificado ? colors.green : colors.amber }]}>
+                        {verificado ? 'Verificado' : 'Pendiente'}
+                      </Text>
+                    </View>
+                    {certificadoPro && (
+                      <View style={[s.idBadge, s.idBadgeAmbar]}>
+                        <Text style={[s.idBadgeText, { color: colors.amber }]}>🏅 Pro</Text>
+                      </View>
+                    )}
+                    {!!zona && (
+                      <View style={[s.idBadge, s.idBadgeNeutro]}>
+                        <Ionicons name="location" size={11} color={colors.textMuted} />
+                        <Text style={[s.idBadgeText, { color: colors.textMuted }]} numberOfLines={1}>{zona}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </Glass>
-            )}
-
-            <View style={s.statsRow}>
-              <Glass style={s.statCard}>
-                <Ionicons name="star" size={16} color={colors.amber} />
-                <Text style={s.statNum}>{stats?.valoracion_media ?? '—'}</Text>
-                <Text style={s.statLabel}>Valoración</Text>
-              </Glass>
-              <Glass style={s.statCard}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={s.statNum}>{stats?.trabajos_completados ?? 0}</Text>
-                <Text style={s.statLabel}>Trabajos</Text>
-              </Glass>
-              <Glass style={s.statCard}>
-                <Ionicons name="cash" size={16} color={colors.accent2} />
-                <Text style={s.statNum}>{stats?.ingresos_totales ?? 0}€</Text>
-                <Text style={s.statLabel}>Total ganado</Text>
-              </Glass>
-            </View>
-
-            <Text style={s.seccionTitulo}>Zona de trabajo</Text>
-            <View style={s.inputWrap}>
-              <Ionicons name="location-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
-              <TextInput style={s.input} placeholder="Ej: Bilbao y alrededores"
-                placeholderTextColor={colors.textFaint} value={zona} onChangeText={setZona} />
-            </View>
+              </View>
+              <View style={s.heroStats}>
+                <View style={s.heroStat}>
+                  <View style={s.heroStatValueRow}>
+                    <Text style={s.heroStatValue}>{stats?.valoracion_media ?? '—'}</Text>
+                    <Ionicons name="star" size={12} color={colors.amber} />
+                  </View>
+                  <Text style={s.heroStatLabel}>Valoración</Text>
+                </View>
+                <View style={[s.heroStat, s.heroStatDivider]}>
+                  <Text style={s.heroStatValue}>{stats?.trabajos_completados ?? 0}</Text>
+                  <Text style={s.heroStatLabel}>Trabajos</Text>
+                </View>
+                <View style={[s.heroStat, s.heroStatDivider]}>
+                  <Text style={[s.heroStatValue, { color: colors.green }]}>{stats?.ingresos_totales ?? 0}€</Text>
+                  <Text style={s.heroStatLabel}>Ganado</Text>
+                </View>
+              </View>
+            </Glass>
 
             <Text style={s.seccionTitulo}>Sobre mí</Text>
-            <TextInput
-              style={s.textArea}
-              placeholder="Cuéntanos tu experiencia, especialidades..."
-              placeholderTextColor={colors.textFaint}
-              multiline
-              numberOfLines={5}
-              value={descripcion}
-              onChangeText={setDescripcion}
-            />
+            <Glass style={s.bioCard}>
+              <Text style={s.bioFieldLabel}>Zona de trabajo</Text>
+              <View style={s.inputWrap}>
+                <Ionicons name="location-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
+                <TextInput style={s.input} placeholder="Ej: Bilbao y alrededores"
+                  placeholderTextColor={colors.textFaint} value={zona} onChangeText={setZona} />
+              </View>
+              <Text style={[s.bioFieldLabel, { marginTop: spacing.sm }]}>Lo que ven tus clientes</Text>
+              <TextInput
+                style={s.textArea}
+                placeholder="Cuéntanos tu experiencia, especialidades..."
+                placeholderTextColor={colors.textFaint}
+                multiline
+                numberOfLines={4}
+                value={descripcion}
+                onChangeText={setDescripcion}
+              />
+            </Glass>
 
-            <Text style={s.seccionTitulo}>Verificación de identidad</Text>
-            <Text style={s.seccionSub}>Sube estos documentos para que un administrador verifique tu perfil</Text>
-            {DOCUMENTOS_TIPOS.map(({ tipo, label }) => {
-              const doc = documentoDe(tipo);
-              const estado = doc?.estado || 'sin_subir';
-              const pillEstilo = estado === 'verificado' ? s.docPillOk : estado === 'rechazado' ? s.docPillMal : estado === 'pendiente' ? s.docPillPendiente : s.docPillVacio;
-              const pillTexto = estado === 'verificado' ? '✓ Verificado' : estado === 'rechazado' ? '✕ Rechazado' : estado === 'pendiente' ? '⏳ Revisando' : 'Sin subir';
-              return (
-                <Glass key={tipo} style={s.docCard}>
-                  <View style={s.docInfo}>
-                    <Text style={s.docLabel}>{label}</Text>
-                    <View style={pillEstilo}><Text style={s.docPillText}>{pillTexto}</Text></View>
-                  </View>
-                  <Pressable style={s.docBtn} haptic onPress={() => subirDocumento(tipo)} disabled={subiendoDoc === tipo}>
-                    <Ionicons name={doc ? 'refresh-outline' : 'cloud-upload-outline'} size={15} color={colors.blue} />
-                    <Text style={s.docBtnText}>
-                      {subiendoDoc === tipo ? 'Subiendo...' : doc ? 'Reemplazar' : 'Subir'}
-                    </Text>
+            <View style={s.verifHeadRow}>
+              <Text style={[s.seccionTitulo, { marginBottom: 0 }]}>Verificación de identidad</Text>
+              <Text style={s.verifCount}>
+                {DOCUMENTOS_TIPOS.filter(({ tipo }) => documentoDe(tipo)?.estado === 'verificado').length} de {DOCUMENTOS_TIPOS.length}
+              </Text>
+            </View>
+            <View style={s.verifTrack}>
+              {DOCUMENTOS_TIPOS.map(({ tipo, label, icon }) => {
+                const doc = documentoDe(tipo);
+                const estado = doc?.estado || 'sin_subir';
+                const completo = estado === 'verificado';
+                const colorEstado = estado === 'verificado' ? colors.green : estado === 'rechazado' ? colors.red : estado === 'pendiente' ? colors.amber : colors.glassBorder;
+                return (
+                  <Pressable
+                    key={tipo}
+                    haptic
+                    style={s.verifItem}
+                    onPress={() => subirDocumento(tipo)}
+                    disabled={subiendoDoc === tipo}
+                  >
+                    <View style={s.verifRingWrap}>
+                      <Svg width={52} height={52} style={{ transform: [{ rotate: '-90deg' }] }}>
+                        <Circle cx={26} cy={26} r={RADIO_ANILLO_DOC} stroke={colors.glassBorder} strokeWidth={3} fill="none" />
+                        <Circle
+                          cx={26} cy={26} r={RADIO_ANILLO_DOC} stroke={colorEstado} strokeWidth={3} fill="none"
+                          strokeLinecap="round"
+                          strokeDasharray={CIRCUNFERENCIA_ANILLO_DOC}
+                          strokeDashoffset={completo ? 0 : CIRCUNFERENCIA_ANILLO_DOC}
+                        />
+                      </Svg>
+                      <View style={s.verifIconWrap}>
+                        {subiendoDoc === tipo ? (
+                          <ActivityIndicator size={14} color={colors.text} />
+                        ) : (
+                          <Ionicons name={completo ? 'checkmark' : icon} size={17} color={completo ? colors.green : colors.textMuted} />
+                        )}
+                      </View>
+                      {!completo && (
+                        <View style={s.verifPlus}>
+                          <Ionicons name="add" size={9} color="#fff" />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={s.verifItemLabel} numberOfLines={2}>{label}</Text>
                   </Pressable>
-                </Glass>
-              );
-            })}
+                );
+              })}
+            </View>
 
+            {(trabajosGratis > 0 || !!codigoReferido) && (
+              <>
+                <Text style={s.seccionTitulo}>Recompensas</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -spacing.xl }} contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
+                  {trabajosGratis > 0 && (
+                    <Glass style={s.rewardCard}>
+                      <View style={[s.rewardIcon, s.idBadgeAmbar]}>
+                        <Ionicons name="gift" size={15} color={colors.amber} />
+                      </View>
+                      <Text style={s.rewardTitulo}>Te quedan {trabajosGratis} trabajo{trabajosGratis > 1 ? 's' : ''} sin comisión</Text>
+                      <Text style={s.rewardSub}>Los primeros trabajos que cobres no le pagan comisión a la plataforma.</Text>
+                    </Glass>
+                  )}
+                  {!!codigoReferido && (
+                    <Glass style={s.rewardCard}>
+                      <View style={[s.rewardIcon, { backgroundColor: colors.blueLight }]}>
+                        <Ionicons name="people" size={15} color={colors.accent2} />
+                      </View>
+                      <Text style={s.rewardTitulo}>Invita a un colega</Text>
+                      <Text style={s.rewardSub}>Comisión reducida (2,5%) por 90 días cuando se registre con tu código.</Text>
+                      <View style={s.codeChip}>
+                        <Text style={s.codeChipText}>{codigoReferido}</Text>
+                        <Pressable
+                          haptic
+                          style={s.codeChipBtn}
+                          onPress={() => Share.share({ message: `Únete a Multiservicios Provenza como profesional usando mi código ${codigoReferido} y los dos salimos ganando.` })}
+                        >
+                          <Ionicons name="share-social-outline" size={12} color={colors.text} />
+                          <Text style={s.codeChipBtnText}>Compartir</Text>
+                        </Pressable>
+                      </View>
+                    </Glass>
+                  )}
+                </ScrollView>
+              </>
+            )}
+
+            <Text style={s.seccionTitulo}>Tu negocio</Text>
             <Pressable haptic onPress={() => navigation.navigate('Equipo')}>
               <Glass style={s.adminCard}>
                 <LinearGradient colors={[colors.accent, colors.accent2]} style={s.adminIconWrap}>
-                  <Ionicons name="business" size={22} color="#fff" />
+                  <Ionicons name="business" size={20} color="#fff" />
                 </LinearGradient>
                 <View style={{ flex: 1 }}>
                   <Text style={s.adminTitulo}>Administración</Text>
                   <Text style={s.adminSub}>Registra tu empresa, gestiona tu equipo y tu panel de gestión</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={22} color={colors.textFaint} />
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
               </Glass>
             </Pressable>
 
-            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: { usuario_id: userId, nombre } })}>
-              <Text style={s.linkTerminosText}>👁️ Ver vista previa de tu perfil público</Text>
-            </Pressable>
-
-            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
-              <Text style={s.linkTerminosText}>Ajustes de cuenta (contraseña, eliminar cuenta)</Text>
-            </Pressable>
-
-            <Pressable style={s.linkTerminos} haptic onPress={() => navigation.navigate('Terminos')}>
-              <Text style={s.linkTerminosText}>Términos y condiciones</Text>
-            </Pressable>
+            <Text style={s.seccionTitulo}>Cuenta</Text>
+            <Glass style={s.cuentaCard}>
+              <Pressable style={s.cuentaRow} haptic onPress={() => navigation.navigate('PerfilFontaneroPublico', { fontanero: { usuario_id: userId, nombre } })}>
+                <View style={s.cuentaRowIcon}><Ionicons name="eye-outline" size={14} color={colors.textMuted} /></View>
+                <Text style={s.cuentaRowText}>Vista previa de tu perfil público</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+              </Pressable>
+              <Pressable style={[s.cuentaRow, s.cuentaRowDivider]} haptic onPress={() => navigation.navigate('AjustesCuenta')}>
+                <View style={s.cuentaRowIcon}><Ionicons name="settings-outline" size={14} color={colors.textMuted} /></View>
+                <Text style={s.cuentaRowText}>Ajustes de cuenta</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+              </Pressable>
+              <Pressable style={[s.cuentaRow, s.cuentaRowDivider]} haptic onPress={() => navigation.navigate('Terminos')}>
+                <View style={s.cuentaRowIcon}><Ionicons name="document-text-outline" size={14} color={colors.textMuted} /></View>
+                <Text style={s.cuentaRowText}>Términos y condiciones</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+              </Pressable>
+            </Glass>
           </>
         )}
 
         {tab === 'horario' && (
           <>
-            <Text style={s.seccionTitulo}>Días y horas de trabajo</Text>
-            <Text style={s.seccionSub}>Toca las horas para editarlas</Text>
-
-            {horario.map((h, i) => (
-              <View key={i} style={[s.diaCard, !h.activo && s.diaCardInactivo]}>
-                <Switch value={h.activo} onValueChange={() => toggleDia(i)}
-                  trackColor={{ false: colors.bgCard3, true: colors.blueLight }}
-                  thumbColor={h.activo ? colors.blue : colors.textFaint} />
-                <Text style={[s.diaNombre, !h.activo && s.diaInactivo]}>{DIAS[i]}</Text>
-                {h.activo && (
-                  <View style={s.horasRow}>
-                    <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: i, tipo: 'inicio' })}>
-                      <Text style={s.horaBtnText}>{h.inicio}</Text>
-                    </TouchableOpacity>
-                    <Ionicons name="arrow-forward" size={12} color={colors.textMuted} />
-                    <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: i, tipo: 'fin' })}>
-                      <Text style={s.horaBtnText}>{h.fin}</Text>
-                    </TouchableOpacity>
+            <View style={s.quickRow}>
+              <Glass style={s.quickChip}>
+                <View style={s.quickChipTop}>
+                  <View style={[s.quickChipIcon, s.idBadgeVerde]}>
+                    <Ionicons name="pause" size={13} color={colors.green} />
                   </View>
+                  <Switch value={!disponible} onValueChange={toggleDisponibleAhora} disabled={actualizandoDisponible}
+                    trackColor={{ false: colors.bgCard3, true: colors.red }} thumbColor={!disponible ? '#fff' : colors.textFaint} />
+                </View>
+                <Text style={s.quickChipTitulo}>No disponible ahora</Text>
+                <Text style={s.quickChipSub}>Pausa sin tocar tu horario semanal</Text>
+              </Glass>
+              <Pressable haptic onPress={() => setMostrarVacaciones(v => !v)} style={{ flex: 1 }}>
+                <Glass style={s.quickChip}>
+                  <View style={s.quickChipTop}>
+                    <View style={[s.quickChipIcon, s.idBadgeAmbar]}>
+                      <Ionicons name="airplane" size={13} color={colors.amber} />
+                    </View>
+                    <Ionicons name="chevron-forward" size={13} color={colors.textFaint} />
+                  </View>
+                  <Text style={s.quickChipTitulo}>Modo vacaciones</Text>
+                  <Text style={s.quickChipSub}>
+                    {vacacionesActivas
+                      ? `Hasta el ${new Date(vacacionesHasta).toLocaleDateString('es-ES')}`
+                      : 'Bloquea un rango de fechas'}
+                  </Text>
+                </Glass>
+              </Pressable>
+            </View>
+
+            {mostrarVacaciones && (
+              <Glass style={s.vacacionesPanel}>
+                {vacacionesActivas ? (
+                  <>
+                    <Text style={s.vacacionesTexto}>
+                      Vacaciones activas hasta el {new Date(vacacionesHasta).toLocaleDateString('es-ES')}
+                    </Text>
+                    <TouchableOpacity style={s.btnCancelarVacaciones} onPress={cancelarVacaciones} disabled={guardandoVacaciones}>
+                      <Text style={s.btnCancelarVacacionesText}>{guardandoVacaciones ? '...' : 'Cancelar vacaciones'}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={s.vacacionesTexto}>Sin fechas bloqueadas todavía</Text>
+                    <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                      <TouchableOpacity style={s.btnVacacionesPreset} onPress={() => activarVacaciones(7)} disabled={guardandoVacaciones}>
+                        <Text style={s.btnVacacionesPresetText}>1 semana</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.btnVacacionesPreset} onPress={() => activarVacaciones(14)} disabled={guardandoVacaciones}>
+                        <Text style={s.btnVacacionesPresetText}>2 semanas</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
                 )}
+              </Glass>
+            )}
+
+            <View style={s.horarioHeadRow}>
+              <View>
+                <Text style={[s.seccionTitulo, { marginTop: 0 }]}>Días y horas de trabajo</Text>
+                <Text style={[s.seccionSub, { marginBottom: 0 }]}>Toca las horas para editarlas</Text>
               </View>
-            ))}
+              <View style={s.modeSwitchWrap}>
+                <Text style={s.modeSwitchLabel}>{mostrarDetallado ? 'Detallado' : 'Compacto'}</Text>
+                <Switch value={mostrarDetallado} onValueChange={setMostrarDetallado}
+                  trackColor={{ false: colors.bgCard3, true: colors.accent }} thumbColor={mostrarDetallado ? '#fff' : colors.textFaint} />
+              </View>
+            </View>
+
+            {!mostrarDetallado ? (
+              <>
+                <View style={[s.diaCard, { marginTop: spacing.md }]}>
+                  <Switch value={horario[0].activo} onValueChange={toggleLunVier}
+                    trackColor={{ false: colors.bgCard3, true: colors.blueLight }}
+                    thumbColor={horario[0].activo ? colors.blue : colors.textFaint} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.diaNombre, !horario[0].activo && s.diaInactivo]}>Lunes a viernes</Text>
+                    <Text style={s.diaSubetiqueta}>{lunVierIguales ? 'Mismo horario los 5 días' : 'Horarios distintos — mirá el detalle'}</Text>
+                  </View>
+                  {horario[0].activo && lunVierIguales && (
+                    <View style={s.horasRow}>
+                      <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: 'lunvier', tipo: 'inicio' })}>
+                        <Text style={s.horaBtnText}>{horario[0].inicio}</Text>
+                      </TouchableOpacity>
+                      <Ionicons name="arrow-forward" size={12} color={colors.textMuted} />
+                      <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: 'lunvier', tipo: 'fin' })}>
+                        <Text style={s.horaBtnText}>{horario[0].fin}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+                <View style={s.weekendRow}>
+                  {[5, 6].map(i => (
+                    <View key={i} style={s.weekendChip}>
+                      <Text style={[s.diaNombre, !horario[i].activo && s.diaInactivo]}>{DIAS[i]}</Text>
+                      <Switch value={horario[i].activo} onValueChange={() => toggleDia(i)}
+                        trackColor={{ false: colors.bgCard3, true: colors.blueLight }}
+                        thumbColor={horario[i].activo ? colors.blue : colors.textFaint} />
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : (
+              horario.map((h, i) => (
+                <View key={i} style={[s.diaCard, !h.activo && s.diaCardInactivo]}>
+                  <Switch value={h.activo} onValueChange={() => toggleDia(i)}
+                    trackColor={{ false: colors.bgCard3, true: colors.blueLight }}
+                    thumbColor={h.activo ? colors.blue : colors.textFaint} />
+                  <Text style={[s.diaNombre, !h.activo && s.diaInactivo]}>{DIAS[i]}</Text>
+                  {h.activo && (
+                    <View style={s.horasRow}>
+                      <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: i, tipo: 'inicio' })}>
+                        <Text style={s.horaBtnText}>{h.inicio}</Text>
+                      </TouchableOpacity>
+                      <Ionicons name="arrow-forward" size={12} color={colors.textMuted} />
+                      <TouchableOpacity style={s.horaBtn} onPress={() => setEditandoHora({ dia: i, tipo: 'fin' })}>
+                        <Text style={s.horaBtnText}>{h.fin}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
 
             {editandoHora && (
               <View style={s.horaSelectorWrap}>
                 <Text style={s.horaSelectorTitulo}>
-                  Hora de {editandoHora.tipo === 'inicio' ? 'inicio' : 'fin'} — {DIAS[editandoHora.dia]}
+                  Hora de {editandoHora.tipo === 'inicio' ? 'inicio' : 'fin'} — {editandoHora.dia === 'lunvier' ? 'Lunes a viernes' : DIAS[editandoHora.dia]}
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.horaScroll}>
-                  {HORAS.map(h => (
-                    <TouchableOpacity key={h}
-                      style={[s.horaPill, horario[editandoHora.dia][editandoHora.tipo] === h && s.horaPillActiva]}
-                      onPress={() => cambiarHora(editandoHora.dia, editandoHora.tipo, h)}>
-                      <Text style={[s.horaPillText, horario[editandoHora.dia][editandoHora.tipo] === h && s.horaPillTextActiva]}>{h}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {HORAS.map(h => {
+                    const valorActual = editandoHora.dia === 'lunvier' ? horario[0][editandoHora.tipo] : horario[editandoHora.dia][editandoHora.tipo];
+                    return (
+                      <TouchableOpacity key={h}
+                        style={[s.horaPill, valorActual === h && s.horaPillActiva]}
+                        onPress={() => editandoHora.dia === 'lunvier' ? cambiarHoraLunVier(editandoHora.tipo, h) : cambiarHora(editandoHora.dia, editandoHora.tipo, h)}>
+                        <Text style={[s.horaPillText, valorActual === h && s.horaPillTextActiva]}>{h}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
                 <TouchableOpacity onPress={() => setEditandoHora(null)} style={s.cerrarSelector}>
                   <Text style={s.cerrarSelectorText}>Cerrar</Text>
@@ -486,27 +728,36 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
         {tab === 'servicios' && (
           <>
-            <Text style={s.seccionTitulo}>Mis servicios y precios base</Text>
+            <Text style={[s.seccionTitulo, { marginTop: 0 }]}>Mis servicios y precios base</Text>
             <Text style={s.seccionSub}>El cliente verá estos precios antes de contratarte</Text>
 
-            {servicios.length === 0 && (
-              <Text style={s.seccionSub}>Aún no has añadido servicios propios.</Text>
-            )}
-            {servicios.map(sv => (
-              <Glass key={sv.id} style={s.servicioCard}>
-                <View style={s.servicioInfo}>
-                  <Text style={s.servicioNombre}>{sv.nombre}</Text>
-                  <View style={s.servicioDuracionRow}>
-                    <Ionicons name="time-outline" size={11} color={colors.textMuted} />
-                    <Text style={s.servicioDuracion}>{sv.duracion_minutos} min</Text>
-                  </View>
+            {servicios.length === 0 ? (
+              <Glass style={s.servicioVacio}>
+                <View style={s.servicioVacioIcon}>
+                  <Ionicons name="construct-outline" size={18} color={colors.textFaint} />
                 </View>
-                <Text style={s.servicioPrecio}>desde {sv.precio}€</Text>
-                <Pressable onPress={() => eliminarServicio(sv.id)} haptic style={s.eliminarBtn}>
-                  <Ionicons name="close" size={14} color={colors.red} />
-                </Pressable>
+                <Text style={s.servicioVacioTexto}>Aún no has añadido servicios propios</Text>
               </Glass>
-            ))}
+            ) : (
+              servicios.map(sv => (
+                <Glass key={sv.id} style={s.servicioCard}>
+                  <View style={s.servicioIconWrap}>
+                    <Ionicons name="construct" size={16} color={colors.accent2} />
+                  </View>
+                  <View style={s.servicioInfo}>
+                    <Text style={s.servicioNombre}>{sv.nombre}</Text>
+                    <View style={s.servicioDuracionRow}>
+                      <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                      <Text style={s.servicioDuracion}>{sv.duracion_minutos} min</Text>
+                    </View>
+                  </View>
+                  <Text style={s.servicioPrecio}>{sv.precio}€</Text>
+                  <Pressable onPress={() => eliminarServicio(sv.id)} haptic style={s.eliminarBtn}>
+                    <Ionicons name="close" size={14} color={colors.red} />
+                  </Pressable>
+                </Glass>
+              ))
+            )}
 
             <Glass style={s.añadirCard}>
               <Text style={s.añadirTitulo}>Añadir servicio</Text>
@@ -515,21 +766,23 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                 <TextInput style={s.input} placeholder="Nombre del servicio" placeholderTextColor={colors.textFaint}
                   value={nuevoServicio} onChangeText={setNuevoServicio} />
               </View>
-              <View style={s.dobleInput}>
-                <View style={[s.inputWrap, { flex: 1 }]}>
-                  <Ionicons name="cash-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
-                  <TextInput style={s.input} placeholder="Precio €" placeholderTextColor={colors.textFaint}
-                    value={nuevoPrecio} onChangeText={setNuevoPrecio} keyboardType="numeric" />
-                </View>
-                <View style={[s.inputWrap, { flex: 1 }]}>
-                  <Ionicons name="time-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
-                  <TextInput style={s.input} placeholder="Min" placeholderTextColor={colors.textFaint}
-                    value={nuevaDuracion} onChangeText={setNuevaDuracion} keyboardType="numeric" />
-                </View>
+              <View style={s.inputWrap}>
+                <Ionicons name="cash-outline" size={16} color={colors.textMuted} style={s.inputIcon} />
+                <TextInput style={s.input} placeholder="Precio €" placeholderTextColor={colors.textFaint}
+                  value={nuevoPrecio} onChangeText={setNuevoPrecio} keyboardType="numeric" />
               </View>
-              <Pressable haptic onPress={añadirServicio}>
+              <Text style={s.duracionLabel}>Duración estimada</Text>
+              <View style={s.duracionRow}>
+                {['30', '60', '90', '120'].map(min => (
+                  <Pressable key={min} haptic onPress={() => setNuevaDuracion(min)} style={[s.duracionChip, nuevaDuracion === min && s.duracionChipActivo]}>
+                    <Text style={[s.duracionChipText, nuevaDuracion === min && s.duracionChipTextActivo]}>{min} min</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable haptic onPress={añadirServicio} disabled={!nuevoServicio || !nuevoPrecio} style={s.btnAñadirWrap}>
                 <LinearGradient colors={[colors.accent, colors.accent2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnAñadir}>
                   <Text style={s.btnAñadirText}>Añadir servicio</Text>
+                  <Ionicons name="add" size={15} color={colors.text} />
                 </LinearGradient>
               </Pressable>
             </Glass>
@@ -641,56 +894,89 @@ const s = StyleSheet.create({
   guardarBtnWrap: { padding: 4 },
   guardarBtn: { color: colors.blue, fontSize: 15, fontWeight: '600' },
   guardarBtnOk: { color: colors.green },
-  tabsScroll: { maxHeight: 60 },
-  tabs: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.sm },
-  tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.full, backgroundColor: colors.bgCard, gap: 6 },
-  tabActivo: { backgroundColor: colors.blueLight },
-  tabText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
-  tabTextActivo: { color: colors.blue, fontWeight: '700' },
+  dock: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  dockItem: { alignItems: 'center', gap: 5, width: 58 },
+  dockIcon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.bgCard, justifyContent: 'center', alignItems: 'center' },
+  dockIconActivo: { backgroundColor: colors.accent },
+  dockLabel: { color: colors.textFaint, fontSize: 10, fontWeight: '700' },
+  dockLabelActivo: { color: colors.text },
   contenido: { flex: 1 },
-  avatarWrap: { alignItems: 'center', marginBottom: spacing.md },
-  avatarGrande: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, ...shadow.glow(colors.blue) },
-  avatarGrandeText: { color: '#fff', fontWeight: 'bold', fontSize: 38 },
-  fotoBtn: { flexDirection: 'row', gap: 6, backgroundColor: colors.bgCard, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, ...shadow.sm },
-  fotoBtnText: { color: colors.blue, fontSize: 13, fontWeight: '500' },
-  nombreGrande: { color: colors.text, ...type.h1, textAlign: 'center', marginBottom: spacing.sm },
-  verificadoRow: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'center', marginBottom: spacing.xl },
-  verificado: { color: colors.green, fontSize: 13 },
-  noVerificado: { color: colors.amber, fontSize: 13 },
-  badgeProGrande: { color: colors.amber, fontSize: 12, fontWeight: '700', marginLeft: 10 },
-  referidoCard: { width: '100%', padding: spacing.lg, borderRadius: radius.md, marginTop: spacing.md, gap: 6 },
-  referidoTitulo: { color: colors.text, fontWeight: '700', fontSize: 14 },
-  referidoSub: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
-  referidoCodigoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  referidoCodigo: { color: colors.accent2, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
-  referidoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.glass, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.glassBorder },
-  referidoBtnText: { color: colors.text, fontSize: 12, fontWeight: '600' },
-  statsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
-  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', gap: 6, ...shadow.sm },
-  statNum: { color: colors.text, fontSize: 18, fontWeight: 'bold' },
-  statLabel: { color: colors.textMuted, fontSize: 11 },
-  seccionTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 6, marginTop: spacing.sm },
+
+  heroCard: { borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.lg, ...shadow.sm },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg },
+  heroAvatarWrap: { position: 'relative' },
+  heroAvatar: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.blue, justifyContent: 'center', alignItems: 'center' },
+  heroAvatarText: { color: '#fff', fontWeight: 'bold', fontSize: 21 },
+  heroAvatarImagen: { width: 56, height: 56, borderRadius: radius.md },
+  heroAvatarBadge: { position: 'absolute', bottom: -4, right: -4, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.bgCard2, borderWidth: 2.5, borderColor: colors.bg, justifyContent: 'center', alignItems: 'center' },
+  heroNombre: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginBottom: 6 },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  idBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.full },
+  idBadgeVerde: { backgroundColor: colors.greenGlass },
+  idBadgeAmbar: { backgroundColor: colors.amberGlass },
+  idBadgeNeutro: { backgroundColor: colors.glass, maxWidth: 130 },
+  idBadgeText: { fontSize: 10, fontWeight: '800' },
+  heroStats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.glassBorder },
+  heroStat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
+  heroStatDivider: { borderLeftWidth: 1, borderLeftColor: colors.glassBorder },
+  heroStatValueRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  heroStatValue: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  heroStatLabel: { color: colors.textFaint, fontSize: 10, fontWeight: '600', marginTop: 2 },
+
+  bioCard: { padding: spacing.lg, borderRadius: radius.lg, marginBottom: spacing.sm },
+  bioFieldLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: spacing.sm },
+  seccionTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10, marginTop: spacing.lg },
   seccionSub: { color: colors.textMuted, fontSize: 12, marginBottom: spacing.lg },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, paddingHorizontal: spacing.lg, marginBottom: spacing.sm, ...shadow.sm },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard2, borderRadius: radius.md, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   inputIcon: { marginRight: spacing.sm },
   input: { flex: 1, color: colors.text, paddingVertical: spacing.md, fontSize: 14 },
-  textArea: { backgroundColor: colors.bgCard, color: colors.text, borderRadius: radius.md, padding: spacing.lg, fontSize: 14, minHeight: 120, textAlignVertical: 'top', marginBottom: spacing.lg, ...shadow.sm },
-  docCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
-  docInfo: { flex: 1 },
-  docLabel: { color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 6 },
-  docPillOk: { alignSelf: 'flex-start', backgroundColor: colors.greenLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.green },
-  docPillMal: { alignSelf: 'flex-start', backgroundColor: colors.redLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.red },
-  docPillPendiente: { alignSelf: 'flex-start', backgroundColor: colors.bgCard2, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.amber },
-  docPillVacio: { alignSelf: 'flex-start', backgroundColor: colors.bgCard2, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.border2 },
-  docPillText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  docBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.blueLight, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8 },
-  docBtnText: { color: colors.blue, fontSize: 12.5, fontWeight: '700' },
-  linkTerminos: { alignItems: 'center', paddingVertical: spacing.lg },
-  linkTerminosText: { color: colors.textFaint, fontSize: 12.5, textDecorationLine: 'underline' },
-  adminCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.md, marginTop: spacing.md },
-  adminIconWrap: { width: 48, height: 48, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
+  textArea: { backgroundColor: colors.bgCard2, color: colors.text, borderRadius: radius.md, padding: spacing.lg, fontSize: 13.5, minHeight: 80, textAlignVertical: 'top' },
+
+  verifHeadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg },
+  verifCount: { color: colors.textFaint, fontSize: 11, fontWeight: '700', backgroundColor: colors.bgCard2, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2 },
+  verifTrack: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
+  verifItem: { alignItems: 'center', gap: spacing.sm, width: 84 },
+  verifRingWrap: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center' },
+  verifIconWrap: { position: 'absolute', width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
+  verifPlus: { position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: radius.full, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.bg, justifyContent: 'center', alignItems: 'center' },
+  verifItemLabel: { color: colors.textMuted, fontSize: 10.5, fontWeight: '700', textAlign: 'center', lineHeight: 13 },
+
+  rewardCard: { width: 240, padding: spacing.md, borderRadius: radius.lg },
+  rewardIcon: { width: 32, height: 32, borderRadius: radius.sm, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
+  rewardTitulo: { color: colors.text, fontWeight: '800', fontSize: 13, marginBottom: 3 },
+  rewardSub: { color: colors.textMuted, fontSize: 11.5, lineHeight: 16 },
+  codeChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: spacing.sm, backgroundColor: colors.bgCard2, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border2, borderStyle: 'dashed', paddingHorizontal: 10, paddingVertical: 8 },
+  codeChipText: { color: colors.text, fontSize: 13, fontWeight: 'bold', letterSpacing: 1.5 },
+  codeChipBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.glass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  codeChipBtnText: { color: colors.text, fontSize: 10.5, fontWeight: '700' },
+
+  adminCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.md },
+  adminIconWrap: { width: 44, height: 44, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
+  cuentaCard: { borderRadius: radius.lg, overflow: 'hidden' },
+  cuentaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  cuentaRowDivider: { borderTopWidth: 1, borderTopColor: colors.glassBorder },
+  cuentaRowIcon: { width: 26, height: 26, borderRadius: radius.sm, backgroundColor: colors.glass, justifyContent: 'center', alignItems: 'center' },
+  cuentaRowText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: '600' },
   adminTitulo: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 3 },
   adminSub: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
+  quickRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
+  quickChip: { flex: 1, padding: spacing.md, borderRadius: radius.md, gap: spacing.sm },
+  quickChipTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  quickChipIcon: { width: 26, height: 26, borderRadius: radius.sm, justifyContent: 'center', alignItems: 'center' },
+  quickChipTitulo: { color: colors.text, fontWeight: '800', fontSize: 12.5 },
+  quickChipSub: { color: colors.textMuted, fontSize: 10.5, lineHeight: 14 },
+  vacacionesPanel: { padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md, gap: spacing.sm },
+  vacacionesTexto: { color: colors.textMuted, fontSize: 12.5 },
+  btnVacacionesPreset: { backgroundColor: colors.bgCard2, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.border2 },
+  btnVacacionesPresetText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  btnCancelarVacaciones: { alignSelf: 'flex-start' },
+  btnCancelarVacacionesText: { color: colors.red, fontSize: 12.5, fontWeight: '700' },
+  horarioHeadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  modeSwitchWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  modeSwitchLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  diaSubetiqueta: { color: colors.textFaint, fontSize: 11, marginTop: 1 },
+  weekendRow: { flexDirection: 'row', gap: spacing.md },
+  weekendChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, ...shadow.sm },
   diaCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
   diaCardInactivo: { opacity: 0.5 },
   diaNombre: { color: colors.text, fontWeight: '500', fontSize: 14, flex: 1 },
@@ -707,7 +993,11 @@ const s = StyleSheet.create({
   horaPillTextActiva: { color: '#fff', fontWeight: '600' },
   cerrarSelector: { alignItems: 'center', paddingTop: spacing.sm },
   cerrarSelectorText: { color: colors.textMuted, fontSize: 13 },
+  servicioVacio: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, marginBottom: spacing.sm },
+  servicioVacioIcon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.bgCard2, justifyContent: 'center', alignItems: 'center' },
+  servicioVacioTexto: { color: colors.textMuted, fontSize: 13, flex: 1 },
   servicioCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, gap: spacing.md, ...shadow.sm },
+  servicioIconWrap: { width: 34, height: 34, borderRadius: radius.sm, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center' },
   servicioInfo: { flex: 1 },
   servicioNombre: { color: colors.text, fontWeight: '500', fontSize: 14 },
   servicioDuracionRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
@@ -716,9 +1006,15 @@ const s = StyleSheet.create({
   eliminarBtn: { backgroundColor: colors.redLight, borderRadius: radius.sm, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
   añadirCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm, ...shadow.sm },
   añadirTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: spacing.lg },
-  dobleInput: { flexDirection: 'row', gap: spacing.md },
-  btnAñadir: { backgroundColor: colors.blue, borderRadius: radius.md, padding: 13, alignItems: 'center', marginTop: 4, ...shadow.glow(colors.blue) },
-  btnAñadirText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  duracionLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: spacing.sm },
+  duracionRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  duracionChip: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: radius.sm, backgroundColor: colors.bgCard2, borderWidth: 1, borderColor: colors.border2 },
+  duracionChipActivo: { backgroundColor: colors.blue, borderColor: colors.blue },
+  duracionChipText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  duracionChipTextActivo: { color: '#fff' },
+  btnAñadirWrap: { alignSelf: 'flex-end' },
+  btnAñadir: { flexDirection: 'row', gap: 6, backgroundColor: colors.blue, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', ...shadow.glow(colors.blue) },
+  btnAñadirText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
   subirFotoBtn: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.xl, alignItems: 'center', marginBottom: spacing.lg, ...shadow.sm },
   subirFotoIconWrap: { width: 52, height: 52, borderRadius: radius.full, backgroundColor: colors.blueLight, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
   subirFotoText: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 4 },
@@ -732,7 +1028,6 @@ const s = StyleSheet.create({
   fotoImagen: { width: '100%', height: 120 },
   fotoDescInput: { color: colors.textMuted, fontSize: 12, padding: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.border },
   fotoEliminar: { position: 'absolute', top: spacing.sm, right: spacing.sm, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: radius.full, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
-  avatarGrandeImagen: { width: 96, height: 96, borderRadius: 48, marginBottom: spacing.md },
   resenaCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md, ...shadow.sm },
   resenaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   estrellasRow: { flexDirection: 'row', gap: 1 },
