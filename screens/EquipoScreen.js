@@ -73,7 +73,10 @@ export default function EquipoScreen({ navigation }) {
       }
       try {
         const resNotifs = await axios.get(`${API}/usuarios/${usuario.id}/notificaciones`, { headers });
-        setInvitaciones((resNotifs.data || []).filter(n => n.tipo === 'invitacion_equipo' && !n.leida));
+        // No filtramos por "leída": NotificacionesScreen marca leída ANTES de navegar acá,
+        // así que una invitación recién tocada ya llegaría con leida=true. Lo que importa es
+        // si esa invitación puntual (referencia_id = empresa_fontanero_id) ya fue aceptada.
+        setInvitaciones((resNotifs.data || []).filter(n => n.tipo === 'invitacion_equipo' && resPerfil.data.empresa_id !== n.referencia_id));
       } catch (e) { setInvitaciones([]); }
     } catch (e) {}
     finally { setCargando(false); }
