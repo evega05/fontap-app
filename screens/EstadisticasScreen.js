@@ -1,26 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path, Line, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { LineChart, BarChart } from 'react-native-chart-kit';
 import { useAuth } from '../AuthContext';
 import { colors } from '../theme';
 import { avisar } from '../confirmar';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 const ANCHO = Dimensions.get('window').width;
+const GRAFICO_ANCHO = ANCHO - 72;
+const GRAFICO_ALTO = 130;
+const GRAFICO_VB_ANCHO = 320;
+const GRAFICO_VB_ALTO = 110;
+const GRAFICO_PAD = 14;
 
-const CHART_CONFIG = {
-  backgroundColor: colors.bgCard,
-  backgroundGradientFrom: colors.bgCard,
-  backgroundGradientTo: colors.bgCard,
-  decimalPlaces: 0,
-  color: (o = 1) => `rgba(39,110,241,${o})`,
-  labelColor: (o = 1) => `rgba(128,128,160,${o})`,
-  propsForDots: { r: '4', strokeWidth: '2', stroke: colors.blue },
-  propsForBackgroundLines: { stroke: colors.border },
-};
+// Arma el path SVG del gráfico de ingresos a partir de los valores del período.
+// Reemplaza a react-native-chart-kit, cuyo LineChart renderizaba un fondo blanco
+// sólido en vez del translúcido de colors.bgCard configurado — un gráfico "roto"
+// en producción que nunca se veía bien sobre el fondo oscuro de la app.
+function construirGraficoIngresos(valores) {
+  const max = Math.max(...valores, 1);
+  const paso = GRAFICO_VB_ANCHO / (valores.length - 1 || 1);
+  const puntos = valores.map((v, i) => ({
+    x: i * paso,
+    y: GRAFICO_VB_ALTO - GRAFICO_PAD - (v / max) * (GRAFICO_VB_ALTO - GRAFICO_PAD * 2),
+  }));
+  const linea = 'M ' + puntos.map(p => `${p.x} ${p.y}`).join(' L ');
+  const area = `${linea} L ${GRAFICO_VB_ANCHO} ${GRAFICO_VB_ALTO} L 0 ${GRAFICO_VB_ALTO} Z`;
+  return { linea, area, ultimo: puntos[puntos.length - 1] };
+}
 
 export default function EstadisticasScreen({ navigation, route }) {
   const { usuario, token } = useAuth();
@@ -98,18 +109,13 @@ export default function EstadisticasScreen({ navigation, route }) {
     }
   };
 
-  const datosLinea = {
-    labels: periodoIngresos === 'semana'
-      ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-      : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
-    datasets: [{
-      data: periodoIngresos === 'semana'
-        ? (stats?.ingresos_semana || [0, 0, 0, 0, 0, 0, 0])
-        : (stats?.ingresos_mes || [0, 0, 0, 0]),
-      color: (o = 1) => `rgba(39,110,241,${o})`,
-      strokeWidth: 2,
-    }],
-  };
+  const valoresGrafico = periodoIngresos === 'semana'
+    ? (stats?.ingresos_semana || [0, 0, 0, 0, 0, 0, 0])
+    : (stats?.ingresos_mes || [0, 0, 0, 0]);
+  const etiquetasGrafico = periodoIngresos === 'semana'
+    ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+  const grafico = construirGraficoIngresos(valoresGrafico);
 
   return (
     <View style={s.container}>
@@ -128,36 +134,42 @@ export default function EstadisticasScreen({ navigation, route }) {
           contentContainerStyle={{ padding: 20, paddingBottom: 50 }}
           refreshControl={<RefreshControl refreshing={refrescando} onRefresh={() => { setRefrescando(true); cargar(); }} tintColor={colors.blue} />}
         >
-          {/* KPIs principales */}
-          <View style={s.kpiGrid}>
-            <View style={[s.kpiCard, s.kpiBlue]}>
-              <Text style={s.kpiEmoji}>✅</Text>
-              <Text style={s.kpiNum}>{stats?.trabajos_completados ?? 0}</Text>
-              <Text style={s.kpiLabel}>Trabajos completados</Text>
+          {/* Métrica principal */}
+          <View style={s.hero}>
+            <View style={s.heroLabelRow}>
+              <Ionicons name="trending-up" size={14} color={colors.green} />
+              <Text style={s.heroLabel}>Ingresos totales</Text>
             </View>
-            <View style={[s.kpiCard, s.kpiGreen]}>
-              <Text style={s.kpiEmoji}>💰</Text>
-              <Text style={s.kpiNum}>{stats?.ingresos_totales ?? 0}€</Text>
-              <Text style={s.kpiLabel}>Ingresos totales</Text>
-            </View>
+            <Text style={s.heroAmount}>{stats?.ingresos_totales ?? 0}€</Text>
+            <Text style={s.heroSub}>
+              {stats?.trabajos_completados
+                ? `${Math.round((stats.ingresos_totales || 0) / stats.trabajos_completados)}€ de media por trabajo`
+                : 'Todavía sin trabajos completados'}
+            </Text>
           </View>
-          <View style={s.kpiGrid}>
-            <View style={[s.kpiCard, s.kpiAmber]}>
-              <Text style={s.kpiEmoji}>⭐</Text>
-              <Text style={s.kpiNum}>{stats?.valoracion_media ?? '—'}</Text>
-              <Text style={s.kpiLabel}>Valoración media</Text>
+
+          <View style={s.statsRow}>
+            <View style={s.statItem}>
+              <Text style={s.statValue}>{stats?.trabajos_completados ?? 0}</Text>
+              <Text style={s.statLabel}>Trabajos</Text>
             </View>
-            <View style={[s.kpiCard, s.kpiPurple]}>
-              <Text style={s.kpiEmoji}>📈</Text>
-              <Text style={s.kpiNum}>{stats?.tasa_aceptacion ?? 0}%</Text>
-              <Text style={s.kpiLabel}>Tasa de aceptación</Text>
+            <View style={[s.statItem, s.statItemDivider]}>
+              <View style={s.statValueRow}>
+                <Text style={s.statValue}>{stats?.valoracion_media ?? '—'}</Text>
+                <Ionicons name="star" size={13} color={colors.amber} />
+              </View>
+              <Text style={s.statLabel}>Valoración</Text>
+            </View>
+            <View style={[s.statItem, s.statItemDivider]}>
+              <Text style={s.statValue}>{stats?.tasa_aceptacion ?? 0}%</Text>
+              <Text style={s.statLabel}>Aceptación</Text>
             </View>
           </View>
 
           {/* Gráfico de ingresos */}
           <View style={s.graficoCard}>
             <View style={s.graficoHeader}>
-              <Text style={s.graficoTitulo}>💰 Ingresos</Text>
+              <Text style={s.graficoTitulo}>Ingresos</Text>
               <View style={s.periodoTabs}>
                 <TouchableOpacity
                   style={[s.periodoTab, periodoIngresos === 'semana' && s.periodoTabActivo]}
@@ -173,16 +185,25 @@ export default function EstadisticasScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             </View>
-            <LineChart
-              data={datosLinea}
-              width={ANCHO - 72}
-              height={160}
-              chartConfig={CHART_CONFIG}
-              bezier
-              style={{ borderRadius: 12, marginTop: 8 }}
-              withInnerLines
-              withOuterLines={false}
-            />
+            <View style={s.chartWrap}>
+              <Svg width={GRAFICO_ANCHO} height={GRAFICO_ALTO} viewBox={`0 0 ${GRAFICO_VB_ANCHO} ${GRAFICO_VB_ALTO}`} preserveAspectRatio="none">
+                <Defs>
+                  <SvgLinearGradient id="areaIngresos" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0%" stopColor={colors.accent} stopOpacity={0.35} />
+                    <Stop offset="100%" stopColor={colors.accent} stopOpacity={0} />
+                  </SvgLinearGradient>
+                </Defs>
+                <Line x1="0" y1="20" x2={GRAFICO_VB_ANCHO} y2="20" stroke={colors.glassBorder} strokeWidth={1} />
+                <Line x1="0" y1="55" x2={GRAFICO_VB_ANCHO} y2="55" stroke={colors.glassBorder} strokeWidth={1} />
+                <Line x1="0" y1="90" x2={GRAFICO_VB_ANCHO} y2="90" stroke={colors.glassBorder} strokeWidth={1} />
+                <Path d={grafico.area} fill="url(#areaIngresos)" />
+                <Path d={grafico.linea} fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                <Circle cx={grafico.ultimo.x} cy={grafico.ultimo.y} r={4.5} fill={colors.accent} stroke={colors.bg} strokeWidth={2.5} />
+              </Svg>
+            </View>
+            <View style={s.chartLabels}>
+              {etiquetasGrafico.map((l, i) => <Text key={i} style={s.chartLabel}>{l}</Text>)}
+            </View>
           </View>
 
           {/* Resumen adicional */}
@@ -211,21 +232,6 @@ export default function EstadisticasScreen({ navigation, route }) {
               </Text>
             </View>
           </View>
-
-          {/* Estrellas visuales */}
-          {stats?.valoracion_media && (
-            <View style={s.estrellasCard}>
-              <Text style={s.estrellasTitulo}>Tu valoración</Text>
-              <View style={s.estrellasRow}>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Text key={i} style={[s.estrella, i <= Math.round(stats.valoracion_media) && s.estrellaActiva]}>
-                    {i <= Math.round(stats.valoracion_media) ? '★' : '☆'}
-                  </Text>
-                ))}
-                <Text style={s.estrellasNum}>{stats.valoracion_media}</Text>
-              </View>
-            </View>
-          )}
 
           {comparativa?.precio_propio_medio != null && comparativa?.precio_gremio_zona_medio != null && (
             <View style={s.resumenCard}>
@@ -267,15 +273,17 @@ const s = StyleSheet.create({
   back: { color: colors.blue, fontSize: 15, fontWeight: '500' },
   titulo: { color: colors.text, fontSize: 17, fontWeight: 'bold' },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  kpiGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  kpiCard: { flex: 1, borderRadius: 18, padding: 16, alignItems: 'center', borderWidth: 1 },
-  kpiBlue: { backgroundColor: colors.blueLight, borderColor: colors.blue },
-  kpiGreen: { backgroundColor: colors.greenLight, borderColor: colors.green },
-  kpiAmber: { backgroundColor: '#1a1400', borderColor: colors.amber },
-  kpiPurple: { backgroundColor: '#160f2a', borderColor: colors.purple },
-  kpiEmoji: { fontSize: 24, marginBottom: 8 },
-  kpiNum: { color: colors.text, fontSize: 22, fontWeight: 'bold', marginBottom: 4 },
-  kpiLabel: { color: colors.textMuted, fontSize: 11, textAlign: 'center' },
+  hero: { backgroundColor: colors.blueLight, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(76,124,255,0.32)', padding: 18, marginBottom: 12 },
+  heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '700' },
+  heroAmount: { color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -1, marginVertical: 4 },
+  heroSub: { color: colors.textMuted, fontSize: 12.5 },
+  statsRow: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 16, overflow: 'hidden' },
+  statItem: { flex: 1, alignItems: 'center', paddingVertical: 14 },
+  statItemDivider: { borderLeftWidth: 1, borderLeftColor: colors.border },
+  statValueRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  statValue: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  statLabel: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600', marginTop: 3 },
   graficoCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
   graficoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   graficoTitulo: { color: colors.text, fontWeight: '600', fontSize: 15 },
@@ -284,18 +292,15 @@ const s = StyleSheet.create({
   periodoTabActivo: { backgroundColor: colors.blue },
   periodoTabText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   periodoTabTextActivo: { color: '#fff' },
+  chartWrap: { marginTop: 10, alignItems: 'center' },
+  chartLabels: { flexDirection: 'row', marginTop: 6 },
+  chartLabel: { flex: 1, textAlign: 'center', color: colors.textFaint, fontSize: 10.5, fontWeight: '600' },
   resumenCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
   resumenTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 14 },
   resumenFila: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   resumenLabel: { color: colors.textMuted, fontSize: 13 },
   resumenValor: { color: colors.text, fontSize: 13, fontWeight: '700' },
   comparativaNota: { fontSize: 12, fontWeight: '600', marginTop: 10, textAlign: 'center' },
-  estrellasCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  estrellasTitulo: { color: colors.text, fontWeight: '600', fontSize: 15, marginBottom: 12 },
-  estrellasRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  estrella: { fontSize: 32, color: colors.textFaint },
-  estrellaActiva: { color: colors.amber },
-  estrellasNum: { color: colors.text, fontSize: 22, fontWeight: 'bold', marginLeft: 8 },
   btnFiscal: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 12, borderWidth: 1, borderColor: colors.border },
   btnFiscalText: { color: colors.blue, fontWeight: '600', fontSize: 14 },
 });
