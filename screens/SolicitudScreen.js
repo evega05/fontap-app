@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,8 +20,27 @@ export default function SolicitudScreen({ navigation, route }) {
   const PASO_DETALLES = necesitaPasoGremio ? 3 : 2;
   const PASO_CUANDO = necesitaPasoGremio ? 4 : 3;
   const TOTAL_PASOS = necesitaPasoGremio ? 4 : 3;
-  const SERVICIOS = [...serviciosDe(fontanero?.gremio || gremioElegido), OTRO_SERVICIO]
-    .map((sv, i) => ({ id: i + 1, nombre: sv.nombre, emoji: sv.emoji, precio: 'consultar' }));
+  const [catalogoFontanero, setCatalogoFontanero] = useState([]);
+
+  // Si se pide directo a un profesional, se prefiere mostrar su catálogo propio (con
+  // precio real) en vez de solo la lista genérica del gremio — y guarda a qué ítem del
+  // catálogo corresponde el pedido, para que el profesional pueda ver después cuáles de
+  // sus servicios son los más solicitados.
+  useEffect(() => {
+    if (!fontanero?.id) return;
+    axios.get(`${API}/fontaneros/${fontanero.id}/servicios`)
+      .then(res => setCatalogoFontanero(res.data || []))
+      .catch(() => setCatalogoFontanero([]));
+  }, [fontanero?.id]);
+
+  const nombresEnCatalogo = new Set(catalogoFontanero.map(c => c.nombre.trim().toLowerCase()));
+  const serviciosGenericos = serviciosDe(fontanero?.gremio || gremioElegido)
+    .filter(sv => !nombresEnCatalogo.has(sv.nombre.trim().toLowerCase()));
+  const SERVICIOS = [
+    ...catalogoFontanero.map(c => ({ nombre: c.nombre, emoji: '🔧', precio: `${c.precio}€`, catalogoServicioId: c.id })),
+    ...serviciosGenericos,
+    OTRO_SERVICIO,
+  ].map((sv, i) => ({ id: i + 1, nombre: sv.nombre, emoji: sv.emoji, precio: sv.precio ?? 'consultar', catalogoServicioId: sv.catalogoServicioId ?? null }));
   const [tipo, setTipo] = useState(null);
   const [descripcion, setDescripcion] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -106,6 +125,7 @@ export default function SolicitudScreen({ navigation, route }) {
     urgente,
     fecha: fechaCita ? fechaCita.toISOString() : null,
     fontanero_id: fontanero?.id || null,
+    catalogo_servicio_id: tipo.catalogoServicioId || null,
     gremio: fontanero?.gremio || gremioElegido,
     ciudad: route.params?.ciudad || null,
     latitud_cliente,

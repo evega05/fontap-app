@@ -74,6 +74,8 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
   const [vacacionesHasta, setVacacionesHasta] = useState(null);
   const [mostrarVacaciones, setMostrarVacaciones] = useState(false);
   const [guardandoVacaciones, setGuardandoVacaciones] = useState(false);
+  const [avisoAutomatico, setAvisoAutomatico] = useState(false);
+  const [actualizandoAviso, setActualizandoAviso] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -92,6 +94,7 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       setDisponible(p.disponible !== false);
       setVacacionesDesde(p.vacaciones_desde || null);
       setVacacionesHasta(p.vacaciones_hasta || null);
+      setAvisoAutomatico(!!p.aviso_automatico_activo);
       if (p.foto_url) setFotoPerfil(`${API}${p.foto_url}`);
     } catch (e) {}
 
@@ -276,6 +279,20 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
 
   const vacacionesActivas = vacacionesHasta && new Date(vacacionesHasta) > new Date();
 
+  const toggleAvisoAutomatico = async () => {
+    const nuevoValor = !avisoAutomatico;
+    setAvisoAutomatico(nuevoValor);
+    setActualizandoAviso(true);
+    try {
+      await axios.put(`${API}/fontaneros/${userId}/perfil`, { aviso_automatico_activo: nuevoValor }, { headers });
+    } catch (e) {
+      setAvisoAutomatico(!nuevoValor);
+      avisar('Error', 'No se pudo actualizar el aviso automático');
+    } finally {
+      setActualizandoAviso(false);
+    }
+  };
+
   // Lunes a viernes (índices 0-4) suelen compartir el mismo horario — si coinciden,
   // se editan juntos en la vista compacta en vez de repetir 5 filas idénticas.
   const lunVierIguales = [1, 2, 3, 4].every(i => horario[i].activo === horario[0].activo && horario[i].inicio === horario[0].inicio && horario[i].fin === horario[0].fin);
@@ -344,6 +361,12 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
       avisar('Error', 'No se pudo guardar el perfil');
     }
   };
+
+  const masSolicitadoId = servicios.reduce((mejor, sv) => {
+    if (!sv.veces_solicitado) return mejor;
+    if (!mejor || sv.veces_solicitado > mejor.veces_solicitado) return sv;
+    return mejor;
+  }, null)?.id;
 
   return (
     <View style={s.container}>
@@ -634,6 +657,22 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
               </Glass>
             )}
 
+            <Glass style={s.avisoAutoCard}>
+              <View style={s.avisoAutoLeft}>
+                <View style={[s.quickChipIcon, s.idBadgeNeutro, { backgroundColor: colors.glass }]}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={13} color={colors.textMuted} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.quickChipTitulo}>Avisar fuera de horario</Text>
+                  <Text style={s.avisoAutoSub}>
+                    Si te escriben mientras estás pausado o de vacaciones, se responde solo una vez por chat
+                  </Text>
+                </View>
+              </View>
+              <Switch value={avisoAutomatico} onValueChange={toggleAvisoAutomatico} disabled={actualizandoAviso}
+                trackColor={{ false: colors.bgCard3, true: colors.accent }} thumbColor={avisoAutomatico ? '#fff' : colors.textFaint} />
+            </Glass>
+
             <View style={s.horarioHeadRow}>
               <View>
                 <Text style={[s.seccionTitulo, { marginTop: 0 }]}>Días y horas de trabajo</Text>
@@ -750,6 +789,12 @@ export default function PerfilFontaneroScreen({ navigation, route }) {
                       <Ionicons name="time-outline" size={11} color={colors.textMuted} />
                       <Text style={s.servicioDuracion}>{sv.duracion_minutos} min</Text>
                     </View>
+                    {sv.id === masSolicitadoId && (
+                      <View style={s.masSolicitadoBadge}>
+                        <Ionicons name="trophy" size={9} color={colors.amber} />
+                        <Text style={s.masSolicitadoText}>Más solicitado</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={s.servicioPrecio}>{sv.precio}€</Text>
                   <Pressable onPress={() => eliminarServicio(sv.id)} haptic style={s.eliminarBtn}>
@@ -971,6 +1016,9 @@ const s = StyleSheet.create({
   btnVacacionesPresetText: { color: colors.text, fontSize: 12, fontWeight: '700' },
   btnCancelarVacaciones: { alignSelf: 'flex-start' },
   btnCancelarVacacionesText: { color: colors.red, fontSize: 12.5, fontWeight: '700' },
+  avisoAutoCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md },
+  avisoAutoLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  avisoAutoSub: { color: colors.textMuted, fontSize: 10.5, lineHeight: 14, marginTop: 1 },
   horarioHeadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   modeSwitchWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   modeSwitchLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
@@ -1002,6 +1050,8 @@ const s = StyleSheet.create({
   servicioNombre: { color: colors.text, fontWeight: '500', fontSize: 14 },
   servicioDuracionRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   servicioDuracion: { color: colors.textMuted, fontSize: 11 },
+  masSolicitadoBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.amberGlass, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 4 },
+  masSolicitadoText: { color: colors.amber, fontSize: 9.5, fontWeight: '800' },
   servicioPrecio: { color: colors.green, fontWeight: 'bold', fontSize: 14 },
   eliminarBtn: { backgroundColor: colors.redLight, borderRadius: radius.sm, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
   añadirCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm, ...shadow.sm },
