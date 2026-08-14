@@ -12,6 +12,11 @@ import { mensajeError } from '../errores';
 
 const API = 'https://fontap-backend-production.up.railway.app';
 
+// Pausado a pedido: por ahora no se puede crear cuenta nueva como administrador
+// de fincas desde el registro. No se borra el flujo (tipo, backend, etc.), solo
+// se oculta esta tarjeta — poner en true para reactivarlo.
+const PERMITIR_REGISTRO_ADMINISTRADOR = false;
+
 export default function RegistroScreen({ navigation }) {
   const { login: guardarSesion } = useAuth();
   const { t } = useIdioma();
@@ -137,11 +142,13 @@ export default function RegistroScreen({ navigation }) {
           <Text style={[s.tipoTitulo, tipo === 'fontanero' && s.tipoTituloActivo]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1}>{t('soyProfesional')}</Text>
           <Text style={s.tipoSub} numberOfLines={2} maxFontSizeMultiplier={1.1}>{t('quieroTrabajos')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[s.tipoBtn, tipo === 'administrador_fincas' && s.tipoBtnActivo]} onPress={() => setTipo('administrador_fincas')}>
-          <Text style={s.tipoEmoji} maxFontSizeMultiplier={1.1}>🏢</Text>
-          <Text style={[s.tipoTitulo, tipo === 'administrador_fincas' && s.tipoTituloActivo]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1}>Administrador</Text>
-          <Text style={s.tipoSub} numberOfLines={2} maxFontSizeMultiplier={1.1}>Publico proyectos</Text>
-        </TouchableOpacity>
+        {PERMITIR_REGISTRO_ADMINISTRADOR && (
+          <TouchableOpacity style={[s.tipoBtn, tipo === 'administrador_fincas' && s.tipoBtnActivo]} onPress={() => setTipo('administrador_fincas')}>
+            <Text style={s.tipoEmoji} maxFontSizeMultiplier={1.1}>🏢</Text>
+            <Text style={[s.tipoTitulo, tipo === 'administrador_fincas' && s.tipoTituloActivo]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1}>Administrador</Text>
+            <Text style={s.tipoSub} numberOfLines={2} maxFontSizeMultiplier={1.1}>Publico proyectos</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {tipo === 'fontanero' && (
